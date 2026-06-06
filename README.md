@@ -127,8 +127,11 @@ at `web/5.148.6` (commit `417e7724`). Note: the current upstream stack is
 Next increments (the fork's install/build needs Node 22.22.2 + bun, so they
 happen in an environment that has those):
 
-1. Land the monorepo fork: `apps/web` + its 12 workspace deps + root config + the
+1. Land the monorepo fork: `apps/web` + its workspace deps + root config + the
    four `@spry/*` packages under `packages/`; `bun install` green; app boots.
+   Turnkey: [`scripts/land-fork.sh`](scripts/land-fork.sh) +
+   [docs/landing-the-fork.md](docs/landing-the-fork.md) (run in a Node 22.22.2 +
+   bun environment).
 2. Prune the removed surfaces (limit/buy/sell, send, NFT marketplace, v2/v3 +
    migration, governance, routing/UniswapX) and their nav entries.
 3. Swap-submit rewrite: wire the Quoter, `@spry/slippage`, and `@spry/sdk`
