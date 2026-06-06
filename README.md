@@ -124,8 +124,8 @@ live-verified): `@spry/fee` (tier table + curve, bit-exact vs the contract),
 `@spry/slippage` (the reworked slippage model, brief section 7), `@spry/sdk`
 (SpryRouter builders + SpryHook / V4Quoter / StateView clients), and
 `@spry/subgraph` (typed section-13 queries + client). The Base Sepolia subgraph
-schema is verified, but its Goldsky indexing is in an error state (data-side fix
-needed) before subgraph-fed data renders.
+(Goldsky) is healthy and serving data; results populate as Spry pools are created
+on-chain.
 
 The section 15 integration plan is written, grounded in the real upstream tree:
 [docs/apps-web-integration.md](docs/apps-web-integration.md). Upstream is pinned
@@ -146,8 +146,7 @@ happen in an environment that has those):
 3. Swap-submit rewrite: wire the Quoter, `@spry/slippage`, and `@spry/sdk`
    builders into `useSwapCallback`; remove the routing surface.
 4. Tier picker on create/add-liquidity; Spry widgets (section 9).
-5. Wire `@spry/subgraph` into the app's data layer (pools/swaps/tiers/analytics)
-   once the Goldsky indexing error is fixed.
+5. Wire `@spry/subgraph` into the app's data layer (pools/swaps/tiers/analytics).
 
 Visual / styling work is a separate later pass and is intentionally out of scope
 for these increments.

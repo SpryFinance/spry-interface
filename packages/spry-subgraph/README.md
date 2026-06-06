@@ -30,11 +30,10 @@ throws with the error messages when there is none.
 
 ## Status
 
-The deployed Base Sepolia schema is **verified** (the live test introspects the
-`Pool` type and confirms every Spry field the queries use). **Caveat:** the
-Goldsky deployment currently has an indexing error (`hasIndexingErrors`) and
-serves no data yet, so data queries throw `subgraph error: indexing_error` until
-that is fixed on the subgraph side. The schema-level checks pass today.
+The deployed Base Sepolia subgraph (Goldsky) is **healthy and serving data**
+(`hasIndexingErrors: false`). The live test introspects the `Pool` type, checks
+`_meta`, and runs the section-13 queries end-to-end. Results are empty until Spry
+pools are created on-chain on Base Sepolia.
 
 ## Test
 

@@ -65,8 +65,7 @@ export const BASE_SEPOLIA: SpryChainConfig = {
   },
   startBlock: 42508548, // SpryHook deploy block on Base Sepolia
   blockWindowHint: 30, // confirmed from the deployed BLOCK_WINDOW() (authoritative value is on-chain)
-  // Spry subgraph on Goldsky. Schema verified; NOTE: indexing is currently in an
-  // error state (hasIndexingErrors) and serves no data yet (fix on the subgraph side).
+  // Spry subgraph on Goldsky (indexing healthy; serving data).
   subgraphUrl:
     'https://api.goldsky.com/api/public/project_cmls3noc9jy1l01uy0cr74jok/subgraphs/spry-subgraph/1.0.0/gn',
 };
