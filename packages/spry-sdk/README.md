@@ -80,6 +80,19 @@ with the zero-fee constant-product `gross` (from pool state via `@spry/fee`) and
 feed both to `@spry/slippage`'s `impliedFeePips*`. The raw request builders
 (`quoteExactInputSingleRequest`, ...) are exported for wagmi composition.
 
+## StateView reader (pool state)
+
+Reads a pool's `slot0` (sqrtPriceX96) and `liquidity` and derives the virtual
+reserves via `@spry/fee`. This is the "gross" leg of the implied-fee preview:
+the zero-fee constant-product output, paired with the Quoter's `net`.
+
+```ts
+import { createSpryStateViewClient } from '@spry/sdk';
+
+const stateView = createSpryStateViewClient((req) => publicClient.readContract(req), stateViewAddress);
+const { reserve0, reserve1 } = await stateView.getVirtualReserves(poolId);
+```
+
 ## Fidelity
 
 The router and hook ABIs in `src/abi/` are vendored **verbatim** from

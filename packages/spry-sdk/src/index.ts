@@ -8,6 +8,7 @@
 // - SpryHook views client: cached BLOCK_WINDOW / tierParams, live poolWindow,
 //   and the window countdown.
 // - V4Quoter client: the authoritative execution-pricing source (quote calls).
+// - StateView reader: pool slot0 + liquidity -> virtual reserves (for previews).
 // - PoolKey helpers: spryPoolKey + the v4 poolId.
 
 export * from './abi';
@@ -17,3 +18,4 @@ export * from './keys';
 export * from './router';
 export * from './hook';
 export * from './quoter';
+export * from './stateView';
