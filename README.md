@@ -118,17 +118,22 @@ bit-exact vs the contract), `@spry/config` (addresses + Spry-pool predicate),
 `@spry/slippage` (the reworked slippage / fee-tolerance model, brief section 7),
 `@spry/sdk` (SpryRouter calldata builders + cached SpryHook views client).
 
-Next increments:
+The section 15 integration plan is written, grounded in the real upstream tree:
+[docs/apps-web-integration.md](docs/apps-web-integration.md). Upstream is pinned
+at `web/5.148.6` (commit `417e7724`). Note: the current upstream stack is
+**bun + nx + Node 22.22.2 + Vite** (not the yarn+turbo the brief assumed), and
+`apps/web` imports 12 workspace packages.
 
-1. Bring in upstream `apps/web` + the shared `packages/*` it uses; prune removed
-   surfaces; reconcile the workspace root.
-2. The brief's section 15 module lists (upstream modules to touch/remove; new
-   Spry modules to add), maintained against the real tree.
+Next increments (the fork's install/build needs Node 22.22.2 + bun, so they
+happen in an environment that has those):
+
+1. Land the monorepo fork: `apps/web` + its 12 workspace deps + root config + the
+   four `@spry/*` packages under `packages/`; `bun install` green; app boots.
+2. Prune the removed surfaces (limit/buy/sell, send, NFT marketplace, v2/v3 +
+   migration, governance, routing/UniswapX) and their nav entries.
 3. Swap-submit rewrite: wire the Quoter, `@spry/slippage`, and `@spry/sdk`
-   builders into the swap flow.
-4. Spry widgets (tier badge, live fee, fee-curve chart + live marker, window
-   countdown, fee preview, recent swaps, pool analytics, tiers overview) and the
-   create / add-liquidity tier picker.
+   builders into `useSwapCallback`; remove the routing surface.
+4. Tier picker on create/add-liquidity; Spry widgets (section 9).
 5. Point the data layer at the Spry subgraph; re-run GraphQL codegen; wire the
    queries.
 
