@@ -27,13 +27,20 @@ describe('chain configs', () => {
     expect(base.addresses.permit2).toBe(PERMIT2_ADDRESS);
   });
 
-  it('marks Spry contracts as not-yet-deployed (placeholders)', () => {
-    for (const chainId of SUPPORTED_CHAIN_IDS) {
+  it('reflects deployment status per chain', () => {
+    const base = requireSpryConfig(ChainId.BASE_SEPOLIA);
+    expect(base.addresses.spryHook).toBe('0x43C99D40E2E7FBa44435bFC6Da57a74d38fD0080');
+    expect(base.addresses.spryRouter).toBe('0xd4Af9FFDf2067d4CA422526D308E08CDBE690642');
+    expect(isSpryDeployed(base)).toBe(true);
+
+    for (const chainId of [ChainId.SEPOLIA, ChainId.UNICHAIN_SEPOLIA]) {
       const config = requireSpryConfig(chainId);
       expect(config.addresses.spryHook).toBe(PLACEHOLDER_ADDRESS);
-      expect(config.addresses.spryRouter).toBe(PLACEHOLDER_ADDRESS);
       expect(isSpryDeployed(config)).toBe(false);
-      expect(config.subgraphUrl).toBeNull();
+    }
+    // No subgraph endpoint wired on any chain yet.
+    for (const chainId of SUPPORTED_CHAIN_IDS) {
+      expect(requireSpryConfig(chainId).subgraphUrl).toBeNull();
     }
   });
 
@@ -47,13 +54,12 @@ describe('chain configs', () => {
 
 describe('Spry-pool predicate', () => {
   const config = requireSpryConfig(ChainId.BASE_SEPOLIA);
-  // Pre-deployment, the configured hook IS the placeholder, so a key pointing
-  // at it with the dynamic-fee flag and a valid tick spacing is "Spry".
-  const validKey = { hooks: PLACEHOLDER_ADDRESS, fee: DYNAMIC_FEE_FLAG, tickSpacing: 60 };
+  // Base Sepolia is deployed, so the configured hook is the real address.
+  const validKey = { hooks: config.addresses.spryHook, fee: DYNAMIC_FEE_FLAG, tickSpacing: 60 };
 
   it('accepts a well-formed key (case-insensitive hook match)', () => {
     expect(isSpryPoolKey(validKey, config)).toBe(true);
-    expect(isSpryPoolKey({ ...validKey, hooks: PLACEHOLDER_ADDRESS.toLowerCase() }, config)).toBe(true);
+    expect(isSpryPoolKey({ ...validKey, hooks: config.addresses.spryHook.toLowerCase() }, config)).toBe(true);
     expect(classifySpryPoolKey(validKey, config)).toBeNull();
   });
 

@@ -8,9 +8,8 @@
 //   - permit2: the universal canonical Permit2 address.
 //   - quoter: PLACEHOLDER. Fill from the canonical v4-periphery deployment for
 //     each chain (https://docs.uniswap.org/contracts/v4/deployments) before use.
-//   - spryHook / spryRouter: PLACEHOLDER until the contracts are deployed
-//     (the hook address is CREATE2-mined at deploy; the subgraph uses the same
-//     0xffff...ffff sentinel today).
+//   - spryHook / spryRouter: DEPLOYED on Base Sepolia (verified on-chain);
+//     still PLACEHOLDER on Sepolia and Unichain Sepolia until deployed there.
 //   - subgraphUrl: null until chosen at deploy (The Graph / Goldsky).
 //   - startBlock: provisional (canonical V4 deploy block; replace with the hook
 //     deploy block at deployment).
@@ -53,13 +52,13 @@ export const BASE_SEPOLIA: SpryChainConfig = {
   addresses: {
     poolManager: '0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408',
     positionManager: '0x4b2c77d209d3405f41a037ec6c77f7f5b8e2ca80',
-    quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Base Sepolia
+    quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Base Sepolia (needed for pricing)
     permit2: PERMIT2_ADDRESS,
-    spryHook: PLACEHOLDER_ADDRESS, // TODO: deployed SpryHook
-    spryRouter: PLACEHOLDER_ADDRESS, // TODO: deployed SpryRouter
+    spryHook: '0x43C99D40E2E7FBa44435bFC6Da57a74d38fD0080', // deployed + verified on-chain
+    spryRouter: '0xd4Af9FFDf2067d4CA422526D308E08CDBE690642', // deployed + verified on-chain
   },
-  startBlock: 19088197,
-  blockWindowHint: 6, // ~2s blocks
+  startBlock: 19088197, // TODO: set to the SpryHook deploy block (currently the canonical V4 block)
+  blockWindowHint: 30, // confirmed from the deployed BLOCK_WINDOW() (authoritative value is on-chain)
   subgraphUrl: null, // TODO: deployed Spry subgraph endpoint
 };
 

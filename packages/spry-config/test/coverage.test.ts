@@ -31,10 +31,14 @@ describe('address helpers', () => {
 });
 
 describe('deployment gating', () => {
-  it('reports not-deployed and throws via assert pre-deployment', () => {
-    const config = requireSpryConfig(DEFAULT_CHAIN_ID);
-    expect(isSpryDeployed(config)).toBe(false);
-    expect(() => assertSpryDeployed(config)).toThrow();
+  it('base-sepolia is deployed; placeholder chains are not', () => {
+    const base = requireSpryConfig(ChainId.BASE_SEPOLIA);
+    expect(isSpryDeployed(base)).toBe(true);
+    expect(() => assertSpryDeployed(base)).not.toThrow();
+
+    const sepolia = requireSpryConfig(ChainId.SEPOLIA);
+    expect(isSpryDeployed(sepolia)).toBe(false);
+    expect(() => assertSpryDeployed(sepolia)).toThrow();
   });
 });
 
@@ -61,10 +65,10 @@ describe('predicate rejection precedence', () => {
     const key = { hooks: ZERO_ADDRESS, fee: 3000, tickSpacing: 61 };
     expect(classifySpryPoolKey(key, config)).toBe('wrong-hook');
     // Right hook, static fee, bad spacing: fee is checked before spacing.
-    const key2 = { hooks: PLACEHOLDER_ADDRESS, fee: 3000, tickSpacing: 61 };
+    const key2 = { hooks: config.addresses.spryHook, fee: 3000, tickSpacing: 61 };
     expect(classifySpryPoolKey(key2, config)).toBe('not-dynamic-fee');
     // Right hook, dynamic fee, bad spacing.
-    const key3 = { hooks: PLACEHOLDER_ADDRESS, fee: DYNAMIC_FEE_FLAG, tickSpacing: 61 };
+    const key3 = { hooks: config.addresses.spryHook, fee: DYNAMIC_FEE_FLAG, tickSpacing: 61 };
     expect(classifySpryPoolKey(key3, config)).toBe('invalid-tick-spacing');
   });
 });
