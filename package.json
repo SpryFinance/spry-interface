@@ -1,0 +1,23 @@
+{
+  "name": "spry-interface",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Spry web app: a thin, reviewable overlay on the Uniswap v4 web interface. This root is a temporary bootstrap holding the standalone Spry packages; it will be reconciled with the upstream apps/web + packages monorepo when the fork lands.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.9"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
