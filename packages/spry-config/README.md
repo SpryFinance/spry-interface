@@ -4,37 +4,32 @@ Per-chain Spry configuration: contract addresses, subgraph endpoints, block
 window, and the Spry-pool predicate. Depends on `@spry/fee` for the fee/tick
 domain.
 
-## Status: pre-deployment
-
-The three networks match exactly the ones the Spry subgraph indexes
-(`spry-subgraph/networks.json`). Some addresses are real, others are
-placeholders the deployer fills.
-
-| Field | State |
-|-------|-------|
-| `poolManager`, `positionManager` | **Real** canonical V4 (copied from the subgraph's `networks.json`). |
-| `permit2` | **Real** universal canonical Permit2. |
-| `quoter` | **Placeholder.** Fill from the canonical v4-periphery deployment per chain. |
-| `spryHook`, `spryRouter` | **Placeholder** (`0xffff...ffff`) until deployed. The hook address is CREATE2-mined at deploy. |
-| `subgraphUrl` | `null` until chosen at deploy (The Graph / Goldsky). |
-| `startBlock` | Provisional (canonical V4 deploy block; replace with the hook deploy block). |
-| `blockWindowHint` | Informational only. The authoritative window is the per-chain `immutable`: read `SpryHook.BLOCK_WINDOW()` once on-chain and cache it. |
+## Status
 
 Supported chains: **Sepolia** (11155111), **Base Sepolia** (84532),
 **Unichain Sepolia** (1301).
 
-## TODO before testnet/mainnet use
+**Base Sepolia is fully wired and verified on-chain** (SpryHook, SpryRouter,
+canonical V4Quoter + StateView + PoolManager + PositionManager + Permit2,
+`startBlock` = the hook deploy block, `blockWindowHint` = 30 from the live
+`BLOCK_WINDOW()`). The only remaining field is `subgraphUrl` (null until the
+Spry subgraph is deployed).
 
-1. Fill `quoter` with the canonical `V4Quoter` for each chain
-   (https://docs.uniswap.org/contracts/v4/deployments).
-2. Fill `spryHook` and `spryRouter` with the deployed addresses, and update
-   `startBlock` to the hook deploy block.
-3. Set `subgraphUrl` to the deployed Spry subgraph endpoint.
-4. Confirm `blockWindowHint` against the value actually passed at deploy (or
-   just read `BLOCK_WINDOW()` on-chain, which is the source of truth).
+**Sepolia and Unichain Sepolia are pre-deployment**: `spryHook`, `spryRouter`,
+`quoter`, and `stateView` are placeholders (`0xffff...ffff`), and `subgraphUrl`
+is null. Their `poolManager` / `positionManager` / `permit2` are real.
 
-`isSpryDeployed(config)` returns `false` while the hook/router are placeholders;
-use it to gate Spry-specific UI until deployment.
+`isSpryDeployed(config)` returns `true` once the hook + router are real (Base
+Sepolia today); use it to gate Spry-specific UI per chain.
+
+`blockWindowHint` is informational; the authoritative window is the on-chain
+`SpryHook.BLOCK_WINDOW()` (read once and cache).
+
+## TODO
+
+- Base Sepolia: set `subgraphUrl` once the Spry subgraph is deployed.
+- Sepolia / Unichain Sepolia: fill `spryHook`, `spryRouter`, `quoter`,
+  `stateView`, `startBlock`, and `subgraphUrl` when deployed there.
 
 ## API
 

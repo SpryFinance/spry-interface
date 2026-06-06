@@ -8,6 +8,8 @@ export interface SpryAddresses {
   positionManager: Address;
   /** Canonical V4Quoter. The ONLY authoritative source for execution pricing. */
   quoter: Address;
+  /** Canonical v4-periphery StateView lens (read pool slot0 / liquidity). */
+  stateView: Address;
   /** Canonical Permit2 (universal address). */
   permit2: Address;
   /** SpryHook. Pre-deployment placeholder until the hook is deployed + mined. */

@@ -21,10 +21,13 @@ describe('chain configs', () => {
     );
   });
 
-  it('exposes real V4 addresses and universal Permit2', () => {
+  it('exposes the real canonical V4 + Spry addresses on Base Sepolia', () => {
     const base = requireSpryConfig(ChainId.BASE_SEPOLIA);
     expect(base.addresses.poolManager).toBe('0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408');
     expect(base.addresses.permit2).toBe(PERMIT2_ADDRESS);
+    expect(base.addresses.quoter).toBe('0x4A6513c898fe1B2d0E78d3b0e0A4a151589B1cBa');
+    expect(base.addresses.stateView).toBe('0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4');
+    expect(base.startBlock).toBe(42508548);
   });
 
   it('reflects deployment status per chain', () => {
@@ -36,6 +39,8 @@ describe('chain configs', () => {
     for (const chainId of [ChainId.SEPOLIA, ChainId.UNICHAIN_SEPOLIA]) {
       const config = requireSpryConfig(chainId);
       expect(config.addresses.spryHook).toBe(PLACEHOLDER_ADDRESS);
+      expect(config.addresses.quoter).toBe(PLACEHOLDER_ADDRESS);
+      expect(config.addresses.stateView).toBe(PLACEHOLDER_ADDRESS);
       expect(isSpryDeployed(config)).toBe(false);
     }
     // No subgraph endpoint wired on any chain yet.

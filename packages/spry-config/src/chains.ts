@@ -1,18 +1,22 @@
 // Per-chain Spry configuration.
 //
 // The three networks here are exactly the ones the Spry subgraph indexes
-// (see spry-subgraph/networks.json). Everything is PRE-DEPLOYMENT:
+// (see spry-subgraph/networks.json). Base Sepolia is DEPLOYED + verified
+// on-chain; Sepolia and Unichain Sepolia are still pre-deployment.
 //
-//   - poolManager / positionManager: REAL canonical V4 addresses, copied
-//     verbatim from the subgraph's networks.json (authoritative in-repo source).
+//   - poolManager / positionManager: REAL canonical V4 addresses.
 //   - permit2: the universal canonical Permit2 address.
-//   - quoter: PLACEHOLDER. Fill from the canonical v4-periphery deployment for
-//     each chain (https://docs.uniswap.org/contracts/v4/deployments) before use.
+//   - quoter / stateView: REAL canonical v4-periphery on Base Sepolia;
+//     PLACEHOLDER on the other chains (fill from the canonical deployment,
+//     https://docs.uniswap.org/contracts/v4/deployments).
 //   - spryHook / spryRouter: DEPLOYED on Base Sepolia (verified on-chain);
 //     still PLACEHOLDER on Sepolia and Unichain Sepolia until deployed there.
 //   - subgraphUrl: null until chosen at deploy (The Graph / Goldsky).
-//   - startBlock: provisional (canonical V4 deploy block; replace with the hook
-//     deploy block at deployment).
+//   - startBlock: the SpryHook deploy block on Base Sepolia; provisional
+//     (canonical V4 block) on the other chains until deployed.
+//
+// Uniswap's Universal Router and the PoolSwapTest / PoolModifyLiquidityTest
+// helpers are intentionally NOT tracked: Spry swaps go through SpryRouter only.
 //
 // See the "TODO before mainnet/testnet use" section in this package's README.
 
@@ -35,6 +39,7 @@ export const SEPOLIA: SpryChainConfig = {
     poolManager: '0xE03A1074c86CFeDd5C142C4F04F1a1536e203543',
     positionManager: '0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4',
     quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Sepolia
+    stateView: PLACEHOLDER_ADDRESS, // TODO: canonical StateView on Sepolia
     permit2: PERMIT2_ADDRESS,
     spryHook: PLACEHOLDER_ADDRESS, // TODO: deployed SpryHook
     spryRouter: PLACEHOLDER_ADDRESS, // TODO: deployed SpryRouter
@@ -51,13 +56,14 @@ export const BASE_SEPOLIA: SpryChainConfig = {
   testnet: true,
   addresses: {
     poolManager: '0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408',
-    positionManager: '0x4b2c77d209d3405f41a037ec6c77f7f5b8e2ca80',
-    quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Base Sepolia (needed for pricing)
+    positionManager: '0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80',
+    quoter: '0x4A6513c898fe1B2d0E78d3b0e0A4a151589B1cBa', // canonical V4Quoter (verified on-chain)
+    stateView: '0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4', // canonical StateView (verified on-chain)
     permit2: PERMIT2_ADDRESS,
     spryHook: '0x43C99D40E2E7FBa44435bFC6Da57a74d38fD0080', // deployed + verified on-chain
     spryRouter: '0xd4Af9FFDf2067d4CA422526D308E08CDBE690642', // deployed + verified on-chain
   },
-  startBlock: 19088197, // TODO: set to the SpryHook deploy block (currently the canonical V4 block)
+  startBlock: 42508548, // SpryHook deploy block on Base Sepolia
   blockWindowHint: 30, // confirmed from the deployed BLOCK_WINDOW() (authoritative value is on-chain)
   subgraphUrl: null, // TODO: deployed Spry subgraph endpoint
 };
@@ -71,6 +77,7 @@ export const UNICHAIN_SEPOLIA: SpryChainConfig = {
     poolManager: '0x00b036b58a818b1bc34d502d3fe730db729e62ac',
     positionManager: '0xf969aee60879c54baaed9f3ed26147db216fd664',
     quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Unichain Sepolia
+    stateView: PLACEHOLDER_ADDRESS, // TODO: canonical StateView on Unichain Sepolia
     permit2: PERMIT2_ADDRESS,
     spryHook: PLACEHOLDER_ADDRESS, // TODO: deployed SpryHook
     spryRouter: PLACEHOLDER_ADDRESS, // TODO: deployed SpryRouter

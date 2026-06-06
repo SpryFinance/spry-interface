@@ -33,6 +33,13 @@ describe.skipIf(!RPC)('live Base Sepolia deployment', () => {
     expect(pm.toLowerCase()).toBe(config.addresses.poolManager.toLowerCase());
   });
 
+  it('canonical Quoter and StateView are deployed', async () => {
+    for (const address of [config.addresses.quoter, config.addresses.stateView]) {
+      const code = await client.getBytecode({ address });
+      expect((code?.length ?? 0) > 2).toBe(true);
+    }
+  });
+
   it('TIER_COUNT is 5 and permissionsFlags is BEFORE_SWAP_FLAG (128)', async () => {
     const tierCount = await client.readContract({
       address: config.addresses.spryHook,
