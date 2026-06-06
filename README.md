@@ -82,9 +82,10 @@ A per-area mapping of what changes will be maintained here as `apps/web` lands.
   max-slippage (brief section 7): `amountOutMin` / `amountInMax` that cover both
   price slippage and the dynamic fee rising toward the tier cap within a window.
 - [`@spry/sdk`](packages/spry-sdk/README.md) - `SpryRouter` swap calldata
-  builders (8 entry points + multicall/Permit2, with the section 6.1 guards) and
-  a cached `SpryHook` views client (`BLOCK_WINDOW`, `poolWindow`, `tierParams`).
-  Built on viem; ABIs vendored verbatim from `spry-contracts/abis`.
+  builders (8 entry points + multicall/Permit2, with the section 6.1 guards), a
+  cached `SpryHook` views client (`BLOCK_WINDOW`, `poolWindow`, `tierParams`),
+  and a `V4Quoter` client (the authoritative execution-pricing source). Built on
+  viem; ABIs vendored verbatim from `spry-contracts`.
 
 ## Sibling repositories
 

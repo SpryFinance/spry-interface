@@ -59,6 +59,27 @@ await hook.verifyTierParamsOnChain(tier);  // confirm the cache matches the cont
 The reader is injected (a thin adapter over viem / wagmi), so the client is
 testable without a live chain.
 
+## V4Quoter client (execution pricing)
+
+The authoritative pricing source (brief section 5): never price a trade from the
+`@spry/fee` curve or the subgraph. The quote functions are nonpayable (they
+simulate the swap and return), so they go through viem's `simulateContract`.
+
+```ts
+import { createSpryQuoterClient } from '@spry/sdk';
+
+const quoter = createSpryQuoterClient(
+  async (req) => (await publicClient.simulateContract(req)).result, // [amount, gasEstimate]
+  quoterAddress,
+);
+const { amountOut } = await quoter.quoteExactInputSingle({ poolKey, zeroForOne: true, exactAmount });
+```
+
+To derive the implied current fee for the slippage model, pair the quoted `net`
+with the zero-fee constant-product `gross` (from pool state via `@spry/fee`) and
+feed both to `@spry/slippage`'s `impliedFeePips*`. The raw request builders
+(`quoteExactInputSingleRequest`, ...) are exported for wagmi composition.
+
 ## Fidelity
 
 The router and hook ABIs in `src/abi/` are vendored **verbatim** from
