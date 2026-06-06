@@ -43,8 +43,9 @@ describe('chain configs', () => {
       expect(config.addresses.stateView).toBe(PLACEHOLDER_ADDRESS);
       expect(isSpryDeployed(config)).toBe(false);
     }
-    // No subgraph endpoint wired on any chain yet.
-    for (const chainId of SUPPORTED_CHAIN_IDS) {
+    // Base Sepolia has a subgraph endpoint; the other chains do not yet.
+    expect(base.subgraphUrl).toContain('goldsky.com');
+    for (const chainId of [ChainId.SEPOLIA, ChainId.UNICHAIN_SEPOLIA]) {
       expect(requireSpryConfig(chainId).subgraphUrl).toBeNull();
     }
   });

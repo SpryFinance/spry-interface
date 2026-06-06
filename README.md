@@ -18,7 +18,8 @@ spry-interface/
 │   ├── spry-fee/       @spry/fee       tier table + cached tierParams + JS four-zone curve
 │   ├── spry-config/    @spry/config    per-chain addresses, subgraph URL, Spry-pool predicate
 │   ├── spry-slippage/  @spry/slippage  dynamic-fee-aware slippage / fee-tolerance (brief section 7)
-│   └── spry-sdk/       @spry/sdk       SpryRouter calldata builders + cached SpryHook views client
+│   ├── spry-sdk/       @spry/sdk       SpryRouter builders + SpryHook/V4Quoter/StateView clients
+│   └── spry-subgraph/  @spry/subgraph  typed Spry subgraph queries + fetch client (brief section 13)
 ├── tools/
 │   └── contract-diff/ read-only Foundry harness: generates the @spry/fee differential fixture
 ├── package.json       workspace root (temporary bootstrap; see below)
@@ -83,9 +84,12 @@ A per-area mapping of what changes will be maintained here as `apps/web` lands.
   price slippage and the dynamic fee rising toward the tier cap within a window.
 - [`@spry/sdk`](packages/spry-sdk/README.md) - `SpryRouter` swap calldata
   builders (8 entry points + multicall/Permit2, with the section 6.1 guards), a
-  cached `SpryHook` views client (`BLOCK_WINDOW`, `poolWindow`, `tierParams`),
-  and a `V4Quoter` client (the authoritative execution-pricing source). Built on
-  viem; ABIs vendored verbatim from `spry-contracts`.
+  cached `SpryHook` views client (`BLOCK_WINDOW`, `poolWindow`, `tierParams`), a
+  `V4Quoter` client (authoritative pricing), and a `StateView` reader (pool
+  state to virtual reserves). Built on viem; ABIs vendored from `spry-contracts`.
+- [`@spry/subgraph`](packages/spry-subgraph/README.md) - typed GraphQL queries
+  (brief section 13) and a thin fetch client for the Spry subgraph fields and
+  entities (pools, swaps, tiers, fee windows). For history / analytics only.
 
 ## Sibling repositories
 
@@ -114,10 +118,14 @@ This app integrates with three repos checked out alongside it under `../`:
 
 ## Roadmap
 
-Done (all fork-independent core, fully tested): `@spry/fee` (tier table + curve,
-bit-exact vs the contract), `@spry/config` (addresses + Spry-pool predicate),
-`@spry/slippage` (the reworked slippage / fee-tolerance model, brief section 7),
-`@spry/sdk` (SpryRouter calldata builders + cached SpryHook views client).
+Done (all fork-independent core, fully tested; Base Sepolia is deployed and
+live-verified): `@spry/fee` (tier table + curve, bit-exact vs the contract),
+`@spry/config` (addresses + Spry-pool predicate; Base Sepolia fully wired),
+`@spry/slippage` (the reworked slippage model, brief section 7), `@spry/sdk`
+(SpryRouter builders + SpryHook / V4Quoter / StateView clients), and
+`@spry/subgraph` (typed section-13 queries + client). The Base Sepolia subgraph
+schema is verified, but its Goldsky indexing is in an error state (data-side fix
+needed) before subgraph-fed data renders.
 
 The section 15 integration plan is written, grounded in the real upstream tree:
 [docs/apps-web-integration.md](docs/apps-web-integration.md). Upstream is pinned
@@ -138,8 +146,8 @@ happen in an environment that has those):
 3. Swap-submit rewrite: wire the Quoter, `@spry/slippage`, and `@spry/sdk`
    builders into `useSwapCallback`; remove the routing surface.
 4. Tier picker on create/add-liquidity; Spry widgets (section 9).
-5. Point the data layer at the Spry subgraph; re-run GraphQL codegen; wire the
-   queries.
+5. Wire `@spry/subgraph` into the app's data layer (pools/swaps/tiers/analytics)
+   once the Goldsky indexing error is fixed.
 
 Visual / styling work is a separate later pass and is intentionally out of scope
 for these increments.

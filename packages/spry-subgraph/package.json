@@ -1,0 +1,25 @@
+{
+  "name": "@spry/subgraph",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Spry subgraph data layer: typed GraphQL queries (brief section 13) and a thin fetch client for the Spry-specific fields/entities.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@spry/config": "*",
+    "@spry/fee": "*"
+  },
+  "sideEffects": false
+}

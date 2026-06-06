@@ -12,8 +12,9 @@ Supported chains: **Sepolia** (11155111), **Base Sepolia** (84532),
 **Base Sepolia is fully wired and verified on-chain** (SpryHook, SpryRouter,
 canonical V4Quoter + StateView + PoolManager + PositionManager + Permit2,
 `startBlock` = the hook deploy block, `blockWindowHint` = 30 from the live
-`BLOCK_WINDOW()`). The only remaining field is `subgraphUrl` (null until the
-Spry subgraph is deployed).
+`BLOCK_WINDOW()`, and `subgraphUrl` = the Goldsky endpoint). Caveat: the
+subgraph schema is correct but indexing is currently in an error state
+(`hasIndexingErrors`), so it serves no data yet (fix on the subgraph side).
 
 **Sepolia and Unichain Sepolia are pre-deployment**: `spryHook`, `spryRouter`,
 `quoter`, and `stateView` are placeholders (`0xffff...ffff`), and `subgraphUrl`
@@ -27,7 +28,8 @@ Sepolia today); use it to gate Spry-specific UI per chain.
 
 ## TODO
 
-- Base Sepolia: set `subgraphUrl` once the Spry subgraph is deployed.
+- Base Sepolia: fix the subgraph indexing error (data side) so the Goldsky
+  endpoint serves data.
 - Sepolia / Unichain Sepolia: fill `spryHook`, `spryRouter`, `quoter`,
   `stateView`, `startBlock`, and `subgraphUrl` when deployed there.
 

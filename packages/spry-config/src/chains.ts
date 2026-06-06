@@ -11,7 +11,7 @@
 //     https://docs.uniswap.org/contracts/v4/deployments).
 //   - spryHook / spryRouter: DEPLOYED on Base Sepolia (verified on-chain);
 //     still PLACEHOLDER on Sepolia and Unichain Sepolia until deployed there.
-//   - subgraphUrl: null until chosen at deploy (The Graph / Goldsky).
+//   - subgraphUrl: set on Base Sepolia (Goldsky); null on the other chains.
 //   - startBlock: the SpryHook deploy block on Base Sepolia; provisional
 //     (canonical V4 block) on the other chains until deployed.
 //
@@ -65,7 +65,10 @@ export const BASE_SEPOLIA: SpryChainConfig = {
   },
   startBlock: 42508548, // SpryHook deploy block on Base Sepolia
   blockWindowHint: 30, // confirmed from the deployed BLOCK_WINDOW() (authoritative value is on-chain)
-  subgraphUrl: null, // TODO: deployed Spry subgraph endpoint
+  // Spry subgraph on Goldsky. Schema verified; NOTE: indexing is currently in an
+  // error state (hasIndexingErrors) and serves no data yet (fix on the subgraph side).
+  subgraphUrl:
+    'https://api.goldsky.com/api/public/project_cmls3noc9jy1l01uy0cr74jok/subgraphs/spry-subgraph/1.0.0/gn',
 };
 
 export const UNICHAIN_SEPOLIA: SpryChainConfig = {
