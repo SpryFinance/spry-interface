@@ -5,6 +5,7 @@ import type {
   IndicativeQuoteRequest,
   TradeRepository,
 } from 'uniswap/src/features/transactions/swap/services/tradeService/tradeRepository'
+import { buildSpryWrapQuote } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import {
   TradeService,
   TradeWithGasEstimates,
@@ -94,6 +95,33 @@ export function createEVMTradeService(ctx: EVMTradeServiceContext): TradeService
           return { trade: null }
         }
 
+        // SPRY: the Trading API gateway does not serve Base Sepolia (every quote
+        // 401s), so we synthesize the quote locally where we can and never fall
+        // through to the gateway for this chain.
+        if (validatedInput.currencyIn.chainId === UniverseChainId.BaseSepolia) {
+          // Wrap/unwrap is handled here; pool swaps via the V4 Quoter follow.
+          const spryLocalQuote = buildSpryWrapQuote(validatedInput)
+          if (!spryLocalQuote) {
+            // No locally-synthesizable quote (non-wrap pair, a USD price quote, or
+            // a pool swap not yet wired to the V4 Quoter): return no trade rather
+            // than issuing a doomed gateway request.
+            return { trade: null }
+          }
+          const localResult = transformQuoteToTrade({
+            quote: spryLocalQuote,
+            amountSpecified: validatedInput.amount,
+            quoteCurrencyData: {
+              currencyIn: validatedInput.currencyIn,
+              currencyOut: validatedInput.currencyOut,
+              requestTradeType: validatedInput.requestTradeType,
+            },
+          })
+          return {
+            trade: localResult?.trade ?? null,
+            gasEstimate: localResult?.gasEstimate,
+          }
+        }
+
         // Step 3: Build quote request with all params
         const quoteRequestParams = buildQuoteRequest(validatedInput)
         quoteRequestArgs = flattenQuoteRequestResult(quoteRequestParams)
@@ -129,6 +157,12 @@ export function createEVMTradeService(ctx: EVMTradeServiceContext): TradeService
       // Step 1: validate indicative quote request
       const validatedInput = prepareIndicativeTradeInput(input)
       if (!validatedInput) {
+        return null
+      }
+
+      // SPRY: Base Sepolia has no Trading API, so the indicative endpoint would 401.
+      // Skip it; the synthesized main quote provides the amount.
+      if (validatedInput.currencyIn.chainId === UniverseChainId.BaseSepolia) {
         return null
       }
 
