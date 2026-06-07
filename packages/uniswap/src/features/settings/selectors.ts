@@ -12,8 +12,13 @@ export const selectWalletHideReportedActivitySetting = (state: UniswapState): bo
 
 export const selectCurrentLanguage = (state: UniswapState): Language => state.userSettings.currentLanguage
 
-export const selectIsTestnetModeEnabled = (state: UniswapState): boolean =>
-  state.userSettings.isTestnetModeEnabled ?? false
+// Spry interface: the app runs only on Base Sepolia, which is a testnet, so
+// testnet mode is always on. This keeps token lists, data queries, and chain
+// logic in testnet mode (otherwise the app runs in "mainnet mode" on a
+// testnet-only chain and surfaces mainnet tokens / wrong defaults). Forcing it
+// true also resets any stale persisted mainnet chain via the compatibility check
+// in useInitialCurrencyState. Overrides the user/persisted setting on purpose.
+export const selectIsTestnetModeEnabled = (_state: UniswapState): boolean => true
 
 export const selectDeviceAccessTimeoutMinutes = (state: UniswapState): number | undefined =>
   deviceAccessTimeoutToMinutes(state.userSettings.deviceAccessTimeout)
