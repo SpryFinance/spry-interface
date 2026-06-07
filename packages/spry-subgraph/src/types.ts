@@ -12,6 +12,8 @@ export interface TokenRef {
   id: string;
   symbol: string;
   decimals: string;
+  /** Number of Spry pools containing this token. Now maintained; safe as "pools". */
+  poolCount: string;
 }
 
 /** A row from the Pools list query. */
@@ -28,6 +30,12 @@ export interface PoolRow {
   volumeUSD: string;
   feesUSD: string;
   totalValueLockedUSD: string;
+  /**
+   * Count of distinct liquidity-modifying addresses (the immediate caller of
+   * ModifyLiquidity, typically the V4 PositionManager or a router), NOT unique
+   * end-user LPs. Surface as "LP txn sources", not a unique-user metric.
+   */
+  liquidityProviderCount: string;
   token0: TokenRef;
   token1: TokenRef;
 }

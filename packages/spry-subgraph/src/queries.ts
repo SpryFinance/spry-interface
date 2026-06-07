@@ -16,8 +16,9 @@ export const POOLS_QUERY = `
       volumeUSD
       feesUSD
       totalValueLockedUSD
-      token0 { id symbol decimals }
-      token1 { id symbol decimals }
+      liquidityProviderCount
+      token0 { id symbol decimals poolCount }
+      token1 { id symbol decimals poolCount }
     }
   }
 `;
