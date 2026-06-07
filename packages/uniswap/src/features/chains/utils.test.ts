@@ -119,115 +119,38 @@ describe('hexadecimalStringToInt', () => {
 })
 
 describe('getEnabledChains', () => {
-  it('returns all mainnet chains', () => {
-    expect(getEnabledChains({ isTestnetModeEnabled: false, featureFlaggedChainIds: ALL_CHAIN_IDS })).toEqual({
-      chains: [
-        UniverseChainId.Mainnet,
-        UniverseChainId.Unichain,
-        UniverseChainId.Monad,
-        UniverseChainId.Solana,
-        UniverseChainId.Polygon,
-        UniverseChainId.ArbitrumOne,
-        UniverseChainId.Optimism,
-        UniverseChainId.Base,
-        UniverseChainId.Bnb,
-        UniverseChainId.Blast,
-        UniverseChainId.Avalanche,
-        UniverseChainId.Celo,
-        UniverseChainId.WorldChain,
-        UniverseChainId.Linea,
-        UniverseChainId.MegaETH,
-        UniverseChainId.Soneium,
-        UniverseChainId.Tempo,
-        UniverseChainId.XLayer,
-        UniverseChainId.Zora,
-        UniverseChainId.Zksync,
-      ],
-      gqlChains: [
-        GraphQLApi.Chain.Ethereum,
-        GraphQLApi.Chain.Unichain,
-        GraphQLApi.Chain.Monad,
-        GraphQLApi.Chain.Solana,
-        GraphQLApi.Chain.Polygon,
-        GraphQLApi.Chain.Arbitrum,
-        GraphQLApi.Chain.Optimism,
-        GraphQLApi.Chain.Base,
-        GraphQLApi.Chain.Bnb,
-        GraphQLApi.Chain.Blast,
-        GraphQLApi.Chain.Avalanche,
-        GraphQLApi.Chain.Celo,
-        GraphQLApi.Chain.Worldchain,
-        GraphQLApi.Chain.Linea,
-        GraphQLApi.Chain.Megaeth,
-        GraphQLApi.Chain.Soneium,
-        GraphQLApi.Chain.Tempo,
-        GraphQLApi.Chain.Xlayer,
-        GraphQLApi.Chain.Zora,
-        GraphQLApi.Chain.Zksync,
-      ],
-      defaultChainId: UniverseChainId.Mainnet,
-      isTestnetModeEnabled: false,
-    })
-  })
+  // The Spry interface is hardcoded to Spry's deployed chain(s): only Base Sepolia
+  // is ever enabled. The testnet-mode toggle, includeTestnets, and chain feature
+  // flags are intentionally bypassed (see SPRY_ENABLED_CHAIN_IDS in utils.ts).
+  const SPRY_ENABLED = {
+    chains: [UniverseChainId.BaseSepolia],
+    gqlChains: [GraphQLApi.Chain.BaseSepolia],
+    defaultChainId: UniverseChainId.BaseSepolia,
+    isTestnetModeEnabled: false,
+  }
 
-  it('returns feature flagged chains', () => {
+  it('returns only Base Sepolia and ignores the feature-flag set', () => {
+    expect(getEnabledChains({ isTestnetModeEnabled: false, featureFlaggedChainIds: ALL_CHAIN_IDS })).toEqual(
+      SPRY_ENABLED,
+    )
     expect(
       getEnabledChains({
         isTestnetModeEnabled: false,
         featureFlaggedChainIds: [UniverseChainId.Mainnet, UniverseChainId.Polygon],
       }),
-    ).toEqual({
-      chains: [UniverseChainId.Mainnet, UniverseChainId.Polygon],
-      gqlChains: [GraphQLApi.Chain.Ethereum, GraphQLApi.Chain.Polygon],
-      defaultChainId: UniverseChainId.Mainnet,
-      isTestnetModeEnabled: false,
-    })
+    ).toEqual(SPRY_ENABLED)
   })
 
-  it('returns testnet chains', () => {
-    expect(
-      getEnabledChains({
-        isTestnetModeEnabled: true,
-        featureFlaggedChainIds: ALL_CHAIN_IDS,
-      }),
-    ).toEqual({
-      chains: [UniverseChainId.Sepolia, UniverseChainId.UnichainSepolia],
-      gqlChains: [GraphQLApi.Chain.EthereumSepolia, GraphQLApi.Chain.AstrochainSepolia],
-      defaultChainId: UniverseChainId.Sepolia,
+  it('ignores testnet mode (Base Sepolia is always enabled; default stays Base Sepolia)', () => {
+    expect(getEnabledChains({ isTestnetModeEnabled: true, featureFlaggedChainIds: ALL_CHAIN_IDS })).toEqual({
+      ...SPRY_ENABLED,
       isTestnetModeEnabled: true,
     })
   })
 
-  it('returns both mainnet and testnet chains when includeTestnets is true', () => {
+  it('ignores includeTestnets', () => {
     expect(
-      getEnabledChains({
-        includeTestnets: true,
-        isTestnetModeEnabled: false,
-        featureFlaggedChainIds: [
-          UniverseChainId.Mainnet,
-          UniverseChainId.Unichain,
-          UniverseChainId.Base,
-          UniverseChainId.Sepolia,
-          UniverseChainId.UnichainSepolia,
-        ],
-      }),
-    ).toEqual({
-      chains: [
-        UniverseChainId.Mainnet,
-        UniverseChainId.Unichain,
-        UniverseChainId.Base,
-        UniverseChainId.Sepolia,
-        UniverseChainId.UnichainSepolia,
-      ],
-      gqlChains: [
-        GraphQLApi.Chain.Ethereum,
-        GraphQLApi.Chain.Unichain,
-        GraphQLApi.Chain.Base,
-        GraphQLApi.Chain.EthereumSepolia,
-        GraphQLApi.Chain.AstrochainSepolia,
-      ],
-      defaultChainId: UniverseChainId.Mainnet,
-      isTestnetModeEnabled: false,
-    })
+      getEnabledChains({ includeTestnets: true, isTestnetModeEnabled: false, featureFlaggedChainIds: ALL_CHAIN_IDS }),
+    ).toEqual(SPRY_ENABLED)
   })
 })

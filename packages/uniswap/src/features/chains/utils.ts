@@ -231,66 +231,50 @@ export function filterChainIdsByPlatform<T extends number>(chainIds: T[], platfo
   })
 }
 
+// Spry interface: the app is hardcoded to Spry's deployed chain(s). Base Sepolia
+// is the only enabled network; the testnet-mode toggle and chain feature flags are
+// intentionally bypassed so it is always available. (Conceptually mirrors
+// @spry/config's SUPPORTED_CHAIN_IDS / isSpryDeployed; kept as a local constant to
+// avoid a cross-package dependency from packages/uniswap.)
+const SPRY_ENABLED_CHAIN_IDS: UniverseChainId[] = [UniverseChainId.BaseSepolia]
+
 export function getEnabledChains({
   platform,
-  /**
-   * When `true`, it will return all enabled chains, including testnets.
-   */
-  includeTestnets = false,
   isTestnetModeEnabled,
-  featureFlaggedChainIds,
 }: {
   platform?: Platform
   isTestnetModeEnabled: boolean
   featureFlaggedChainIds: UniverseChainId[]
   includeTestnets?: boolean
 }): EnabledChainsInfo {
+  // Only Spry's deployed chain(s). `includeTestnets` / `isTestnetModeEnabled` and
+  // `featureFlaggedChainIds` are ignored on purpose (see SPRY_ENABLED_CHAIN_IDS).
   const enabledChainInfos = ORDERED_CHAINS.filter((chainInfo) => {
-    // Filter by platform
     if (platform !== undefined && platform !== chainInfo.platform) {
       return false
     }
-
-    // Filter by testnet mode
-    if (!includeTestnets && isTestnetModeEnabled !== isTestnetChain(chainInfo.id)) {
-      return false
-    }
-
-    // Filter by feature flags
-    if (!featureFlaggedChainIds.includes(chainInfo.id)) {
-      return false
-    }
-
-    return true
+    return SPRY_ENABLED_CHAIN_IDS.includes(chainInfo.id)
   })
 
-  // Extract chain IDs and GQL chains from filtered results
   const chains = enabledChainInfos.map((chainInfo) => chainInfo.id)
   const gqlChains = enabledChainInfos.map((chainInfo) => chainInfo.backendChain.chain)
 
-  const result = {
+  return {
     chains,
     gqlChains,
     defaultChainId: getDefaultChainId({ platform, isTestnetModeEnabled }),
     isTestnetModeEnabled,
   }
-
-  return result
 }
 
-function getDefaultChainId({
-  platform,
-  isTestnetModeEnabled,
-}: {
-  platform?: Platform
-  isTestnetModeEnabled: boolean
-}): UniverseChainId {
+function getDefaultChainId({ platform }: { platform?: Platform; isTestnetModeEnabled: boolean }): UniverseChainId {
   if (platform === Platform.SVM) {
     // TODO(Solana): is there a Solana testnet we can return here?
     return UniverseChainId.Solana
   }
 
-  return isTestnetModeEnabled ? UniverseChainId.Sepolia : UniverseChainId.Mainnet
+  // Spry interface: default to Spry's chain (Base Sepolia) for EVM.
+  return UniverseChainId.BaseSepolia
 }
 
 /** Returns all stablecoins for a given chainId. */
