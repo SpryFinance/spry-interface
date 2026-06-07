@@ -1,0 +1,325 @@
+import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Button, Flex, ModalCloseIcon, Text, TouchableArea, useDynamicFontSizing } from 'ui/src'
+import { BackArrow } from 'ui/src/components/icons/BackArrow'
+import type { UniverseChainId } from 'uniswap/src/features/chains/types'
+import {
+  getEarnAmountValidation,
+  getEarnPercentageInput,
+  getProjectedAnnualEarnings,
+} from 'uniswap/src/features/earn/amount'
+import type { EarnDepositSourceOption, EarnVaultInfo } from 'uniswap/src/features/earn/types'
+import { useAppFiatCurrency, useFiatCurrencyComponents } from 'uniswap/src/features/fiatCurrency/hooks'
+import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
+import { useFiatTokenConversion } from 'uniswap/src/features/transactions/hooks/useFiatTokenConversion'
+import useResizeObserver from 'use-resize-observer'
+import { NumberType } from 'utilities/src/format/types'
+import { isSafeNumber } from 'utilities/src/primitives/integer'
+import { DepositTokenSelector } from '~/features/earn/DepositTokenSelector'
+import { PredefinedAmount } from '~/pages/Swap/Buy/PredefinedAmount'
+import { AlternateCurrencyDisplay } from '~/pages/Swap/common/AlternateCurrencyDisplay'
+import {
+  NumericalInputMimic,
+  NumericalInputSymbolContainer,
+  NumericalInputWrapper,
+  StyledNumericalInput,
+} from '~/pages/Swap/common/shared'
+
+const CHAR_WIDTH = 45
+const MAX_FONT_SIZE = 70
+const MIN_FONT_SIZE = 24
+const INPUT_MAX_WIDTH = 360
+const FIAT_DECIMALS = 2
+
+const PERCENT_OPTIONS = [0.25, 0.5, 0.75, 1] as const
+
+interface DepositAmountViewProps {
+  vault: EarnVaultInfo
+  depositSourceOptions: EarnDepositSourceOption[]
+  selectedDepositSource: EarnDepositSourceOption | undefined
+  onSelectDepositSource: (currencyId: string) => void
+  initialAmount?: string
+  onBack: () => void
+  onClose: () => void
+  onReview: (params: { amount: string; sourceChainId: UniverseChainId; sourceCurrencyId: string }) => void
+}
+
+export function DepositAmountView({
+  vault,
+  depositSourceOptions,
+  selectedDepositSource,
+  onSelectDepositSource,
+  initialAmount = '',
+  onBack,
+  onClose,
+  onReview,
+}: DepositAmountViewProps): JSX.Element {
+  const { t } = useTranslation()
+  const { convertFiatAmount, formatNumberOrString, formatPercent } = useLocalizationContext()
+  const fiatCurrency = useAppFiatCurrency()
+  const { symbol: fiatSymbol } = useFiatCurrencyComponents(fiatCurrency)
+
+  const currency = selectedDepositSource?.currencyInfo.currency
+
+  const availableBalanceQuantity = selectedDepositSource?.balanceQuantity ?? 0
+  const availableBalanceUsd = selectedDepositSource?.balanceUsd
+
+  const [amount, setAmount] = useState(initialAmount)
+  const [inputInFiat, setInputInFiat] = useState(true)
+  const inputRef = useRef<ComponentRef<typeof StyledNumericalInput>>(null)
+  const hiddenObserver = useResizeObserver<HTMLElement>()
+
+  const { fontSize, onLayout, onSetFontSize, onExtraElementLayout } = useDynamicFontSizing({
+    maxCharWidthAtMaxFontSize: CHAR_WIDTH,
+    maxFontSize: MAX_FONT_SIZE,
+    minFontSize: MIN_FONT_SIZE,
+    maxWidth: INPUT_MAX_WIDTH,
+  })
+
+  // Recalculate font sizing once on mount when seeded with a non-empty amount
+  // (e.g., navigating back from the review view).
+  useEffect(() => {
+    if (initialAmount) {
+      onSetFontSize(initialAmount)
+    }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- intentional run-once on mount
+  }, [])
+
+  // Source chain drives the fiat<->token conversion — per-chain variants price independently.
+  const { fiatToToken, tokenToFiat } = useFiatTokenConversion({ currency })
+  const convertUsdToLocalFiat = useCallback(
+    (balanceUsd: number): number => convertFiatAmount(balanceUsd).amount,
+    [convertFiatAmount],
+  )
+
+  const handleUserInput = useCallback(
+    (value: string) => {
+      if (!isSafeNumber(value)) {
+        return
+      }
+      const normalized = value.replace(/^0+(?=\d)/, '')
+      onSetFontSize(normalized)
+      setAmount(normalized)
+    },
+    [onSetFontSize],
+  )
+
+  const handlePercentPress = useCallback(
+    (pct: number) => {
+      const percentageInput = getEarnPercentageInput({
+        balanceQuantity: availableBalanceQuantity,
+        balanceUsd: availableBalanceUsd,
+        convertUsdToLocalFiat,
+        fiatDecimals: FIAT_DECIMALS,
+        percentage: pct,
+        tokenDecimals: currency?.decimals ?? FIAT_DECIMALS,
+      })
+      const value = percentageInput.inputInFiat ? percentageInput.exactAmountFiat : percentageInput.exactAmountToken
+      setInputInFiat(percentageInput.inputInFiat)
+      onSetFontSize(value)
+      setAmount(value)
+    },
+    [availableBalanceQuantity, availableBalanceUsd, convertUsdToLocalFiat, currency?.decimals, onSetFontSize],
+  )
+
+  const parsedAmount = Number(amount) || 0
+
+  const alternateDisplayAmount = useMemo(() => {
+    if (!amount) {
+      return undefined
+    }
+    return inputInFiat ? (fiatToToken(amount) ?? undefined) : (tokenToFiat(amount) ?? undefined)
+  }, [amount, fiatToToken, inputInFiat, tokenToFiat])
+
+  // Validate in token units so unpriced tokens (no USD valuation) still gate over-balance.
+  const inputAsTokens = useMemo<number | undefined>(() => {
+    if (parsedAmount <= 0) {
+      return 0
+    }
+    if (!inputInFiat) {
+      return parsedAmount
+    }
+    const tokenStr = fiatToToken(amount)
+    return tokenStr !== null ? Number(tokenStr) : undefined
+  }, [amount, fiatToToken, inputInFiat, parsedAmount])
+
+  // Block review when fiat conversion is unavailable (review consumes fiat) or token-quantity
+  // can't be derived from a fiat input (over-balance unverifiable).
+  const { isOverBalance, isReviewDisabled } = getEarnAmountValidation({
+    availableAmount: availableBalanceQuantity,
+    comparisonAmount: inputAsTokens,
+    hasRequiredSelection: selectedDepositSource !== undefined,
+    inputAmount: parsedAmount,
+    isConversionPending: !inputInFiat && alternateDisplayAmount === undefined,
+  })
+
+  // Base projection on local-fiat so the figure stays comparable across unit toggles.
+  const projectedEarningsBaseLocalFiat = inputInFiat
+    ? parsedAmount
+    : parsedAmount > 0
+      ? Number(tokenToFiat(amount) ?? 0)
+      : 0
+  const projectedAnnualEarnings = getProjectedAnnualEarnings({
+    balance: projectedEarningsBaseLocalFiat,
+    apyPercent: vault.apyPercent,
+  })
+
+  const formatLocalFiat = useCallback(
+    (value: number): string =>
+      formatNumberOrString({
+        value,
+        type: NumberType.FiatStandard,
+        currencyCode: fiatCurrency,
+      }),
+    [fiatCurrency, formatNumberOrString],
+  )
+
+  const ctaLabel = isOverBalance ? t('explore.earn.deposit.insufficientBalance') : t('common.button.review')
+  const apyLabel = t('explore.earn.vault.rateValue', {
+    apy: formatPercent(vault.apyPercent),
+  })
+
+  const scaledInputWidth = useMemo(
+    () => (amount && hiddenObserver.width ? hiddenObserver.width + 1 : undefined),
+    [amount, hiddenObserver.width],
+  )
+
+  // Wire format is local fiat — review converts to USD internally. See useEarnVaultModalFlow.
+  const handleReview = useCallback(() => {
+    if (!selectedDepositSource) {
+      return
+    }
+    const localFiat = inputInFiat ? amount : tokenToFiat(amount)
+    if (localFiat === null) {
+      return
+    }
+    onReview({
+      amount: localFiat,
+      sourceChainId: selectedDepositSource.chainId,
+      sourceCurrencyId: selectedDepositSource.currencyInfo.currencyId,
+    })
+  }, [amount, inputInFiat, onReview, selectedDepositSource, tokenToFiat])
+
+  const focusInput = useCallback(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  // Toggle also converts the value so $1 of ETH becomes ~0.0003 ETH (not the literal string).
+  const handleToggleInputUnit = useCallback(() => {
+    setInputInFiat((prev) => {
+      const next = !prev
+      if (!amount) {
+        return next
+      }
+      const converted = next ? tokenToFiat(amount) : fiatToToken(amount)
+      if (converted === null) {
+        // No price yet — leave the input as-is.
+        return next
+      }
+      const trimmed = next ? Number(converted).toFixed(FIAT_DECIMALS) : converted
+      onSetFontSize(trimmed)
+      setAmount(trimmed)
+      return next
+    })
+  }, [amount, fiatToToken, onSetFontSize, tokenToFiat])
+
+  const maxDecimals = inputInFiat ? FIAT_DECIMALS : (currency?.decimals ?? FIAT_DECIMALS)
+
+  return (
+    <Flex gap="$spacing16">
+      <Flex row alignItems="center" justifyContent="space-between">
+        <TouchableArea onPress={onBack} hoverable>
+          <BackArrow color="$neutral2" size="$icon.24" />
+        </TouchableArea>
+        <Text variant="body2" color="$neutral1">
+          {t('explore.earn.deposit.title')}
+        </Text>
+        <ModalCloseIcon onClose={onClose} />
+      </Flex>
+
+      <Flex gap="$spacing4">
+        <Flex
+          backgroundColor="$surface1"
+          borderWidth="$spacing1"
+          borderColor="$surface3"
+          borderRadius="$rounded20"
+          px="$spacing24"
+          py="$spacing48"
+          gap="$spacing16"
+          alignItems="center"
+          cursor="text"
+          onPress={focusInput}
+          onLayout={onLayout}
+        >
+          <NumericalInputWrapper>
+            <Flex onLayout={onExtraElementLayout}>
+              {inputInFiat && (
+                <NumericalInputSymbolContainer showPlaceholder={!amount} numericalFontSize={fontSize}>
+                  {fiatSymbol}
+                </NumericalInputSymbolContainer>
+              )}
+            </Flex>
+            <StyledNumericalInput
+              value={amount}
+              onUserInput={handleUserInput}
+              placeholder="0"
+              fieldWidth={scaledInputWidth}
+              numericalFontSize={fontSize}
+              hasPrefix={inputInFiat}
+              maxDecimals={maxDecimals}
+              ref={inputRef}
+            />
+            <NumericalInputMimic ref={hiddenObserver.ref} numericalFontSize={fontSize}>
+              {amount}
+            </NumericalInputMimic>
+          </NumericalInputWrapper>
+
+          {currency && amount ? (
+            <Flex height={36} justifyContent="center">
+              <AlternateCurrencyDisplay
+                inputCurrency={currency}
+                inputInFiat={inputInFiat}
+                exactAmountOut={alternateDisplayAmount}
+                onToggle={handleToggleInputUnit}
+                disabled={alternateDisplayAmount === undefined}
+              />
+            </Flex>
+          ) : (
+            <Flex row alignItems="center" gap="$spacing8" justifyContent="center" flexWrap="wrap">
+              {PERCENT_OPTIONS.map((pct) => (
+                <PredefinedAmount
+                  key={pct}
+                  label={pct === 1 ? t('common.max') : `${Math.round(pct * 100)}%`}
+                  onPress={() => handlePercentPress(pct)}
+                />
+              ))}
+            </Flex>
+          )}
+        </Flex>
+
+        <DepositTokenSelector
+          apyLabel={apyLabel}
+          options={depositSourceOptions}
+          selectedSourceCurrencyId={selectedDepositSource?.currencyInfo.currencyId ?? vault.currencyId}
+          onSelectSourceCurrency={onSelectDepositSource}
+        />
+      </Flex>
+
+      <Flex row alignItems="center" justifyContent="space-between" px="$spacing4">
+        <Text variant="body3" color="$accent1">
+          {apyLabel}
+        </Text>
+        <Text variant="body3" color={parsedAmount > 0 ? '$statusSuccess' : '$neutral2'}>
+          {`+${formatLocalFiat(projectedAnnualEarnings)} `}
+          <Text variant="body3" color="$neutral2">
+            {t('explore.earn.deposit.perYear')}
+          </Text>
+        </Text>
+      </Flex>
+
+      <Button emphasis="primary" size="large" py="$spacing24" isDisabled={isReviewDisabled} onPress={handleReview}>
+        {ctaLabel}
+      </Button>
+    </Flex>
+  )
+}
