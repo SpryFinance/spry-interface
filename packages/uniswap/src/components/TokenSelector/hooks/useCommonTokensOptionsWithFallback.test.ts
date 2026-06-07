@@ -64,6 +64,24 @@ describe(useCommonTokensOptionsWithFallback, () => {
     expect(symbols).toContain('sptB')
   })
 
+  it('falls back to local COMMON_BASES tokens when the primary result is undefined (Base Sepolia)', async () => {
+    // The gateway-backed primary (useAllCommonBaseCurrencies, filtered to the chain)
+    // can be undefined - not just [] - for Base Sepolia. Regression guard that the
+    // fallback uses `!data?.length`, not `=== 0`, so it still kicks in.
+    mockUseCommonTokensOptions.mockReturnValue({ data: undefined, error: undefined, loading: false, refetch: vi.fn() })
+    mockUseCurrencies.mockReturnValue({ data: [], error: undefined, loading: false, refetch: vi.fn() })
+
+    const { result } = renderHook(() =>
+      useCommonTokensOptionsWithFallback({ chainFilter: UniverseChainId.BaseSepolia, portfolioData }),
+    )
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const symbols = (result.current.data ?? []).map((opt) => opt.currencyInfo.currency.symbol)
+    expect(symbols).toContain('sptA')
+    expect(symbols).toContain('sptB')
+  })
+
   it('uses the gateway-resolved options when present (normal path is unchanged)', async () => {
     mockUseCommonTokensOptions.mockReturnValue({ data: [], error: undefined, loading: false, refetch: vi.fn() })
     const gatewayCurrencyInfo = makeCurrencyInfo(

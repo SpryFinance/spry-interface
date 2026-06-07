@@ -34,7 +34,11 @@ export function useCommonTokensOptionsWithFallback({
     portfolioBalancesById: {},
   })
 
-  const shouldFallback = data?.length === 0 && commonBases?.length
+  // Fall back to the local COMMON_BASES when the primary common-tokens result is
+  // empty OR undefined. For Base Sepolia the gateway-backed primary
+  // (useAllCommonBaseCurrencies, filtered to the chain) yields no tokens, and `data`
+  // can be undefined (not just []) - so guard with `!data?.length`, not `=== 0`.
+  const shouldFallback = !data?.length && commonBases?.length
 
   // useCurrencies() re-resolves the common bases via the gateway (useTokenProjects),
   // which does not serve every chain (e.g. Base Sepolia / Spry tokens). When that
