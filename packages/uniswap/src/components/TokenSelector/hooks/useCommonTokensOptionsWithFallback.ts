@@ -41,11 +41,15 @@ export function useCommonTokensOptionsWithFallback({
   const shouldFallback = !data?.length && commonBases?.length
 
   // useCurrencies() re-resolves the common bases via the gateway (useTokenProjects),
-  // which does not serve every chain (e.g. Base Sepolia / Spry tokens). When that
-  // re-fetch comes back empty, render the local COMMON_BASES entries directly (they
-  // are already complete CurrencyInfos) so the tokens still appear.
+  // which does not serve every chain. For gateway-unsupported chains (e.g. Base
+  // Sepolia) that re-fetch is empty OR INCOMPLETE - it resolves only native ETH, not
+  // the ERC20s (sptA/sptB/WETH). Prefer the gateway result only when it is at least as
+  // complete as the local list; otherwise render the local COMMON_BASES (already
+  // complete CurrencyInfos) so every entry appears.
   const fallbackTokenOptions =
-    commonBasesTokenOptions && commonBasesTokenOptions.length > 0 ? commonBasesTokenOptions : commonBases
+    commonBasesTokenOptions && commonBasesTokenOptions.length >= (commonBases?.length ?? 0)
+      ? commonBasesTokenOptions
+      : commonBases
 
   return useMemo(
     () => ({

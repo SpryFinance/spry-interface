@@ -82,24 +82,25 @@ describe(useCommonTokensOptionsWithFallback, () => {
     expect(symbols).toContain('sptB')
   })
 
-  it('uses the gateway-resolved options when present (normal path is unchanged)', async () => {
+  it('uses the complete local list when the gateway re-fetch is PARTIAL (only native ETH)', async () => {
+    // The real Base Sepolia bug: the gateway resolves only native ETH (1 token), not
+    // the ERC20s, so a naive "use gateway if non-empty" drops sptA/sptB. The fix prefers
+    // the gateway result only when it is at least as complete as the local COMMON_BASES.
     mockUseCommonTokensOptions.mockReturnValue({ data: [], error: undefined, loading: false, refetch: vi.fn() })
-    const gatewayCurrencyInfo = makeCurrencyInfo(
+    const ethOnly = makeCurrencyInfo(
       new Token(UniverseChainId.BaseSepolia, SPT_A_ADDRESS, 18, 'sptA', 'Spry Test Token A'),
     )
-    mockUseCurrencies.mockReturnValue({
-      data: [gatewayCurrencyInfo],
-      error: undefined,
-      loading: false,
-      refetch: vi.fn(),
-    })
+    mockUseCurrencies.mockReturnValue({ data: [ethOnly], error: undefined, loading: false, refetch: vi.fn() })
 
     const { result } = renderHook(() =>
       useCommonTokensOptionsWithFallback({ chainFilter: UniverseChainId.BaseSepolia, portfolioData }),
     )
 
     await waitFor(() => expect(result.current.loading).toBe(false))
-    // When the gateway returns options, those are used (the fix does not break the normal path).
-    expect(result.current.data?.length).toBeGreaterThan(0)
+    // Partial gateway result (1) < local COMMON_BASES, so the complete local list is used
+    // and sptA + sptB still render.
+    const symbols = (result.current.data ?? []).map((opt) => opt.currencyInfo.currency.symbol)
+    expect(symbols).toContain('sptA')
+    expect(symbols).toContain('sptB')
   })
 })

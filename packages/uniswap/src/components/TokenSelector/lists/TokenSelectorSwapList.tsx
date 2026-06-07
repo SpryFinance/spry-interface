@@ -19,6 +19,7 @@ import { isSwapListLoading } from 'uniswap/src/components/TokenSelector/utils'
 import { useBridgingTokensOptions } from 'uniswap/src/features/bridging/hooks/tokens'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
+import { isBackendSupportedChainId } from 'uniswap/src/features/chains/utils'
 import { DataApiOutageBanner } from 'uniswap/src/features/dataApi/outage/DataApiOutageBanner'
 import { ClearRecentSearchesButton } from 'uniswap/src/features/search/ClearRecentSearchesButton'
 
@@ -78,12 +79,20 @@ function useTokenSectionsForSwap({
 
   const recentlySearchedTokenOptions = useRecentlySearchedTokens(chainFilter)
 
-  const error =
-    (!portfolioTokenOptions && portfolioTokenOptionsError) ||
-    (!trendingTokenOptions && trendingTokenOptionsError) ||
-    (!multichainTokenUxEnabled && !favoriteTokenOptions && favoriteTokenOptionsError) ||
-    (!commonTokenOptions && commonTokenOptionsError) ||
-    (!bridgingTokenOptions && bridgingTokenOptionsError)
+  // Base Sepolia (and any chain with backendSupported: false) is not served by the
+  // Uniswap gateway, so its portfolio / trending / bridging endpoints 400/401. Those
+  // are expected, not fatal - suppress them so the locally-sourced suggested tokens
+  // (COMMON_BASES, e.g. sptA/sptB) still render instead of "Something went wrong".
+  const effectiveChainId = chainFilter ?? oppositeSelectedToken?.chainId ?? defaultChainId
+  const isGatewayUnsupportedChain = !isBackendSupportedChainId(effectiveChainId)
+
+  const error = isGatewayUnsupportedChain
+    ? undefined
+    : (!portfolioTokenOptions && portfolioTokenOptionsError) ||
+      (!trendingTokenOptions && trendingTokenOptionsError) ||
+      (!multichainTokenUxEnabled && !favoriteTokenOptions && favoriteTokenOptionsError) ||
+      (!commonTokenOptions && commonTokenOptionsError) ||
+      (!bridgingTokenOptions && bridgingTokenOptionsError)
 
   const loading =
     (!portfolioTokenOptions && portfolioTokenOptionsLoading) ||
