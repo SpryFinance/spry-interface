@@ -43,6 +43,13 @@ interface UniRpcConfigResolverInput {
 export function createUniRpcConfigResolver(ctx: UniRpcConfigResolverCtx) {
   return (input: UniRpcConfigResolverInput): UniRpcConfig | null => {
     try {
+      // Base Sepolia (the Spry chain) is NOT served by the Uniswap entry-gateway RPC
+      // proxy - `${baseUrl}/rpc/84532` returns 401. Skip UniRPC for it so the resolver
+      // falls back to the chain's direct RPC (sepolia.base.org, from UNIVERSE_CHAIN_INFO).
+      if (input.chainId === UniverseChainId.BaseSepolia) {
+        return null
+      }
+
       if (!ctx.getFeatureFlag()) {
         return null
       }
