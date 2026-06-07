@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "export PATH=\"$HOME/.bun/bin:$PATH\"; source \"$HOME/.nvm/nvm.sh\"; nvm use 22.22.2 >/dev/null; export NODE_OPTIONS=\"--dns-result-order=ipv4first\"; exec bun web dev"
+      ],
+      "port": 3000
+    }
+  ]
+}
