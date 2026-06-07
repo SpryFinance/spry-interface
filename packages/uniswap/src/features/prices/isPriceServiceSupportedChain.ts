@@ -31,6 +31,8 @@ const PRICE_SERVICE_SUPPORT: Record<UniverseChainId, boolean> = {
   // Testnets
   [UniverseChainId.Sepolia]: true,
   [UniverseChainId.UnichainSepolia]: true,
+  // Base Sepolia: Spry's chain; the Uniswap price service does not cover it.
+  [UniverseChainId.BaseSepolia]: false,
 
   // Unsupported — falls back to legacy (TAPI /quote or GraphQL)
   [UniverseChainId.Celo]: false,

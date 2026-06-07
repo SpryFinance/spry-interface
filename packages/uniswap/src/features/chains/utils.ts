@@ -75,6 +75,8 @@ export function fromGraphQLChain(chain: GraphQLApi.Chain | string | undefined): 
       return UniverseChainId.Avalanche
     case GraphQLApi.Chain.Base:
       return UniverseChainId.Base
+    case GraphQLApi.Chain.BaseSepolia:
+      return UniverseChainId.BaseSepolia
     case GraphQLApi.Chain.Bnb:
       return UniverseChainId.Bnb
     case GraphQLApi.Chain.Blast:
