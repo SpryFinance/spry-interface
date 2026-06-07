@@ -1,8 +1,11 @@
 import { getSpryConfig } from '@spry/config'
 import { PoolTier } from '@spry/fee'
 import { buildSwapExactInputSingle, buildSwapExactOutputSingle, spryPoolKey, type Address } from '@spry/sdk'
+import { TradeType } from '@uniswap/sdk-core'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
+import type { TransactionRequestInfo } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
+import type { ClassicTrade } from 'uniswap/src/features/transactions/swap/types/trade'
 import { areAddressesEqual } from 'uniswap/src/utils/addresses'
 
 /** A ready-to-send Spry swap transaction (SpryRouter call). */
@@ -99,4 +102,56 @@ export function buildSprySwapTxRequest(args: {
       })
 
   return { to: tx.to, data: tx.data, value: tx.value, chainId: args.chainId }
+}
+
+/**
+ * Builds the swap-transaction info for a priced Spry ClassicTrade on Base Sepolia,
+ * in the shape the swap-tx service expects (replacing the Trading API /swap call,
+ * which does not serve this chain). Extracts the pool direction and the
+ * slippage-adjusted bounds from the trade, encodes the SpryRouter calldata, and
+ * returns a single populated txRequest.
+ *
+ * Gas is intentionally left for the wallet to estimate at signing time: the input
+ * token is approved in a preceding step, so an eager estimate here would revert
+ * before approval. Returns null if this is not a Base Sepolia Spry swap.
+ */
+export function buildSprySwapTransactionInfo(args: {
+  trade: ClassicTrade
+  account: string
+}): TransactionRequestInfo | null {
+  const { trade, account } = args
+  const chainId = trade.inputAmount.currency.chainId
+  if (chainId !== UniverseChainId.BaseSepolia) {
+    return null
+  }
+
+  const swapTx = buildSprySwapTxRequest({
+    chainId,
+    tokenInAddress: trade.inputAmount.currency.wrapped.address as Address,
+    tokenOutAddress: trade.outputAmount.currency.wrapped.address as Address,
+    exactInput: trade.tradeType === TradeType.EXACT_INPUT,
+    amountIn: BigInt(trade.inputAmount.quotient.toString()),
+    amountOut: BigInt(trade.outputAmount.quotient.toString()),
+    amountOutMin: BigInt(trade.minAmountOut.quotient.toString()),
+    amountInMax: BigInt(trade.maxAmountIn.quotient.toString()),
+    recipient: account as Address,
+    deadline: BigInt(trade.deadline),
+  })
+  if (!swapTx) {
+    return null
+  }
+
+  const txRequest = {
+    to: swapTx.to,
+    data: swapTx.data,
+    value: `0x${swapTx.value.toString(16)}`,
+    chainId,
+  }
+
+  return {
+    txRequests: [txRequest],
+    gasFeeResult: { value: undefined, displayValue: undefined, isLoading: false, error: null },
+    gasEstimate: {},
+    swapRequestArgs: undefined,
+  }
 }

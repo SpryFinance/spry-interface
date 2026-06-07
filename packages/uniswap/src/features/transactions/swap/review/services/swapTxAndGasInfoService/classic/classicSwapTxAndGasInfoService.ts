@@ -14,6 +14,8 @@ export function createClassicSwapTxAndGasInfoService(ctx: {
   gasStrategy: GasStrategy
   transactionSettings: TransactionSettings
   hasOverrides?: boolean
+  /** SPRY: connected account, forwarded to build the SpryRouter swap locally on Base Sepolia. */
+  account?: string
 }): SwapTxAndGasInfoService<ClassicTrade> {
   const getEVMSwapTransactionRequestInfo = createGetEVMSwapTransactionRequestInfo(ctx)
   const getPermitTxInfo = createGetPermitTxInfo(ctx)

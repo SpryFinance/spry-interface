@@ -83,6 +83,10 @@ function useSwapConfig(): {
 
 export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
   const swapConfig = useSwapConfig()
+  // SPRY: the connected account, forwarded into the classic service so Base Sepolia
+  // swaps can set the SpryRouter recipient when building the call locally.
+  const swapFormChainId = useSwapFormStoreDerivedSwapInfo((s) => s.chainId)
+  const account = useActiveAddress(swapFormChainId)
   const presignPermit = usePresignPermit()
   const trace = useTrace()
   const transactionSettings = useAllTransactionSettings()
@@ -111,9 +115,10 @@ export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
       transactionSettings,
       instructionService,
       hasOverrides,
+      account,
     })
     return decorateWithEVMLogging(classicService)
-  }, [swapConfig, transactionSettings, instructionService, hasOverrides, decorateWithEVMLogging])
+  }, [swapConfig, transactionSettings, instructionService, hasOverrides, decorateWithEVMLogging, account])
 
   const bridgeSwapTxInfoService = useMemo(() => {
     const bridgeService = createBridgeSwapTxAndGasInfoService({

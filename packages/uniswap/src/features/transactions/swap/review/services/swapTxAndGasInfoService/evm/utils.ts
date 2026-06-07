@@ -1,4 +1,5 @@
-import type { GasStrategy } from '@universe/api'
+import { type GasStrategy, TradingApi } from '@universe/api'
+import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { TransactionSettings } from 'uniswap/src/features/transactions/components/settings/types'
 import type { ApprovalTxInfo } from 'uniswap/src/features/transactions/swap/review/hooks/useTokenApprovalInfo'
 import type { EVMSwapInstructionsService } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/evm/evmSwapInstructionsService'
@@ -7,6 +8,7 @@ import {
   createProcessSwapResponse,
   getSwapInputExceedsBalance,
 } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
+import { buildSprySwapTransactionInfo } from 'uniswap/src/features/transactions/swap/services/tradeService/sprySwapTransaction'
 import type { DerivedSwapInfo } from 'uniswap/src/features/transactions/swap/types/derivedSwapInfo'
 import type {
   BridgeTrade,
@@ -33,6 +35,9 @@ export function createGetEVMSwapTransactionRequestInfo(ctx: {
    * matches what the user explicitly set.
    */
   hasOverrides?: boolean
+  /** SPRY: the connected account, used as the swap recipient when building the
+   * SpryRouter call locally on Base Sepolia. */
+  account?: string
 }): GetEVMSwapTransactionRequestInfoFn {
   const { gasStrategy, transactionSettings, instructionService, hasOverrides } = ctx
 
@@ -43,6 +48,19 @@ export function createGetEVMSwapTransactionRequestInfo(ctx: {
     approvalTxInfo,
     derivedSwapInfo,
   }) => {
+    // SPRY: the Trading API /swap endpoint does not serve Base Sepolia, so build the
+    // SpryRouter calldata locally for the Spry pool's classic trades.
+    if (
+      trade.routing === TradingApi.Routing.CLASSIC &&
+      ctx.account &&
+      derivedSwapInfo.chainId === UniverseChainId.BaseSepolia
+    ) {
+      const sprySwapInfo = buildSprySwapTransactionInfo({ trade, account: ctx.account })
+      if (sprySwapInfo) {
+        return sprySwapInfo
+      }
+    }
+
     const { tokenApprovalInfo } = approvalTxInfo
 
     const swapQuoteResponse = trade.quote
