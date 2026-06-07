@@ -3,5 +3,22 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["src", "test"]
+  "include": [
+    "src",
+    "test"
+  ],
+  "references": [
+    {
+      "path": "../spry-fee"
+    },
+    {
+      "path": "../spry-config"
+    },
+    {
+      "path": "../spry-subgraph"
+    },
+    {
+      "path": "../spry-slippage"
+    }
+  ]
 }

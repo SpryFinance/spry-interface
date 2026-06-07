@@ -23,9 +23,6 @@
       "path": "./packages/api"
     },
     {
-      "path": "./apps/extension"
-    },
-    {
       "path": "./packages/config"
     },
     {
@@ -35,22 +32,13 @@
       "path": "./config/vitest-presets"
     },
     {
-      "path": "./tools/uniswap-nx"
-    },
-    {
       "path": "./packages/gating"
     },
     {
       "path": "./packages/notifications"
     },
     {
-      "path": "./apps/cli"
-    },
-    {
       "path": "./packages/hashcash-native"
-    },
-    {
-      "path": "./packages/transactional"
     },
     {
       "path": "./packages/mycelium"
@@ -60,15 +48,6 @@
     },
     {
       "path": "./packages/prices"
-    },
-    {
-      "path": "./apps/mobile"
-    },
-    {
-      "path": "./apps/dev-portal"
-    },
-    {
-      "path": "./apps/mission-control"
     },
     {
       "path": "./packages/privacy"
@@ -99,6 +78,21 @@
     },
     {
       "path": "./packages/cryptography"
+    },
+    {
+      "path": "./packages/spry-slippage"
+    },
+    {
+      "path": "./packages/spry-subgraph"
+    },
+    {
+      "path": "./packages/spry-config"
+    },
+    {
+      "path": "./packages/spry-fee"
+    },
+    {
+      "path": "./packages/spry-sdk"
     }
   ]
 }
