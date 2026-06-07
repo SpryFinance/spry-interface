@@ -260,7 +260,6 @@
     "apps/*",
     "packages/*",
     "config/*",
-    "tools/uniswap-nx",
     "labs/*"
   ],
   "patchedDependencies": {
