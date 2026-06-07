@@ -36,13 +36,20 @@ export function useCommonTokensOptionsWithFallback({
 
   const shouldFallback = data?.length === 0 && commonBases?.length
 
+  // useCurrencies() re-resolves the common bases via the gateway (useTokenProjects),
+  // which does not serve every chain (e.g. Base Sepolia / Spry tokens). When that
+  // re-fetch comes back empty, render the local COMMON_BASES entries directly (they
+  // are already complete CurrencyInfos) so the tokens still appear.
+  const fallbackTokenOptions =
+    commonBasesTokenOptions && commonBasesTokenOptions.length > 0 ? commonBasesTokenOptions : commonBases
+
   return useMemo(
     () => ({
-      data: shouldFallback ? commonBasesTokenOptions : data,
+      data: shouldFallback ? fallbackTokenOptions : data,
       error: shouldFallback ? undefined : error,
       refetch,
       loading,
     }),
-    [commonBasesTokenOptions, data, error, loading, refetch, shouldFallback],
+    [fallbackTokenOptions, data, error, loading, refetch, shouldFallback],
   )
 }
