@@ -54,6 +54,7 @@ const CreateAuction = lazy(() => import('~/pages/Liquidity/CreateAuction/CreateA
 const XOAuthCallbackPage = lazy(() => import('~/pages/Liquidity/CreateAuction/XOAuthCallbackPage'))
 const BetaPage = lazy(() => import('~/pages/Beta'))
 const Wrapped = lazy(() => import('~/pages/Wrapped'))
+const SpryProbe = lazy(() => import('~/pages/SpryProbe'))
 
 interface RouterConfig {
   browserRouterEnabled?: boolean
@@ -484,6 +485,16 @@ export const routes: RouteDefinition[] = [
     getElement: () => (
       <Suspense fallback={null}>
         <BetaPage />
+      </Suspense>
+    ),
+  }),
+  // Temporary Spry integration probe: first live read from the @spry/* packages.
+  createRouteDefinition({
+    path: '/spry',
+    getTitle: () => 'Spry',
+    getElement: () => (
+      <Suspense fallback={null}>
+        <SpryProbe />
       </Suspense>
     ),
   }),

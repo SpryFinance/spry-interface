@@ -36,6 +36,11 @@
     "types": ["node"],
     "useUnknownInCatchVariables": true,
     "paths": {
+      "@spry/config": ["./packages/spry-config/src/index.ts"],
+      "@spry/fee": ["./packages/spry-fee/src/index.ts"],
+      "@spry/sdk": ["./packages/spry-sdk/src/index.ts"],
+      "@spry/slippage": ["./packages/spry-slippage/src/index.ts"],
+      "@spry/subgraph": ["./packages/spry-subgraph/src/index.ts"],
       "@universe/analytics/*": ["./packages/analytics/*"],
       "@universe/api/*": ["./packages/api/*"],
       "@universe/chains/*": ["./packages/chains/*"],

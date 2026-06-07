@@ -49,6 +49,7 @@
     "https://*.walletconnect.com",
     "https://*.walletconnect.org",
     "https://api.avax.network/ext/bc/C/rpc",
+    "https://api.goldsky.com",
     "https://api.moonpay.com/",
     "https://api.opensea.io",
     "https://bsc-dataseed.bnbchain.org",

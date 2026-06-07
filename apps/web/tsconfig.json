@@ -76,6 +76,15 @@
       "path": "../../packages/chains"
     },
     {
+      "path": "../../packages/spry-subgraph"
+    },
+    {
+      "path": "../../packages/spry-fee"
+    },
+    {
+      "path": "../../packages/spry-config"
+    },
+    {
       "path": "../../packages/ui"
     },
     {
