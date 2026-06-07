@@ -72,4 +72,5 @@ export const paths = [
   '/extension/uninstall',
   '/wrapped',
   '/preview',
+  '/spry',
 ]

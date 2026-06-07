@@ -20,20 +20,20 @@ export default function SpryProbe(): JSX.Element {
 
   useEffect(() => {
     let cancelled = false
-    async function run(): Promise<void> {
-      try {
-        const client = createSpryGraphClientForChain(chainId)
-        const result = await fetchPools(client, { first: 10 })
-        if (!cancelled) {
-          setPools(result)
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e))
-        }
+    const load = async (): Promise<void> => {
+      const client = createSpryGraphClientForChain(chainId)
+      const result = await fetchPools(client, { first: 10 })
+      if (!cancelled) {
+        setPools(result)
       }
     }
-    void run()
+    // load() is async, so a synchronous throw from client creation also surfaces
+    // here as a rejection; both paths are handled (no floating promise, no void).
+    load().catch((e: unknown) => {
+      if (!cancelled) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    })
     return () => {
       cancelled = true
     }
