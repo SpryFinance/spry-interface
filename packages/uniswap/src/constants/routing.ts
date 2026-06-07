@@ -18,6 +18,8 @@ import {
   OP,
   PATHUSD_TEMPO,
   PORTAL_ETH_CELO,
+  SPRY_TEST_TOKEN_A,
+  SPRY_TEST_TOKEN_B,
   UNI,
   USDC_ARBITRUM,
   USDC_AVALANCHE,
@@ -106,6 +108,15 @@ export const COMMON_BASES: ChainCurrencyList = {
     nativeOnChain(UniverseChainId.Base),
     WRAPPED_NATIVE_CURRENCY[UniverseChainId.Base] as Token,
     USDC_BASE,
+  ].map(buildPartialCurrencyInfo),
+
+  // Spry: Base Sepolia is testnet-only and not served by the Uniswap gateway, so
+  // these hardcoded common bases are the fallback that populates the token selector.
+  [UniverseChainId.BaseSepolia]: [
+    nativeOnChain(UniverseChainId.BaseSepolia),
+    WRAPPED_NATIVE_CURRENCY[UniverseChainId.BaseSepolia] as Token,
+    SPRY_TEST_TOKEN_A,
+    SPRY_TEST_TOKEN_B,
   ].map(buildPartialCurrencyInfo),
 
   [UniverseChainId.Blast]: [

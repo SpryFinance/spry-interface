@@ -34,6 +34,24 @@ export const { USDC: USDC_UNICHAIN } = UNICHAIN_CHAIN_INFO.tokens
 
 export const { USDC: USDC_UNICHAIN_SEPOLIA } = UNICHAIN_SEPOLIA_CHAIN_INFO.tokens
 
+// Spry protocol test tokens on Base Sepolia (the sptA/sptB pool). The Uniswap
+// gateway does not serve Base Sepolia, so these are surfaced via COMMON_BASES
+// (the testnet fallback list) so they appear in the token selector.
+export const SPRY_TEST_TOKEN_A = new Token(
+  UniverseChainId.BaseSepolia,
+  '0xb56d680aea10bb81414851c44f46c8e315932342',
+  18,
+  'sptA',
+  'Spry Test Token A',
+)
+export const SPRY_TEST_TOKEN_B = new Token(
+  UniverseChainId.BaseSepolia,
+  '0xbebc724ee71f74cadfd927ed235e4dc71ff28c8b',
+  18,
+  'sptB',
+  'Spry Test Token B',
+)
+
 export const { USDC: USDC_LINEA, USDT: USDT_LINEA } = LINEA_CHAIN_INFO.tokens
 
 export const { USDM: USDM_MEGAETH, USDe: USDE_MEGAETH } = MEGAETH_CHAIN_INFO.tokens
