@@ -218,7 +218,9 @@ export async function buildSprySwapQuote(
   }
 
   const response: ClassicQuoteResponse = {
-    requestId: 'spry-local-swap',
+    // Vary the id per quote so downstream new-quote detection (isNewQuote) and
+    // error logging key off each distinct price, not a single constant.
+    requestId: `spry-local-swap-${amountIn.toString()}-${amountOut.toString()}`,
     routing: TradingApi.Routing.CLASSIC,
     permitData: null,
     quote: {

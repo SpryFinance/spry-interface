@@ -51,6 +51,19 @@ export function buildSprySwapTxRequest(args: {
     return null
   }
 
+  // Defense-in-depth for a funds-moving call: never send output to the zero
+  // address, and require a positive slippage bound so a wiring mistake cannot
+  // submit an unprotected swap. The bound itself is the trade's slippage limit.
+  if (BigInt(args.recipient) === BigInt(0)) {
+    throw new Error('buildSprySwapTxRequest: recipient must not be the zero address')
+  }
+  if (args.exactInput && args.amountOutMin <= BigInt(0)) {
+    throw new Error('buildSprySwapTxRequest: amountOutMin must be positive for slippage protection')
+  }
+  if (!args.exactInput && args.amountInMax <= BigInt(0)) {
+    throw new Error('buildSprySwapTxRequest: amountInMax must be positive')
+  }
+
   const poolKey = spryPoolKey({
     tokenA: args.tokenInAddress,
     tokenB: args.tokenOutAddress,
