@@ -12,7 +12,7 @@ import {
 // Live checks against the deployed Base Sepolia Spry subgraph (Goldsky). Skipped
 // unless SPRY_LIVE_SUBGRAPH is set.
 //   SPRY_LIVE_SUBGRAPH=1 npx vitest run packages/spry-subgraph/test/live.test.ts
-const enabled = process.env.SPRY_LIVE_SUBGRAPH;
+const enabled = process.env['SPRY_LIVE_SUBGRAPH'];
 
 describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
   const client = createSpryGraphClientForChain(ChainId.BASE_SEPOLIA);

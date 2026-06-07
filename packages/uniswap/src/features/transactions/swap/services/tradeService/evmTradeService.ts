@@ -1,11 +1,11 @@
 import { TradingApi } from '@universe/api'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { GetQuoteRequestResult } from 'uniswap/src/features/transactions/swap/hooks/useTrade/createGetQuoteRequestArgs'
+import { buildSpryLocalQuote } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import type {
   IndicativeQuoteRequest,
   TradeRepository,
 } from 'uniswap/src/features/transactions/swap/services/tradeService/tradeRepository'
-import { buildSpryWrapQuote } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import {
   TradeService,
   TradeWithGasEstimates,
@@ -99,12 +99,11 @@ export function createEVMTradeService(ctx: EVMTradeServiceContext): TradeService
         // 401s), so we synthesize the quote locally where we can and never fall
         // through to the gateway for this chain.
         if (validatedInput.currencyIn.chainId === UniverseChainId.BaseSepolia) {
-          // Wrap/unwrap is handled here; pool swaps via the V4 Quoter follow.
-          const spryLocalQuote = buildSpryWrapQuote(validatedInput)
+          // Wrap/unwrap (1:1) and the sptA/sptB pool (V4 Quoter) are synthesized locally.
+          const spryLocalQuote = await buildSpryLocalQuote(validatedInput)
           if (!spryLocalQuote) {
-            // No locally-synthesizable quote (non-wrap pair, a USD price quote, or
-            // a pool swap not yet wired to the V4 Quoter): return no trade rather
-            // than issuing a doomed gateway request.
+            // No locally-synthesizable quote (e.g. a non-Spry pair or a USD price
+            // quote): return no trade rather than issuing a doomed gateway request.
             return { trade: null }
           }
           const localResult = transformQuoteToTrade({

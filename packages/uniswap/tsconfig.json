@@ -36,6 +36,15 @@
       "path": "../api"
     },
     {
+      "path": "../spry-sdk"
+    },
+    {
+      "path": "../spry-fee"
+    },
+    {
+      "path": "../spry-config"
+    },
+    {
       "path": "../../config/vitest-presets"
     }
   ],

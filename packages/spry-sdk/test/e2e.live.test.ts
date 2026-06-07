@@ -22,7 +22,7 @@ import {
 // @spry/slippage (bounds) -> @spry/sdk (calldata). Skipped unless SPRY_LIVE_RPC
 // is set.
 //   SPRY_LIVE_RPC=https://sepolia.base.org npx vitest run packages/spry-sdk/test/e2e.live.test.ts
-const RPC = process.env.SPRY_LIVE_RPC;
+const RPC = process.env['SPRY_LIVE_RPC'];
 const log = (...args: unknown[]) => console.log(...args); // eslint-disable-line no-console
 
 describe.skipIf(!RPC)('live end-to-end swap pricing (Base Sepolia)', () => {

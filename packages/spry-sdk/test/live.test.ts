@@ -9,7 +9,7 @@ import { createSpryHookClient, spryHookAbi, type ReadContractFn } from '../src/i
 // Skipped unless SPRY_LIVE_RPC is set to a Base Sepolia RPC URL, so the default
 // test run stays deterministic and offline.
 //   SPRY_LIVE_RPC=https://sepolia.base.org npx vitest run packages/spry-sdk/test/live.test.ts
-const RPC = process.env.SPRY_LIVE_RPC;
+const RPC = process.env['SPRY_LIVE_RPC'];
 
 describe.skipIf(!RPC)('live Base Sepolia deployment', () => {
   const config = requireSpryConfig(ChainId.BASE_SEPOLIA);
