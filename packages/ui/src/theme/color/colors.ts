@@ -366,6 +366,7 @@ export const colorsLight = {
   // Testnets
   chain_11155111: networkColors.ethereum.light,
   chain_1301: networkColors.unichain.light,
+  chain_84532: networkColors.base.light,
   chain_10143: networkColors.monad.light,
 
   pinkThemed: colors.pinkLight,
@@ -460,6 +461,7 @@ export const colorsDark = {
   // Testnets
   chain_11155111: networkColors.ethereum.dark,
   chain_1301: networkColors.unichain.dark,
+  chain_84532: networkColors.base.dark,
   chain_10143: networkColors.monad.dark,
 
   pinkThemed: colors.pinkDark,
