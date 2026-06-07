@@ -8,6 +8,8 @@
 import type { PoolTier, SpryZone, SpryDispatchCase } from '@spry/fee';
 
 export interface TokenRef {
+  /** The token (currency) address. */
+  id: string;
   symbol: string;
   decimals: string;
 }
