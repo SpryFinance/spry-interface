@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:live": "SPRY_LIVE_RPC=${SPRY_LIVE_RPC:-https://sepolia.base.org} SPRY_LIVE_SUBGRAPH=${SPRY_LIVE_SUBGRAPH:-1} vitest run"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
