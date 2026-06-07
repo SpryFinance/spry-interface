@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ChainId } from '@spry/config';
+import { TIER_PARAMS, marginalFee, zoneOf, dispatchCase } from '@spry/fee';
 import {
   createSpryGraphClientForChain,
   fetchPools,
@@ -51,5 +52,36 @@ describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
       // eslint-disable-next-line no-console
       console.log('no Spry pools indexed yet on Base Sepolia');
     }
+  });
+
+  it('@spry/fee reproduces the on-chain fee of indexed swaps', async () => {
+    const pools = await fetchPools(client, { first: 1 });
+    const pool = pools[0];
+    if (!pool) {
+      // eslint-disable-next-line no-console
+      console.log('no pools yet; skipping swap reproduction');
+      return;
+    }
+    const swaps = await fetchPoolSwaps(client, pool.id, { first: 10 });
+    if (swaps.length === 0) {
+      // eslint-disable-next-line no-console
+      console.log('no swaps indexed yet; skipping swap reproduction');
+      return;
+    }
+    const params = TIER_PARAMS[pool.tier];
+    let reproduced = 0;
+    for (const s of swaps) {
+      if (s.cumBefore === null || s.cumAfter === null) continue;
+      const cumBefore = BigInt(s.cumBefore);
+      const cumAfter = BigInt(s.cumAfter);
+      // The JS curve must reproduce the exact per-swap fee the contract charged.
+      expect(marginalFee(cumBefore, cumAfter, params), `fee for cum ${s.cumBefore}->${s.cumAfter}`).toBe(Number(s.fee));
+      if (s.zone) expect(zoneOf(cumAfter, params)).toBe(s.zone);
+      if (s.dispatchCase) expect(dispatchCase(cumBefore, cumAfter)).toBe(s.dispatchCase);
+      reproduced++;
+    }
+    // eslint-disable-next-line no-console
+    console.log(`reproduced ${reproduced} live swap fee(s) exactly (tier ${pool.tier})`);
+    expect(reproduced).toBeGreaterThan(0);
   });
 });

@@ -43,6 +43,9 @@ export interface SwapRow {
   zone: SpryZone | null;
   dispatchCase: SpryDispatchCase | null;
   viaSpryRouter: boolean;
+  /** Block-windowed cumulative before/after this swap (the SpryFee endpoints). */
+  cumBefore: string | null;
+  cumAfter: string | null;
 }
 
 /** A row from the tiers overview query (`Tier` entity; id = tier name). */

@@ -34,6 +34,8 @@ export const POOL_SWAPS_QUERY = `
       zone
       dispatchCase
       viaSpryRouter
+      cumBefore
+      cumAfter
     }
   }
 `;
