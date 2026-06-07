@@ -45,28 +45,27 @@ else
     else
         CURRENT_BUN_VERSION=$(bun -v | tr -d '\n' | tr -d '\r')
 
-        # Compare versions
-        if [ "$CURRENT_BUN_VERSION" != "$EXPECTED_BUN_VERSION" ]; then
+        # Accept any bun >= the pinned minimum (matches engines ">=1.3.11").
+        # Portable numeric compare (no `sort -V` dependency): the lower of the
+        # two versions, by numeric major.minor.patch, must be the expected one.
+        LOWER_BUN_VERSION=$(printf '%s\n%s\n' "$EXPECTED_BUN_VERSION" "$CURRENT_BUN_VERSION" | sort -t. -k1,1n -k2,2n -k3,3n | head -n1)
+        if [ "$LOWER_BUN_VERSION" != "$EXPECTED_BUN_VERSION" ]; then
             if [ "$IS_VERCEL" = "1" ]; then
-                echo -e "${YELLOW}Warning: bun version mismatch (Vercel environment)${NC}"
-                echo -e "Expected: ${GREEN}${EXPECTED_BUN_VERSION}${NC}"
-                echo -e "Current:  ${YELLOW}${CURRENT_BUN_VERSION}${NC}"
+                echo -e "${YELLOW}Warning: bun older than minimum (Vercel environment)${NC}"
+                echo -e "Minimum: ${GREEN}${EXPECTED_BUN_VERSION}${NC}"
+                echo -e "Current: ${YELLOW}${CURRENT_BUN_VERSION}${NC}"
                 echo -e "${YELLOW}Version mismatch ignored in Vercel environment${NC}"
             else
-                echo -e "${RED}Error: bun version mismatch${NC}"
-                echo -e "Expected: ${GREEN}${EXPECTED_BUN_VERSION}${NC}"
-                echo -e "Current:  ${RED}${CURRENT_BUN_VERSION}${NC}"
+                echo -e "${RED}Error: bun is older than the required minimum${NC}"
+                echo -e "Minimum: ${GREEN}${EXPECTED_BUN_VERSION}${NC}"
+                echo -e "Current: ${RED}${CURRENT_BUN_VERSION}${NC}"
                 echo ""
-                echo -e "${YELLOW}Please update bun to version ${EXPECTED_BUN_VERSION}:${NC}"
-                echo -e "  ${YELLOW}bun upgrade --canary # if you need canary${NC}"
-                echo -e "  ${YELLOW}bun upgrade # for stable releases${NC}"
-                echo ""
-                echo -e "${YELLOW}Or install the specific version:${NC}"
-                echo -e "  ${YELLOW}curl -fsSL https://bun.sh/install | bash -s \"bun-v${EXPECTED_BUN_VERSION}\"${NC}"
+                echo -e "${YELLOW}Please update bun to at least ${EXPECTED_BUN_VERSION}:${NC}"
+                echo -e "  ${YELLOW}bun upgrade${NC}"
                 HAS_ERROR=1
             fi
         else
-            echo -e "${GREEN}✓ bun version ${CURRENT_BUN_VERSION} matches expected version${NC}"
+            echo -e "${GREEN}✓ bun version ${CURRENT_BUN_VERSION} >= ${EXPECTED_BUN_VERSION}${NC}"
         fi
     fi
 fi
