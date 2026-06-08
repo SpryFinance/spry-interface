@@ -32,7 +32,8 @@ const tabs = [
     ],
   },
 ]
-const socialMediaLinks = ['https://github.com/Uniswap', 'https://x.com/Uniswap', 'https://discord.com/invite/uniswap']
+// Discord is a '#' placeholder until Spry's invite link exists, so it is not asserted here.
+const socialMediaLinks = ['https://github.com/spryfinance', 'https://x.com/spry_fi']
 
 test.describe(
   'NavBar',

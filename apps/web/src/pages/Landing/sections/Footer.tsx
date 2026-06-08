@@ -33,21 +33,21 @@ export function Socials({ iconSize, gap }: { iconSize?: string; gap?: FlexProps[
     <Flex row gap={gap ?? '$spacing24'} maxHeight={iconSize} alignItems="flex-start">
       <MobileTouchableArea>
         <SocialIcon iconColor="#00C32B">
-          <Anchor href="https://github.com/Uniswap" target="_blank">
+          <Anchor href="https://github.com/spryfinance" target="_blank">
             <Github size={iconSize} fill="inherit" />
           </Anchor>
         </SocialIcon>
       </MobileTouchableArea>
       <MobileTouchableArea>
         <SocialIcon iconColor="#20BAFF">
-          <Anchor href="https://x.com/Uniswap" target="_blank">
+          <Anchor href="https://x.com/spry_fi" target="_blank">
             <Twitter size={iconSize} fill="inherit" />
           </Anchor>
         </SocialIcon>
       </MobileTouchableArea>
       <MobileTouchableArea>
         <SocialIcon iconColor="#5F51FF">
-          <Anchor href="https://discord.com/invite/uniswap" target="_blank">
+          <Anchor href="#" target="_blank">
             <Discord size={iconSize} fill="inherit" />
           </Anchor>
         </SocialIcon>
