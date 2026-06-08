@@ -10,6 +10,7 @@ import {
 } from 'uniswap/src/features/transactions/components/settings/stores/transactionSettingsStore/useTransactionSettingsStore'
 import { MaxSlippageRow } from 'uniswap/src/features/transactions/swap/components/MaxSlippageRow/MaxSlippageRow'
 import { RoutingInfo } from 'uniswap/src/features/transactions/swap/components/RoutingInfo/RoutingInfo'
+import { SpryFeeInfo } from 'uniswap/src/features/transactions/swap/components/SpryFeeInfo/SpryFeeInfo'
 import { SwapRateRatio } from 'uniswap/src/features/transactions/swap/components/SwapRateRatio'
 import { FormNetworkCostRow } from 'uniswap/src/features/transactions/swap/form/SwapFormScreen/FormNetworkCostRow'
 import { useFeeOnTransferAmounts } from 'uniswap/src/features/transactions/swap/hooks/useFeeOnTransferAmount'
@@ -115,6 +116,7 @@ export function ExpandableRows(): JSX.Element | null {
           {trade.trade.routing !== TradingApi.Routing.BRIDGE && !isWrap(trade.trade) && (
             <RoutingInfo trade={trade.trade} gasFee={gasFee} chainId={chainId} />
           )}
+          <SpryFeeInfo trade={trade.trade} chainId={chainId} />
         </TransactionDetails>
       </Accordion.Content>
     </Accordion.HeightAnimator>
