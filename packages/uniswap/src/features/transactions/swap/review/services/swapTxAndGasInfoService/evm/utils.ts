@@ -1,4 +1,6 @@
 import { type GasStrategy, TradingApi } from '@universe/api'
+import { DEFAULT_CUSTOM_DEADLINE } from 'uniswap/src/constants/transactions'
+import { getTradeSettingsDeadline } from 'uniswap/src/data/apiClients/tradingApi/utils/getTradeSettingsDeadline'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { TransactionSettings } from 'uniswap/src/features/transactions/components/settings/types'
 import type { ApprovalTxInfo } from 'uniswap/src/features/transactions/swap/review/hooks/useTokenApprovalInfo'
@@ -56,7 +58,15 @@ export function createGetEVMSwapTransactionRequestInfo(ctx: {
       ctx.account &&
       derivedSwapInfo.chainId === UniverseChainId.BaseSepolia
     ) {
-      const sprySwapInfo = await buildSprySwapTransactionInfo({ trade, account: ctx.account })
+      // SPRY: honor the user's deadline setting (default DEFAULT_CUSTOM_DEADLINE),
+      // since the local SpryRouter build bypasses the Trading API /swap call that
+      // would otherwise apply it.
+      const customDeadline = transactionSettings.customDeadline ?? DEFAULT_CUSTOM_DEADLINE
+      const sprySwapInfo = await buildSprySwapTransactionInfo({
+        trade,
+        account: ctx.account,
+        deadline: getTradeSettingsDeadline(customDeadline),
+      })
       if (sprySwapInfo) {
         return sprySwapInfo
       }

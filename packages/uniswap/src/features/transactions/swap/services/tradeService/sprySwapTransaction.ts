@@ -199,8 +199,11 @@ export function buildSprySwapTxRequest(args: {
 export async function buildSprySwapTransactionInfo(args: {
   trade: ClassicTrade
   account: string
+  /** SPRY: settings-derived deadline (unix seconds). Falls back to the trade's own
+   * placeholder deadline when the caller has not resolved the swap settings. */
+  deadline?: number
 }): Promise<TransactionRequestInfo | null> {
-  const { trade, account } = args
+  const { trade, account, deadline } = args
   const chainId = trade.inputAmount.currency.chainId
   if (chainId !== UniverseChainId.BaseSepolia) {
     return null
@@ -224,7 +227,7 @@ export async function buildSprySwapTransactionInfo(args: {
     amountOutMin: BigInt(trade.minAmountOut.quotient.toString()),
     amountInMax: BigInt(trade.maxAmountIn.quotient.toString()),
     recipient: account as Address,
-    deadline: BigInt(trade.deadline),
+    deadline: BigInt(deadline ?? trade.deadline),
   })
   if (!swapTx) {
     return null
