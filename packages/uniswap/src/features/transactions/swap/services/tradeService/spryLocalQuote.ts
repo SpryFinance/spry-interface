@@ -3,6 +3,7 @@ import {
   createSpryQuoterClient,
   createSpryStateViewClient,
   type SimulateQuoteFn,
+  type SpryQuoterClient,
   type StateViewReadFn,
 } from '@spry/sdk'
 import {
@@ -14,9 +15,9 @@ import {
 } from '@universe/api'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import {
+  discoverSpryPoolGraph,
   findSpryCurrency,
-  findSpryRoute,
-  getSpryPoolGraph,
+  findSpryRoutes,
   toPoolCurrency,
   type SpryHop,
   type SpryPoolCurrency,
@@ -35,9 +36,9 @@ import { baseSepolia } from 'viem/chains'
  *
  * Two cases are handled:
  *  - Wrap/unwrap (native ETH <-> WETH): deterministic 1:1, no chain reads.
- *  - Spry pool swaps (ETH/sptA/sptB): priced on-chain via the V4 Quoter
- *    (authoritative, reflects the SpryHook dynamic fee) + StateView for pool
- *    state. Routes of 1 or 2 hops are found locally (see spryRouting).
+ *  - Spry pool swaps (ETH/sptA/sptB/...): the pools are discovered from the Spry
+ *    subgraph, every candidate route is priced on-chain via the V4 Quoter
+ *    (authoritative, reflects the SpryHook dynamic fee), and the best is kept.
  *
  * Returns null for anything else, so the caller falls through to "no trade".
  */
@@ -123,13 +124,60 @@ function routeToken(currency: SpryPoolCurrency): TradingApi.TokenInRoute {
 }
 
 /**
- * Prices a Spry pool swap on Base Sepolia. Finds the route (1 hop for a direct pool,
- * 2 hops through sptA for ETH<->sptB), prices each hop on-chain via the V4 Quoter
- * (authoritative: runs the swap through the SpryHook so the output reflects the
- * dynamic fee), and reads each pool's state from StateView. Produces a CLASSIC quote
- * with a single V4 route of N pools, which transformQuoteToTrade turns into a
- * ClassicTrade whose input/output amounts come straight from the Quoter. Returns
- * null for any pair with no Spry route.
+ * Price one route hop-by-hop, exactly as the router executes the path. For exact-in
+ * the amount flows forward; for exact-out we size each hop's required input walking
+ * backward, then restore forward order. Throws if any hop reverts (illiquid pool).
+ */
+async function quoteSpryRoute(params: {
+  route: SpryHop[]
+  isExactIn: boolean
+  exactAmount: bigint
+  quoter: SpryQuoterClient
+}): Promise<QuotedHop[]> {
+  const { route, isExactIn, exactAmount, quoter } = params
+  if (isExactIn) {
+    const quoted: QuotedHop[] = []
+    let amount = exactAmount
+    for (const hop of route) {
+      const { amountOut } = await quoter.quoteExactInputSingle({
+        poolKey: hop.poolKey,
+        zeroForOne: hop.zeroForOne,
+        exactAmount: amount,
+      })
+      quoted.push({ hop, amountIn: amount, amountOut })
+      amount = amountOut
+    }
+    return quoted
+  }
+
+  const backward: QuotedHop[] = []
+  let amount = exactAmount
+  for (const hop of [...route].reverse()) {
+    const { amountIn } = await quoter.quoteExactOutputSingle({
+      poolKey: hop.poolKey,
+      zeroForOne: hop.zeroForOne,
+      exactAmount: amount,
+    })
+    backward.push({ hop, amountIn, amountOut: amount })
+    amount = amountIn
+  }
+  backward.reverse()
+  return backward
+}
+
+function routeInput(quoted: QuotedHop[]): bigint {
+  return quoted[0]?.amountIn ?? BigInt(0)
+}
+function routeOutput(quoted: QuotedHop[]): bigint {
+  return quoted[quoted.length - 1]?.amountOut ?? BigInt(0)
+}
+
+/**
+ * Prices a Spry pool swap on Base Sepolia. Discovers the pools, finds every candidate
+ * route (direct or multi-hop, across tiers), prices each on-chain via the V4 Quoter,
+ * and keeps the best. Produces a CLASSIC quote with a single V4 route of N pools,
+ * which transformQuoteToTrade turns into a ClassicTrade whose amounts come straight
+ * from the Quoter. Returns null for any pair with no priceable Spry route.
  */
 export async function buildSprySwapQuote(
   validatedInput: ValidatedTradeInput,
@@ -140,19 +188,19 @@ export async function buildSprySwapQuote(
     return null
   }
 
-  const graph = getSpryPoolGraph(UniverseChainId.BaseSepolia)
-  if (!graph) {
-    return null
-  }
   const config = getSpryConfig(UniverseChainId.BaseSepolia)
   if (!config) {
+    return null
+  }
+  const graph = await discoverSpryPoolGraph(UniverseChainId.BaseSepolia)
+  if (!graph) {
     return null
   }
 
   const fromCurrency = toPoolCurrency(currencyIn)
   const toCurrency = toPoolCurrency(currencyOut)
-  const route = findSpryRoute({ pools: graph.pools, from: fromCurrency, to: toCurrency })
-  if (!route) {
+  const routes = findSpryRoutes({ pools: graph.pools, from: fromCurrency, to: toCurrency })
+  if (routes.length === 0) {
     return null
   }
 
@@ -165,55 +213,43 @@ export async function buildSprySwapQuote(
   const isExactIn = validatedInput.requestTradeType === TradingApi.TradeType.EXACT_INPUT
   const exactAmount = BigInt(validatedInput.amount.quotient.toString())
 
-  // Price each hop in sequence, exactly as the router executes the path. For
-  // exact-in the amount flows forward; for exact-out we size each hop's required
-  // input walking backward, then restore forward order.
-  const quoted: QuotedHop[] = []
-  if (isExactIn) {
-    let amount = exactAmount
-    for (const hop of route) {
-      const { amountOut } = await quoter.quoteExactInputSingle({
-        poolKey: hop.poolKey,
-        zeroForOne: hop.zeroForOne,
-        exactAmount: amount,
-      })
-      quoted.push({ hop, amountIn: amount, amountOut })
-      amount = amountOut
-    }
-  } else {
-    const backward: QuotedHop[] = []
-    let amount = exactAmount
-    for (const hop of [...route].reverse()) {
-      const { amountIn } = await quoter.quoteExactOutputSingle({
-        poolKey: hop.poolKey,
-        zeroForOne: hop.zeroForOne,
-        exactAmount: amount,
-      })
-      backward.push({ hop, amountIn, amountOut: amount })
-      amount = amountIn
-    }
-    backward.reverse()
-    quoted.push(...backward)
+  // Price every candidate route in parallel; a route whose pool reverts (e.g. no
+  // liquidity) drops out rather than failing the whole quote.
+  const priced = (
+    await Promise.all(
+      routes.map((route) => quoteSpryRoute({ route, isExactIn, exactAmount, quoter }).catch(() => null)),
+    )
+  ).filter((quoted): quoted is QuotedHop[] => quoted !== null && quoted.length > 0)
+  if (priced.length === 0) {
+    return null
   }
 
-  const first = quoted[0]
-  const last = quoted[quoted.length - 1]
+  // Best execution: the most output for exact-in, the least input for exact-out.
+  const best = priced.reduce((incumbent, candidate) => {
+    const candidateWins = isExactIn
+      ? routeOutput(candidate) > routeOutput(incumbent)
+      : routeInput(candidate) < routeInput(incumbent)
+    return candidateWins ? candidate : incumbent
+  })
+
+  const first = best[0]
+  const last = best[best.length - 1]
   if (!first || !last) {
     return null
   }
   const totalAmountIn = first.amountIn
   const totalAmountOut = last.amountOut
 
-  // Per-pool state. sqrtPriceX96 and tick come from the same slot0 read so the
-  // v4-sdk Pool's PRICE_BOUNDS invariant holds.
+  // Per-pool state for the chosen route. sqrtPriceX96 and tick come from the same
+  // slot0 read so the v4-sdk Pool's PRICE_BOUNDS invariant holds.
   const states = await Promise.all(
-    quoted.map(async ({ hop }) => {
+    best.map(async ({ hop }) => {
       const [slot0, liquidity] = await Promise.all([stateView.getSlot0(hop.poolId), stateView.getLiquidity(hop.poolId)])
       return { slot0, liquidity }
     }),
   )
 
-  const v4Pools: TradingApi.V4PoolInRoute[] = quoted.map(({ hop, amountIn, amountOut }, index) => {
+  const v4Pools: TradingApi.V4PoolInRoute[] = best.map(({ hop, amountIn, amountOut }, index) => {
     const state = states[index]
     const tokenIn = findSpryCurrency(graph, hop.currencyIn)
     const tokenOut = findSpryCurrency(graph, hop.currencyOut)

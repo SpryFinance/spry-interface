@@ -11,13 +11,13 @@ import {
   type SpryTxRequest,
 } from '@spry/sdk'
 import { TradeType } from '@uniswap/sdk-core'
+import { TradingApi } from '@universe/api'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { TransactionRequestInfo } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
 import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import {
-  findSpryRoute,
-  getSpryPoolGraph,
-  toPoolCurrency,
+  spryHopsFromRoute,
+  type SpryHop,
 } from 'uniswap/src/features/transactions/swap/services/tradeService/spryRouting'
 import type { ClassicTrade } from 'uniswap/src/features/transactions/swap/types/trade'
 
@@ -55,24 +55,23 @@ export interface SprySwapTxRequest {
 }
 
 /**
- * Builds the SpryRouter calldata for a Spry pool swap. The Trading API gateway's
+ * Builds the SpryRouter calldata for a priced Spry route. The Trading API gateway's
  * /swap endpoint does not serve Base Sepolia, so we encode the call locally via the
  * @spry/sdk router builders (which enforce the section 6.1 guards and are round-trip
- * tested). The route is found locally: a 1-hop swap uses the single-pool entry
- * points (which attach native ETH automatically), and a 2-hop swap (ETH<->sptB
- * through sptA) uses the path entry points. Allowance-based: an ERC20 input must
- * already be approved to the SpryRouter (handled by the approval flow); a native ETH
- * input attaches its value instead.
+ * tested). A 1-hop route uses the single-pool entry points (which attach native ETH
+ * automatically); a multi-hop route uses the path entry points. The route is the
+ * exact one the quote chose (read back from the trade), so execution matches the
+ * quoted price. Allowance-based: an ERC20 input must already be approved to the
+ * SpryRouter (handled by the approval flow); a native ETH input attaches its value.
  *
- * The token addresses are pool currencies (native ETH is the zero address). Amounts
- * come from the priced trade: the exact side is the user's input, and the bound
- * (amountOutMin / amountInMax) is the trade's slippage-adjusted limit. Returns null
- * for non-Spry chains or pairs with no Spry route.
+ * Amounts come from the priced trade: the exact side is the user's input, and the
+ * bound (amountOutMin / amountInMax) is the trade's slippage-adjusted limit. Returns
+ * null for non-Spry chains or an empty route.
  */
 export function buildSprySwapTxRequest(args: {
   chainId: number
-  tokenInAddress: Address
-  tokenOutAddress: Address
+  /** The priced route hops, in input -> output order. */
+  route: SpryHop[]
   /** true for EXACT_INPUT, false for EXACT_OUTPUT. */
   exactInput: boolean
   /** Raw exact-input amount (used when exactInput). */
@@ -96,6 +95,12 @@ export function buildSprySwapTxRequest(args: {
     return null
   }
 
+  const firstHop = args.route[0]
+  const lastHop = args.route[args.route.length - 1]
+  if (!firstHop || !lastHop) {
+    return null
+  }
+
   // Defense-in-depth for a funds-moving call: never send output to the zero
   // address, and require a positive slippage bound so a wiring mistake cannot
   // submit an unprotected swap. The bound itself is the trade's slippage limit.
@@ -109,30 +114,17 @@ export function buildSprySwapTxRequest(args: {
     throw new Error('buildSprySwapTxRequest: amountInMax must be positive')
   }
 
-  const graph = getSpryPoolGraph(args.chainId)
-  if (!graph) {
-    return null
-  }
-  const route = findSpryRoute({ pools: graph.pools, from: args.tokenInAddress, to: args.tokenOutAddress })
-  if (!route || route.length === 0) {
-    return null
-  }
-
   const router = config.addresses.spryRouter
 
   let tx: SpryTxRequest
-  if (route.length === 1) {
-    const hop = route[0]
-    if (!hop) {
-      return null
-    }
+  if (args.route.length === 1) {
     // Single-pool entry points attach native ETH automatically (value = amountIn
     // when the pulled currency is native).
     tx = args.exactInput
       ? buildSwapExactInputSingle({
           router,
-          key: hop.poolKey,
-          zeroForOne: hop.zeroForOne,
+          key: firstHop.poolKey,
+          zeroForOne: firstHop.zeroForOne,
           amountIn: args.amountIn,
           amountOutMin: args.amountOutMin,
           recipient: args.recipient,
@@ -140,8 +132,8 @@ export function buildSprySwapTxRequest(args: {
         })
       : buildSwapExactOutputSingle({
           router,
-          key: hop.poolKey,
-          zeroForOne: hop.zeroForOne,
+          key: firstHop.poolKey,
+          zeroForOne: firstHop.zeroForOne,
           amountOut: args.amountOut,
           amountInMax: args.amountInMax,
           recipient: args.recipient,
@@ -149,7 +141,7 @@ export function buildSprySwapTxRequest(args: {
         })
   } else if (args.exactInput) {
     // Forward path: each hop's intermediateCurrency is its output currency.
-    const path: PathKey[] = route.map((hop) => ({
+    const path: PathKey[] = args.route.map((hop) => ({
       intermediateCurrency: hop.currencyOut,
       fee: hop.poolKey.fee,
       tickSpacing: hop.poolKey.tickSpacing,
@@ -158,7 +150,7 @@ export function buildSprySwapTxRequest(args: {
     }))
     tx = buildSwapExactInput({
       router,
-      currencyIn: args.tokenInAddress,
+      currencyIn: firstHop.currencyIn,
       path,
       amountIn: args.amountIn,
       amountOutMin: args.amountOutMin,
@@ -168,7 +160,7 @@ export function buildSprySwapTxRequest(args: {
   } else {
     // Exact-output path is reversed: start at the output, and each hop's
     // intermediateCurrency is the currency it is reached from going backward.
-    const path: PathKey[] = [...route].reverse().map((hop) => ({
+    const path: PathKey[] = [...args.route].reverse().map((hop) => ({
       intermediateCurrency: hop.currencyIn,
       fee: hop.poolKey.fee,
       tickSpacing: hop.poolKey.tickSpacing,
@@ -177,14 +169,14 @@ export function buildSprySwapTxRequest(args: {
     }))
     tx = buildSwapExactOutput({
       router,
-      currencyOut: args.tokenOutAddress,
+      currencyOut: lastHop.currencyOut,
       path,
       amountOut: args.amountOut,
       amountInMax: args.amountInMax,
       recipient: args.recipient,
       deadline: args.deadline,
       // The reversed path hides the input currency, so flag a native ETH input.
-      inputIsNative: isNativeCurrency(args.tokenInAddress),
+      inputIsNative: isNativeCurrency(firstHop.currencyIn),
     })
   }
 
@@ -194,9 +186,8 @@ export function buildSprySwapTxRequest(args: {
 /**
  * Builds the swap-transaction info for a priced Spry ClassicTrade on Base Sepolia,
  * in the shape the swap-tx service expects (replacing the Trading API /swap call,
- * which does not serve this chain). Maps the trade currencies to pool currencies
- * (native ETH -> zero address), extracts the slippage-adjusted bounds, encodes the
- * SpryRouter calldata, and returns a single populated txRequest.
+ * which does not serve this chain). Replays the exact route the quote chose, read
+ * back from the trade's V4 route, then encodes the SpryRouter calldata.
  *
  * Gas is a rough estimate (fixed limit * live price): a live estimateGas would
  * revert before the token approval step, so the review uses this to enable
@@ -213,10 +204,18 @@ export async function buildSprySwapTransactionInfo(args: {
     return null
   }
 
+  // Replay the exact route the quote chose, read back from the trade (never
+  // re-derive it, or a later-block "best route" could diverge from the quote).
+  const firstRoute = trade.quote.quote.route?.[0]
+  const v4Pools = firstRoute?.filter((pool): pool is TradingApi.V4PoolInRoute => pool.type === 'v4-pool') ?? []
+  const route = spryHopsFromRoute(v4Pools)
+  if (!route) {
+    return null
+  }
+
   const swapTx = buildSprySwapTxRequest({
     chainId,
-    tokenInAddress: toPoolCurrency(trade.inputAmount.currency),
-    tokenOutAddress: toPoolCurrency(trade.outputAmount.currency),
+    route,
     exactInput: trade.tradeType === TradeType.EXACT_INPUT,
     amountIn: BigInt(trade.inputAmount.quotient.toString()),
     amountOut: BigInt(trade.outputAmount.quotient.toString()),
