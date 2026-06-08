@@ -59,13 +59,16 @@ export function useSprySwapApprovalInfo(params: {
   const requiredCurrencyAmount = currencyInMaxAmount ?? currencyInAmount
   const requiredAmount = requiredCurrencyAmount ? BigInt(requiredCurrencyAmount.quotient.toString()) : BigInt(0)
 
-  const applies =
+  // A Spry classic swap on Base Sepolia by a connected account. A native ETH input
+  // needs no approval; an ERC20 input needs the allowance check below (token set).
+  const isSpryClassicSwap =
     chainId === UniverseChainId.BaseSepolia &&
     routing === TradingApi.Routing.CLASSIC &&
     wrapType === WrapType.NotApplicable &&
     Boolean(address) &&
-    Boolean(token) &&
     Boolean(spender)
+  const nativeInput = Boolean(currencyIn?.isNative)
+  const applies = isSpryClassicSwap && Boolean(token)
 
   const { data, isLoading } = useQuery({
     queryKey: ['sprySwapAllowance', chainId, token, address, spender],
@@ -86,6 +89,11 @@ export function useSprySwapApprovalInfo(params: {
   })
 
   return useMemo(() => {
+    // Native ETH input needs no ERC20 approval; short-circuit so we don't fall
+    // through to the Base Sepolia-401 gateway approval (which shows "may fail").
+    if (isSpryClassicSwap && nativeInput) {
+      return NO_APPROVAL
+    }
     if (!applies || !token || !spender) {
       return null
     }
@@ -124,5 +132,5 @@ export function useSprySwapApprovalInfo(params: {
       },
       revokeGasFeeResult: ZERO_GAS_FEE,
     }
-  }, [applies, token, spender, isLoading, data, requiredAmount, chainId])
+  }, [applies, isSpryClassicSwap, nativeInput, token, spender, isLoading, data, requiredAmount, chainId])
 }

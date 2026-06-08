@@ -1,20 +1,35 @@
 import { getSpryConfig } from '@spry/config'
-import { PoolTier } from '@spry/fee'
-import { buildSwapExactInputSingle, buildSwapExactOutputSingle, spryPoolKey, type Address } from '@spry/sdk'
+import {
+  buildSwapExactInput,
+  buildSwapExactInputSingle,
+  buildSwapExactOutput,
+  buildSwapExactOutputSingle,
+  isNativeCurrency,
+  type Address,
+  type Hex,
+  type PathKey,
+  type SpryTxRequest,
+} from '@spry/sdk'
 import { TradeType } from '@uniswap/sdk-core'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import type { TransactionRequestInfo } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
 import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import {
+  findSpryRoute,
+  getSpryPoolGraph,
+  toPoolCurrency,
+} from 'uniswap/src/features/transactions/swap/services/tradeService/spryRouting'
 import type { ClassicTrade } from 'uniswap/src/features/transactions/swap/types/trade'
-import { areAddressesEqual } from 'uniswap/src/utils/addresses'
 
 // 1 gwei fallback if the live gas price read fails.
 const GAS_PRICE_FALLBACK = BigInt(1_000_000_000)
-// Realistic fixed limit for a SpryRouter single-hop swap through the hook. A live
-// estimateGas reverts before the token approval, so the review uses this estimate
-// and the wallet computes the exact gas at signing (Base Sepolia fees are ~$0).
-const SPRY_SWAP_GAS_LIMIT = BigInt(350_000)
+// Realistic fixed limit for a SpryRouter swap through the hook, sized to cover a
+// 2-hop route. A live estimateGas reverts before the token approval, so the review
+// uses this estimate and the wallet computes the exact gas at signing (Base Sepolia
+// fees are ~$0).
+const SPRY_SWAP_GAS_LIMIT = BigInt(500_000)
+
+const EMPTY_HOOK_DATA: Hex = '0x'
 
 /**
  * A rough gas fee (wei) = gasLimit * live gas price, with a price fallback. The
@@ -34,21 +49,25 @@ export async function estimateSpryGasFeeValue(gasLimit: bigint): Promise<string>
 /** A ready-to-send Spry swap transaction (SpryRouter call). */
 export interface SprySwapTxRequest {
   to: Address
-  data: `0x${string}`
+  data: Hex
   value: bigint
   chainId: number
 }
 
 /**
  * Builds the SpryRouter calldata for a Spry pool swap. The Trading API gateway's
- * /swap endpoint does not serve Base Sepolia, so we encode the call locally via
- * the @spry/sdk router builders (which enforce the section 6.1 guards and are
- * round-trip tested). Allowance-based entry points: the ERC20 input must already
- * be approved to the SpryRouter (handled by the approval flow).
+ * /swap endpoint does not serve Base Sepolia, so we encode the call locally via the
+ * @spry/sdk router builders (which enforce the section 6.1 guards and are round-trip
+ * tested). The route is found locally: a 1-hop swap uses the single-pool entry
+ * points (which attach native ETH automatically), and a 2-hop swap (ETH<->sptB
+ * through sptA) uses the path entry points. Allowance-based: an ERC20 input must
+ * already be approved to the SpryRouter (handled by the approval flow); a native ETH
+ * input attaches its value instead.
  *
- * Amounts come from the already-priced trade: the exact side is the user's input,
- * and the bound (amountOutMin / amountInMax) is the trade's slippage-adjusted
- * limit. Returns null for non-Spry chains.
+ * The token addresses are pool currencies (native ETH is the zero address). Amounts
+ * come from the priced trade: the exact side is the user's input, and the bound
+ * (amountOutMin / amountInMax) is the trade's slippage-adjusted limit. Returns null
+ * for non-Spry chains or pairs with no Spry route.
  */
 export function buildSprySwapTxRequest(args: {
   chainId: number
@@ -90,39 +109,84 @@ export function buildSprySwapTxRequest(args: {
     throw new Error('buildSprySwapTxRequest: amountInMax must be positive')
   }
 
-  const poolKey = spryPoolKey({
-    tokenA: args.tokenInAddress,
-    tokenB: args.tokenOutAddress,
-    tier: PoolTier.BLUE_CHIP,
-    hookAddress: config.addresses.spryHook,
-  })
-
-  const zeroForOne = areAddressesEqual({
-    addressInput1: { address: args.tokenInAddress, platform: Platform.EVM },
-    addressInput2: { address: poolKey.currency0, platform: Platform.EVM },
-  })
+  const graph = getSpryPoolGraph(args.chainId)
+  if (!graph) {
+    return null
+  }
+  const route = findSpryRoute({ pools: graph.pools, from: args.tokenInAddress, to: args.tokenOutAddress })
+  if (!route || route.length === 0) {
+    return null
+  }
 
   const router = config.addresses.spryRouter
 
-  const tx = args.exactInput
-    ? buildSwapExactInputSingle({
-        router,
-        key: poolKey,
-        zeroForOne,
-        amountIn: args.amountIn,
-        amountOutMin: args.amountOutMin,
-        recipient: args.recipient,
-        deadline: args.deadline,
-      })
-    : buildSwapExactOutputSingle({
-        router,
-        key: poolKey,
-        zeroForOne,
-        amountOut: args.amountOut,
-        amountInMax: args.amountInMax,
-        recipient: args.recipient,
-        deadline: args.deadline,
-      })
+  let tx: SpryTxRequest
+  if (route.length === 1) {
+    const hop = route[0]
+    if (!hop) {
+      return null
+    }
+    // Single-pool entry points attach native ETH automatically (value = amountIn
+    // when the pulled currency is native).
+    tx = args.exactInput
+      ? buildSwapExactInputSingle({
+          router,
+          key: hop.poolKey,
+          zeroForOne: hop.zeroForOne,
+          amountIn: args.amountIn,
+          amountOutMin: args.amountOutMin,
+          recipient: args.recipient,
+          deadline: args.deadline,
+        })
+      : buildSwapExactOutputSingle({
+          router,
+          key: hop.poolKey,
+          zeroForOne: hop.zeroForOne,
+          amountOut: args.amountOut,
+          amountInMax: args.amountInMax,
+          recipient: args.recipient,
+          deadline: args.deadline,
+        })
+  } else if (args.exactInput) {
+    // Forward path: each hop's intermediateCurrency is its output currency.
+    const path: PathKey[] = route.map((hop) => ({
+      intermediateCurrency: hop.currencyOut,
+      fee: hop.poolKey.fee,
+      tickSpacing: hop.poolKey.tickSpacing,
+      hooks: hop.poolKey.hooks,
+      hookData: EMPTY_HOOK_DATA,
+    }))
+    tx = buildSwapExactInput({
+      router,
+      currencyIn: args.tokenInAddress,
+      path,
+      amountIn: args.amountIn,
+      amountOutMin: args.amountOutMin,
+      recipient: args.recipient,
+      deadline: args.deadline,
+    })
+  } else {
+    // Exact-output path is reversed: start at the output, and each hop's
+    // intermediateCurrency is the currency it is reached from going backward.
+    const path: PathKey[] = [...route].reverse().map((hop) => ({
+      intermediateCurrency: hop.currencyIn,
+      fee: hop.poolKey.fee,
+      tickSpacing: hop.poolKey.tickSpacing,
+      hooks: hop.poolKey.hooks,
+      hookData: EMPTY_HOOK_DATA,
+    }))
+    tx = buildSwapExactOutput({
+      router,
+      currencyOut: args.tokenOutAddress,
+      path,
+      amountOut: args.amountOut,
+      amountInMax: args.amountInMax,
+      recipient: args.recipient,
+      deadline: args.deadline,
+      // The reversed path hides the input currency, so flag a native ETH input.
+      inputIsNative: isNativeCurrency(args.tokenInAddress),
+    })
+  }
 
   return { to: tx.to, data: tx.data, value: tx.value, chainId: args.chainId }
 }
@@ -130,9 +194,9 @@ export function buildSprySwapTxRequest(args: {
 /**
  * Builds the swap-transaction info for a priced Spry ClassicTrade on Base Sepolia,
  * in the shape the swap-tx service expects (replacing the Trading API /swap call,
- * which does not serve this chain). Extracts the pool direction and the
- * slippage-adjusted bounds from the trade, encodes the SpryRouter calldata, and
- * returns a single populated txRequest.
+ * which does not serve this chain). Maps the trade currencies to pool currencies
+ * (native ETH -> zero address), extracts the slippage-adjusted bounds, encodes the
+ * SpryRouter calldata, and returns a single populated txRequest.
  *
  * Gas is a rough estimate (fixed limit * live price): a live estimateGas would
  * revert before the token approval step, so the review uses this to enable
@@ -151,8 +215,8 @@ export async function buildSprySwapTransactionInfo(args: {
 
   const swapTx = buildSprySwapTxRequest({
     chainId,
-    tokenInAddress: trade.inputAmount.currency.wrapped.address as Address,
-    tokenOutAddress: trade.outputAmount.currency.wrapped.address as Address,
+    tokenInAddress: toPoolCurrency(trade.inputAmount.currency),
+    tokenOutAddress: toPoolCurrency(trade.outputAmount.currency),
     exactInput: trade.tradeType === TradeType.EXACT_INPUT,
     amountIn: BigInt(trade.inputAmount.quotient.toString()),
     amountOut: BigInt(trade.outputAmount.quotient.toString()),
