@@ -65,3 +65,23 @@ export function assertPathAdjacency(startCurrency: Address, path: readonly PathK
     i++;
   }
 }
+
+/**
+ * Exact-OUTPUT adjacency. The exact-output path is forward (path[0] is the user's
+ * INPUT side) but `endCurrency` (= currencyOut) is the END of the chain, so the
+ * real sequence is path[0] -> ... -> path[n-1] -> endCurrency. Check every adjacent
+ * pair, including the final hop against endCurrency. (The exact-input
+ * `assertPathAdjacency` would instead check endCurrency against path[0], the wrong
+ * pair: it both misses a degenerate final hop and rejects a valid cyclic route.)
+ */
+export function assertPathAdjacencyExactOut(endCurrency: Address, path: readonly PathKey[]): void {
+  assertNonEmptyPath(path);
+  const chain: Address[] = [...path.map((hop) => hop.intermediateCurrency), endCurrency];
+  for (let i = 0; i + 1 < chain.length; i++) {
+    const a = chain[i];
+    const b = chain[i + 1];
+    if (a !== undefined && b !== undefined && sameAddress(a, b)) {
+      throw new Error(`path has a self-hop at index ${i}: adjacent currencies must differ`);
+    }
+  }
+}

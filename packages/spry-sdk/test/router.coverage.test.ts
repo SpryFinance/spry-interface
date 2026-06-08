@@ -14,6 +14,7 @@ import {
   isNativeCurrency,
   assertUint256,
   assertPathAdjacency,
+  assertPathAdjacencyExactOut,
   type PoolKey,
   type PathKey,
   type PermitSingle,
@@ -166,5 +167,28 @@ describe('guards (direct)', () => {
       { intermediateCurrency: TOKEN_B, fee: 0x800000, tickSpacing: 60, hooks: HOOK, hookData: '0x' },
     ];
     expect(() => assertPathAdjacency(TOKEN_A, badMid)).toThrow(/self-hop/);
+  });
+
+  it('assertPathAdjacencyExactOut validates the forward chain including the final hop vs currencyOut', () => {
+    // Valid exact-output chain TOKEN_A -> TOKEN_B -> TOKEN_C (path is the input side).
+    const okPath: PathKey[] = [
+      { intermediateCurrency: TOKEN_A, fee: 0x800000, tickSpacing: 60, hooks: HOOK, hookData: '0x' },
+      { intermediateCurrency: TOKEN_B, fee: 0x800000, tickSpacing: 60, hooks: HOOK, hookData: '0x' },
+    ];
+    expect(() => assertPathAdjacencyExactOut(TOKEN_C, okPath)).not.toThrow();
+
+    // Degenerate FINAL hop (path[n-1] === currencyOut) - the case the exact-input guard misses.
+    const badFinal: PathKey[] = [
+      { intermediateCurrency: TOKEN_A, fee: 0x800000, tickSpacing: 60, hooks: HOOK, hookData: '0x' },
+      { intermediateCurrency: TOKEN_C, fee: 0x800000, tickSpacing: 60, hooks: HOOK, hookData: '0x' },
+    ];
+    expect(() => assertPathAdjacencyExactOut(TOKEN_C, badFinal)).toThrow(/self-hop/);
+
+    // Mid-path self-hop is still caught.
+    const badMid: PathKey[] = [
+      { intermediateCurrency: TOKEN_A, fee: 0x800000, tickSpacing: 60, hooks: HOOK, hookData: '0x' },
+      { intermediateCurrency: TOKEN_A, fee: 0x800000, tickSpacing: 60, hooks: HOOK, hookData: '0x' },
+    ];
+    expect(() => assertPathAdjacencyExactOut(TOKEN_C, badMid)).toThrow(/self-hop/);
   });
 });

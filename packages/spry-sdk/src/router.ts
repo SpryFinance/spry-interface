@@ -10,6 +10,7 @@ import {
   assertDeadline,
   assertErc20Input,
   assertPathAdjacency,
+  assertPathAdjacencyExactOut,
   assertRecipientNotRouter,
   assertSwapAmount,
   assertUint256,
@@ -169,7 +170,7 @@ export function buildSwapExactOutput(a: ExactOutputArgs): SpryTxRequest {
   assertUint256(a.amountInMax, 'amountInMax');
   assertRecipientNotRouter(a.recipient, a.router);
   assertDeadline(a.deadline);
-  assertPathAdjacency(a.currencyOut, a.path);
+  assertPathAdjacencyExactOut(a.currencyOut, a.path);
   const data = encodeFunctionData({
     abi: spryRouterAbi,
     functionName: 'swapExactOutput',
@@ -183,7 +184,12 @@ export function buildSwapExactOutputViaPermit2(a: Omit<ExactOutputArgs, 'inputIs
   assertUint256(a.amountInMax, 'amountInMax');
   assertRecipientNotRouter(a.recipient, a.router);
   assertDeadline(a.deadline);
-  assertPathAdjacency(a.currencyOut, a.path);
+  assertPathAdjacencyExactOut(a.currencyOut, a.path);
+  // Permit2 cannot mediate native ETH; the input side is path[0] (forward path).
+  const firstHop = a.path[0];
+  if (firstHop) {
+    assertErc20Input(firstHop.intermediateCurrency);
+  }
   const data = encodeFunctionData({
     abi: spryRouterAbi,
     functionName: 'swapExactOutputViaPermit2',
