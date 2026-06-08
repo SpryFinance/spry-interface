@@ -80,16 +80,18 @@ export function SpryFeeWidget(): JSX.Element | null {
         Spry dynamic fee
       </Text>
       {states.map((state, index) => {
-        // "Best" is only meaningful when the pair has more than one tier to choose
-        // between AND the live quote actually routed through this one.
         const hasAlternatives = (pairTierCount.get(state.pairLabel) ?? 0) > 1
+        // A single-tier hop has no alternative, so its pool is always the one the swap
+        // uses; a multi-tier hop highlights only the tier the live quote actually picked.
+        const isHighlighted = !hasAlternatives || bestPoolIds.has(state.poolId)
+        // The "Best" badge only means something where there were alternatives to beat.
         const isBest = hasAlternatives && bestPoolIds.has(state.poolId)
         // States are grouped by hop; separate one hop's pools from the next with a rule.
         const startsNewHop = index > 0 && states[index - 1]?.hopIndex !== state.hopIndex
         return (
           <Fragment key={state.poolId}>
             {startsNewHop ? <Flex height={1} backgroundColor="$surface3" /> : null}
-            <SpryFeeBar state={state} showPair={showPair} isBest={isBest} />
+            <SpryFeeBar state={state} showPair={showPair} isHighlighted={isHighlighted} isBest={isBest} />
           </Fragment>
         )
       })}
@@ -100,10 +102,12 @@ export function SpryFeeWidget(): JSX.Element | null {
 function SpryFeeBar({
   state,
   showPair,
+  isHighlighted,
   isBest,
 }: {
   state: SpryPoolFeeState
   showPair: boolean
+  isHighlighted: boolean
   isBest: boolean
 }): JSX.Element {
   const sporeColors = useSporeColors()
@@ -122,7 +126,7 @@ function SpryFeeBar({
       p="$spacing8"
       borderRadius="$rounded12"
       borderWidth={1}
-      borderColor={isBest ? '$accent1' : 'transparent'}
+      borderColor={isHighlighted ? '$accent1' : 'transparent'}
     >
       <Flex row alignItems="center" justifyContent="space-between">
         <Flex row alignItems="center" gap="$spacing6">
