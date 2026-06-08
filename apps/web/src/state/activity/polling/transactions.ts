@@ -83,6 +83,10 @@ export function usePollPendingTransactions(onActivityUpdate: OnActivityUpdate) {
       // SPRY: Base Sepolia has no Trading API swap-status endpoint (it 401s), so
       // confirm transactions directly from the on-chain receipt instead.
       if (account.chainId === UniverseChainId.BaseSepolia) {
+        // Base Sepolia blocks are ~2s, so poll over a longer window than the 150ms
+        // trading-api interval (the effect also restarts each new block). This spans
+        // real mine time and avoids burning RPC on sub-block retries.
+        const receiptRetryOptions: RetryOptions = { n: 20, minWait: 1_500, medWait: 1_500, maxWait: 1_500 }
         return retry(async () => {
           if (!tx.hash || !isValidHexString(tx.hash) || !publicClient) {
             throw new Error('Invalid transaction hash')
@@ -112,7 +116,7 @@ export function usePollPendingTransactions(onActivityUpdate: OnActivityUpdate) {
             throw new RetryableError()
           }
           return { status: isSuccess ? 'success' : 'reverted', receipt: adaptedReceipt } as ReceiptWithStatus
-        }, retryOptions) as { promise: Promise<ReceiptWithStatus>; cancel: () => void }
+        }, receiptRetryOptions) as { promise: Promise<ReceiptWithStatus>; cancel: () => void }
       }
 
       return retry(() => {

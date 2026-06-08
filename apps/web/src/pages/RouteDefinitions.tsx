@@ -1,4 +1,5 @@
 /* oxlint-disable max-lines */
+import { isDevEnv } from '@universe/environment'
 import { FeatureFlags, useFeatureFlag, useStatsigClientStatus } from '@universe/gating'
 import { lazy, ReactNode, Suspense, useMemo } from 'react'
 import { matchPath, Navigate, Route, Routes, useLocation } from 'react-router'
@@ -489,8 +490,10 @@ export const routes: RouteDefinition[] = [
     ),
   }),
   // Temporary Spry integration probe: first live read from the @spry/* packages.
+  // Dev-only - excluded from production builds.
   createRouteDefinition({
     path: '/spry',
+    enabled: () => isDevEnv(),
     getTitle: () => 'Spry',
     getElement: () => (
       <Suspense fallback={null}>

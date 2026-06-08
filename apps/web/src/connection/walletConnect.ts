@@ -34,8 +34,8 @@ export const WC_PARAMS = {
   metadata: {
     name: 'Spry',
     description: 'Spry Interface',
-    url: 'https://app.uniswap.org',
-    icons: ['https://app.uniswap.org/favicon.png'],
+    url: 'https://spry.fi',
+    icons: ['https://spry.fi/favicon.png'],
   },
   qrModalOptions: {
     themeVariables: {
