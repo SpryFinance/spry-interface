@@ -9,6 +9,7 @@ import {
   getSwapInputExceedsBalance,
 } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
 import { buildSprySwapTransactionInfo } from 'uniswap/src/features/transactions/swap/services/tradeService/sprySwapTransaction'
+import { buildSpryWrapTransactionInfo } from 'uniswap/src/features/transactions/swap/services/tradeService/spryWrapTransaction'
 import type { DerivedSwapInfo } from 'uniswap/src/features/transactions/swap/types/derivedSwapInfo'
 import type {
   BridgeTrade,
@@ -58,6 +59,18 @@ export function createGetEVMSwapTransactionRequestInfo(ctx: {
       const sprySwapInfo = await buildSprySwapTransactionInfo({ trade, account: ctx.account })
       if (sprySwapInfo) {
         return sprySwapInfo
+      }
+    }
+
+    // SPRY: wrap/unwrap (ETH <-> WETH) on Base Sepolia is a local WETH deposit/withdraw
+    // (the gateway /swap 401s here too).
+    if (
+      (trade.routing === TradingApi.Routing.WRAP || trade.routing === TradingApi.Routing.UNWRAP) &&
+      derivedSwapInfo.chainId === UniverseChainId.BaseSepolia
+    ) {
+      const wrapInfo = await buildSpryWrapTransactionInfo({ trade })
+      if (wrapInfo) {
+        return wrapInfo
       }
     }
 
