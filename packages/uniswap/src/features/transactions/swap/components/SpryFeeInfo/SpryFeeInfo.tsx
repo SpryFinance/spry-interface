@@ -1,66 +1,76 @@
 import { formatFeePercent, isValidTickSpacing, tierFromTickSpacing, tierInfo } from '@spry/fee'
 import { type Hex } from '@spry/sdk'
-import { TradingApi } from '@universe/api'
 import { useMemo } from 'react'
 import { Flex, Text, Tooltip } from 'ui/src'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import {
-  useSpryLiveFee,
-  type SpryFeePool,
-} from 'uniswap/src/features/transactions/swap/components/SpryFeeInfo/useSpryLiveFee'
+  useSprySwapFee,
+  type SprySwapFeeHop,
+} from 'uniswap/src/features/transactions/swap/components/SpryFeeInfo/useSprySwapFee'
 import { type Trade } from 'uniswap/src/features/transactions/swap/types/trade'
 import { isClassic } from 'uniswap/src/features/transactions/swap/utils/routing'
 
-/** The route's Spry pools (id + tier), read from the quote. Empty for non-Spry trades. */
-function spryRoutePools(trade: Trade): SpryFeePool[] {
+/** The route's Spry pools with the per-hop state the fee math needs. Empty for non-Spry trades. */
+function spryRouteHops(trade: Trade): SprySwapFeeHop[] {
   if (!isClassic(trade)) {
     return []
   }
-  const firstRoute = trade.quote.quote.route?.[0]
-  return (firstRoute ?? [])
-    .filter((pool): pool is TradingApi.V4PoolInRoute => pool.type === 'v4-pool')
-    .filter((pool) => isValidTickSpacing(Number(pool.tickSpacing)))
-    .map((pool) => ({ poolId: pool.address as Hex, tier: tierFromTickSpacing(Number(pool.tickSpacing)) }))
+  const firstRoute = trade.quote.quote.route?.[0] ?? []
+  const hops: SprySwapFeeHop[] = []
+  for (const pool of firstRoute) {
+    if (pool.type !== 'v4-pool') {
+      continue
+    }
+    const tickSpacing = Number(pool.tickSpacing)
+    const tokenIn = pool.tokenIn.address
+    const tokenOut = pool.tokenOut.address
+    if (!isValidTickSpacing(tickSpacing) || !tokenIn || !tokenOut) {
+      continue
+    }
+    hops.push({
+      poolId: pool.address as Hex,
+      tier: tierFromTickSpacing(tickSpacing),
+      sqrtPriceX96: BigInt(pool.sqrtRatioX96 ?? '0'),
+      liquidity: BigInt(pool.liquidity ?? '0'),
+      amountIn: BigInt(pool.amountIn ?? '0'),
+      // currency0 is the lower-sorted address, so the input is token0 iff it sorts first.
+      zeroForOne: BigInt(tokenIn) < BigInt(tokenOut),
+    })
+  }
+  return hops
 }
 
 /**
- * Surfaces Spry's dynamic fee in the swap details (Base Sepolia only). The SpryHook
- * recomputes a pool's fee each block from its recent price movement, bounded by the
- * tier; this row shows the live fee (read on-chain, polled per block) with the tier
- * range and how long until the fee relaxes toward base. Falls back to the static
- * tier range before the live read resolves. Renders nothing for non-Spry trades.
+ * Surfaces the Spry dynamic fee in the swap details (Base Sepolia only). Unlike a
+ * pool's resting fee, the SpryHook fee rises with the price movement a swap causes,
+ * so this shows the fee THIS swap pays (computed the way the hook does, read live
+ * on-chain), the tier range, and how long until the fee relaxes toward base. Falls
+ * back to the static tier range before the read resolves. Renders nothing for
+ * non-Spry trades.
  */
 export function SpryFeeInfo({ trade, chainId }: { trade: Trade; chainId: UniverseChainId }): JSX.Element | null {
-  const pools = useMemo(() => spryRoutePools(trade), [trade])
-  const live = useSpryLiveFee({ chainId, pools })
+  const hops = useMemo(() => spryRouteHops(trade), [trade])
+  const swapFee = useSprySwapFee({ chainId, hops })
 
-  const firstPool = pools[0]
-  if (chainId !== UniverseChainId.BaseSepolia || !firstPool) {
+  const firstHop = hops[0]
+  if (chainId !== UniverseChainId.BaseSepolia || !firstHop) {
     return null
   }
 
-  const allSameTier = pools.every((pool) => pool.tier === firstPool.tier)
-  const info = tierInfo(firstPool.tier)
+  const allSameTier = hops.every((hop) => hop.tier === firstHop.tier)
+  const info = tierInfo(firstHop.tier)
   const baseFee = formatFeePercent(info.baseFeePips)
   const capFee = formatFeePercent(info.capFeePips)
   const tierLabel = allSameTier ? info.label : 'Multiple tiers'
 
-  let value: string
-  if (live) {
-    value = formatFeePercent(live.feePips)
-  } else if (allSameTier) {
-    value = `from ${baseFee}`
-  } else {
-    value = 'Dynamic'
-  }
+  const value = swapFee ? formatFeePercent(swapFee.feePips) : `from ${baseFee}`
 
   const countdown =
-    live && live.blocksRemaining > 0
-      ? ` It eases back toward ${baseFee} over ~${live.blocksRemaining} block${live.blocksRemaining === 1 ? '' : 's'} of quiet trading.`
+    swapFee && swapFee.blocksRemaining > 0
+      ? ` It eases back toward ${baseFee} over ~${swapFee.blocksRemaining} block${swapFee.blocksRemaining === 1 ? '' : 's'} of quiet trading.`
       : ''
-  const tooltipText = allSameTier
-    ? `${tierLabel} tier (${baseFee} to ${capFee}). The SpryHook recomputes the fee each block from the pool's recent price movement.${countdown}`
-    : "The SpryHook recomputes the fee each block from each pool's recent price movement."
+  const tierAndRange = allSameTier ? `${tierLabel} tier (${baseFee} to ${capFee}). ` : ''
+  const tooltipText = `${tierAndRange}This is the fee your swap pays: the SpryHook's fee rises with the price movement your trade causes within the current block window.${countdown}`
 
   return (
     <Flex row alignItems="center" justifyContent="space-between">
@@ -70,7 +80,7 @@ export function SpryFeeInfo({ trade, chainId }: { trade: Trade; chainId: Univers
             Dynamic fee
           </Text>
         </Tooltip.Trigger>
-        <Tooltip.Content maxWidth={300}>
+        <Tooltip.Content maxWidth={320}>
           <Text variant="body4">{tooltipText}</Text>
           <Tooltip.Arrow />
         </Tooltip.Content>

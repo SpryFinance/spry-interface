@@ -1,0 +1,80 @@
+import { getSpryConfig } from '@spry/config'
+import { computeSignedDelta, marginalFee, tierParams, type PoolTier } from '@spry/fee'
+import { createSpryHookClient, type Hex, type ReadContractFn } from '@spry/sdk'
+import { useQuery } from '@tanstack/react-query'
+import { UniverseChainId } from 'uniswap/src/features/chains/types'
+import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { ONE_SECOND_MS } from 'utilities/src/time/time'
+
+/** One route hop with the state needed to price its dynamic fee. */
+export interface SprySwapFeeHop {
+  poolId: Hex
+  tier: PoolTier
+  sqrtPriceX96: bigint
+  liquidity: bigint
+  /** The hop's exact input (raw). Drives the cumulative shift the swap causes. */
+  amountIn: bigint
+  zeroForOne: boolean
+}
+
+export interface SprySwapFee {
+  /** The fee this swap pays across hops, in pips (sum of per-hop marginal fees). */
+  feePips: number
+  /** Blocks until the soonest pool window resets, after which fees ease toward base. */
+  blocksRemaining: number
+  /** The pool window length, in blocks. */
+  blockWindow: number
+}
+
+/**
+ * The dynamic fee THIS swap pays, computed the way the SpryHook does: read each
+ * pool's current block-windowed cumulative on-chain, add the cumulative shift the
+ * swap causes (computeSignedDelta), and take the curve's integral-mode marginal fee
+ * over that move. This mirrors the hook (it is not the pool's resting fee, which
+ * ignores the swap's own price impact), and is robust to concentrated liquidity that
+ * a net-vs-gross estimate is not. Polls roughly per block; also returns the window
+ * countdown. Null when not applicable or before the first read resolves.
+ */
+export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[] }): SprySwapFee | null {
+  const { chainId, hops } = params
+  const enabled = chainId === UniverseChainId.BaseSepolia && hops.length > 0
+  const hopsKey = hops.map((hop) => `${hop.poolId}:${hop.amountIn.toString()}:${hop.sqrtPriceX96.toString()}`).join(',')
+
+  const { data } = useQuery({
+    queryKey: ['sprySwapFee', chainId, hopsKey],
+    enabled,
+    refetchInterval: ONE_SECOND_MS * 12,
+    staleTime: ONE_SECOND_MS * 6,
+    queryFn: async (): Promise<SprySwapFee | null> => {
+      const config = getSpryConfig(chainId)
+      if (!config) {
+        return null
+      }
+      const read: ReadContractFn = (request) => spryPublicClient.readContract(request as never) as Promise<unknown>
+      const hook = createSpryHookClient(read, config.addresses.spryHook)
+      const [blockWindow, currentBlock] = await Promise.all([hook.getBlockWindow(), spryPublicClient.getBlockNumber()])
+
+      const perHop = await Promise.all(
+        hops.map(async (hop) => {
+          const window = await hook.getPoolWindow(hop.poolId)
+          const delta = computeSignedDelta({
+            sqrtPriceX96: hop.sqrtPriceX96,
+            liquidity: hop.liquidity,
+            zeroForOne: hop.zeroForOne,
+            amountSpecified: -hop.amountIn, // V4 convention: negative = exact-in
+          })
+          const feePips = marginalFee(window.signedCum, window.signedCum + delta, tierParams(hop.tier))
+          const windowEnd = window.windowStart + blockWindow
+          const remaining = windowEnd > currentBlock ? windowEnd - currentBlock : BigInt(0)
+          return { feePips, remaining }
+        }),
+      )
+
+      const feePips = perHop.reduce((sum, hop) => sum + hop.feePips, 0)
+      const minRemaining = perHop.reduce((min, hop) => (hop.remaining < min ? hop.remaining : min), blockWindow)
+      return { feePips, blocksRemaining: Number(minRemaining), blockWindow: Number(blockWindow) }
+    },
+  })
+
+  return data ?? null
+}
