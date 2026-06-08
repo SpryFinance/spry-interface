@@ -1,4 +1,3 @@
-import { SVGProps } from 'react'
 import { Flex, styled, useSporeColors } from 'ui/src'
 
 const Container = styled(Flex, {
@@ -13,42 +12,44 @@ const Container = styled(Flex, {
   },
 })
 
-type NavIconProps = SVGProps<SVGSVGElement> & {
+type NavIconProps = {
   clickable?: boolean
   onClick?: () => void
 }
 
-// SPRY: the brand mark - a sprout + sun over waves inside a ring. Recreated as a
-// theme-aware SVG (uses the foreground color, crisp at any size).
-function SpryLogo({ color, onClick }: { color: string; onClick?: () => void }) {
-  return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      onClick={onClick}
-      cursor="pointer"
-      aria-label="Spry"
-    >
-      <circle cx="50" cy="50" r="45" stroke={color} strokeWidth="3.5" fill="none" />
-      <circle cx="63" cy="34" r="7" fill={color} />
-      <path d="M50 72 C 49 63 49 55 50 46" stroke={color} strokeWidth="3" strokeLinecap="round" fill="none" />
-      <path d="M49 58 C 39 55 33 46 35 38 C 43 41 49 50 49 58 Z" fill={color} />
-      <path d="M50 55 C 57 52 62 46 63 41 C 56 43 51 48 50 55 Z" fill={color} />
-      <path d="M15 64 Q 27 58 39 64 T 63 64 T 86 64" stroke={color} strokeWidth="3" strokeLinecap="round" fill="none" />
-      <path d="M17 72 Q 30 66 43 72 T 69 72 T 86 70" stroke={color} strokeWidth="3" strokeLinecap="round" fill="none" />
-    </svg>
-  )
-}
+const SPRY_LOGO_SIZE = 28
 
+// SPRY: the brand mark (sprout + sun over waves inside a ring), shipped as the
+// user's own artwork at apps/web/public/spry-logo.png. The logo shape is carried
+// in the PNG's alpha channel, so we paint it through a CSS mask filled with the
+// theme foreground color: white in dark mode, near-black in light mode. That
+// keeps the exact artwork while staying theme-aware and crisp at any DPI.
 export const NavIcon = ({ clickable, onClick }: NavIconProps) => {
   const colors = useSporeColors()
 
   return (
     <Container clickable={clickable}>
-      <SpryLogo color={colors.neutral1.val} onClick={onClick} />
+      {/* A raw masked element is required here: the mark is recolored to the theme
+          foreground via a CSS mask, which Tamagui/react-native-web style props can't express. */}
+      {/* oxlint-disable-next-line react/forbid-elements */}
+      <div
+        role="img"
+        aria-label="Spry"
+        onClick={onClick}
+        style={{
+          width: SPRY_LOGO_SIZE,
+          height: SPRY_LOGO_SIZE,
+          backgroundColor: colors.neutral1.val,
+          maskImage: 'url(/spry-logo.png)',
+          maskRepeat: 'no-repeat',
+          maskPosition: 'center',
+          maskSize: 'contain',
+          WebkitMaskImage: 'url(/spry-logo.png)',
+          WebkitMaskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'center',
+          WebkitMaskSize: 'contain',
+        }}
+      />
     </Container>
   )
 }
