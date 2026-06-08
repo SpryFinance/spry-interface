@@ -102,8 +102,9 @@ const BASE_SEPOLIA_API_CHAIN_ID = TradingApi.ChainId._84532
 const SPRY_POOL_TIER = PoolTier.BLUE_CHIP
 
 // One shared read-only client. createPublicClient does no I/O (connections open
-// lazily on the first call), so building it at module load is cheap.
-const spryPublicClient = createPublicClient({ chain: baseSepolia, transport: http(BASE_SEPOLIA_RPC_URL) })
+// lazily on the first call), so building it at module load is cheap. Exported so
+// the swap-tx and approval paths reuse the same client.
+export const spryPublicClient = createPublicClient({ chain: baseSepolia, transport: http(BASE_SEPOLIA_RPC_URL) })
 
 // The set of Spry-pool token addresses (cache-normalized) for sptA/sptB pair detection.
 const SPRY_POOL_TOKENS = new Set([

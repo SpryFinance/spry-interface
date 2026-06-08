@@ -6,6 +6,7 @@ import { useUniswapContextSelector } from 'uniswap/src/contexts/UniswapContext'
 import { useCheckApprovalQuery } from 'uniswap/src/data/apiClients/tradingApi/useCheckApprovalQuery'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { convertGasFeeToDisplayValue, useActiveGasStrategy } from 'uniswap/src/features/gas/hooks'
+import { useSprySwapApprovalInfo } from 'uniswap/src/features/transactions/swap/services/tradeService/sprySwapApproval'
 import { ApprovalAction, TokenApprovalInfo } from 'uniswap/src/features/transactions/swap/types/trade'
 import { isUniswapX } from 'uniswap/src/features/transactions/swap/utils/routing'
 import {
@@ -103,7 +104,14 @@ export function useTokenApprovalInfo(params: TokenApprovalInfoParams): ApprovalT
   ])
 
   const approvalWillBeBatchedWithSwap = useApprovalWillBeBatchedWithSwap(chainId, routing)
-  const shouldSkip = !approvalRequestArgs || isWrap || !address || approvalWillBeBatchedWithSwap || isChained
+
+  // SPRY: Base Sepolia classic swaps use a local allowance check + erc20 approve
+  // (the gateway /approval endpoint 401s here). When this applies, skip the
+  // gateway query and return the local result below.
+  const spryApproval = useSprySwapApprovalInfo({ chainId, address, currencyInAmount, routing, wrapType })
+
+  const shouldSkip =
+    !approvalRequestArgs || isWrap || !address || approvalWillBeBatchedWithSwap || isChained || Boolean(spryApproval)
 
   const { data, isLoading, error } = useCheckApprovalQuery({
     params: shouldSkip ? undefined : approvalRequestArgs,
@@ -169,7 +177,7 @@ export function useTokenApprovalInfo(params: TokenApprovalInfoParams): ApprovalT
     }
   }, [address, approvalRequestArgs, approvalWillBeBatchedWithSwap, data, error, isWrap, isChained])
 
-  return useMemo(() => {
+  const gatewayApprovalInfo = useMemo(() => {
     const gasEstimate = data?.gasEstimates?.[0]
     const noApprovalNeeded = tokenApprovalInfo.action === ApprovalAction.None
     const noRevokeNeeded =
@@ -198,4 +206,7 @@ export function useTokenApprovalInfo(params: TokenApprovalInfoParams): ApprovalT
       },
     }
   }, [gasStrategy, data?.cancelGasFee, data?.gasEstimates, data?.gasFee, isLoading, tokenApprovalInfo])
+
+  // SPRY: prefer the local Base Sepolia approval result when present.
+  return spryApproval ?? gatewayApprovalInfo
 }
