@@ -12,6 +12,7 @@ import {
 } from 'uniswap/src/features/transactions/components/settings/utils'
 import { TransactionModalInnerContainer } from 'uniswap/src/features/transactions/components/TransactionModal/TransactionModal'
 import { useTransactionModalContext } from 'uniswap/src/features/transactions/components/TransactionModal/TransactionModalContext'
+import { SpryFeeWidget } from 'uniswap/src/features/transactions/swap/components/SpryFeeWidget/SpryFeeWidget'
 import { Slippage } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/settingsConfigurations/slippage/Slippage/Slippage'
 import { TradeRoutingPreference } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/settingsConfigurations/TradeRoutingPreference/TradeRoutingPreference'
 import { SwapFormSettings } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/SwapFormSettings'
@@ -103,6 +104,8 @@ function SwapFormContent(): JSX.Element {
           <SwitchCurrenciesButton />
           <SwapFormCurrencyOutputPanel />
         </Flex>
+
+        <SpryFeeWidget />
 
         <Flex>
           <SwapFormScreenDetails />
