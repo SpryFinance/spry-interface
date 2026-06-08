@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { Flex, Separator, Text } from 'ui/src'
 import { ChevronsIn } from 'ui/src/components/icons/ChevronsIn'
 import { ChevronsOut } from 'ui/src/components/icons/ChevronsOut'
-import { UniswapWalletOptions } from '~/components/WalletModal/UniswapWalletOptions'
 import { WalletModalLayout } from '~/components/WalletModal/WalletModalLayout'
 import { WalletOptionsGrid } from '~/components/WalletModal/WalletOptionsGrid'
 import { ClickableTamaguiStyle } from '~/theme/components/styles'
@@ -18,8 +17,8 @@ export function StandardWalletModal(): JSX.Element {
     </Flex>
   )
 
-  const uniswapOptions = <UniswapWalletOptions />
-
+  // SPRY: the Uniswap Wallet promo block (extension / mobile / download) is hidden;
+  // the grid below shows the standard external connectors.
   const expandToggle = (
     <Flex row alignItems="center" py={8} userSelect="none" onPress={toggleExpandMoreWallets} {...ClickableTamaguiStyle}>
       <Separator />
@@ -47,7 +46,6 @@ export function StandardWalletModal(): JSX.Element {
       header={
         <Flex gap="$gap16">
           {header}
-          {uniswapOptions}
           {expandToggle}
         </Flex>
       }

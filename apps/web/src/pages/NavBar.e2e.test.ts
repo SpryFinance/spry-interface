@@ -78,40 +78,10 @@ test.describe(
         await expect(page).toHaveURL(/\/\?intro=true/)
       })
 
-      test('Company menu displays complete sections, links, and legal content', async ({ page }) => {
+      // SPRY: the Uniswap company mega-menu is removed on desktop; the brand mark is just a home link.
+      test('does not render the company mega-menu', async ({ page }) => {
         await page.goto('/')
-        await page.getByTestId(TestID.NavCompanyMenu).hover()
-        const dropdown = page.getByTestId(TestID.NavCompanyDropdown).first()
-        await expect(dropdown).toBeVisible()
-
-        // Verify all menu sections and their links
-        for (const section of companyMenu) {
-          await expect(
-            page.getByTestId(TestID.NavCompanyDropdown).getByTestId(`menu-section-${section.label}`),
-          ).toBeVisible()
-          for (const item of section.items) {
-            await expect(
-              page.getByTestId(TestID.NavCompanyDropdown).locator(`a:has-text("${item.label}")`),
-            ).toHaveAttribute('href', item.href)
-          }
-        }
-
-        // Verify social media links
-        for (const link of socialMediaLinks) {
-          await expect(page.getByTestId(TestID.NavCompanyDropdown).locator(`a[href='${link}']`)).toBeVisible()
-        }
-
-        // Verify Legal & Privacy section
-        await expect(dropdown.getByText('Legal & Privacy')).toBeVisible()
-        await dropdown.getByText('Legal & Privacy').click()
-
-        await expect(page.getByTestId(TestID.NavCompanyDropdown).getByText('Your Privacy Choices')).toBeVisible()
-        await expect(page.getByTestId(TestID.NavCompanyDropdown).getByText('Privacy Policy')).toBeVisible()
-        await expect(page.getByTestId(TestID.NavCompanyDropdown).getByText('Terms of Service')).toBeVisible()
-
-        await expect(
-          page.getByTestId(TestID.NavCompanyDropdown).locator(`a[href="${uniswapUrls.termsOfServiceUrl}"]`),
-        ).toBeVisible()
+        await expect(page.getByTestId(TestID.NavCompanyMenu)).toHaveCount(0)
       })
 
       for (const tab of tabs) {

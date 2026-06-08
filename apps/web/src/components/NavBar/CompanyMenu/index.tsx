@@ -7,7 +7,6 @@ import { ElementName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
 import { NavIcon } from '~/components/Logo/NavIcon'
-import { MenuDropdown } from '~/components/NavBar/CompanyMenu/MenuDropdown'
 import { MobileMenuDrawer } from '~/components/NavBar/CompanyMenu/MobileMenuDrawer'
 import { useIsMobileDrawer } from '~/components/NavBar/ScreenSizes'
 
@@ -38,6 +37,28 @@ export function CompanyMenu() {
     closeMenu()
   }, [location, closeMenu])
 
+  const brandLogo = (
+    <Trace logPress element={ElementName.NavbarCompanyMenuLogo}>
+      <Link to="/?intro=true" onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
+        <Flex row alignItems="center" gap="$gap4" data-testid={TestID.NavUniswapLogo}>
+          <NavIcon />
+          {isLargeScreen && (
+            <Text variant="subheading1" color="$accent1" userSelect="none">
+              Spry
+            </Text>
+          )}
+        </Flex>
+      </Link>
+    </Trace>
+  )
+
+  // SPRY: drop the Uniswap "company" mega-menu. On desktop the brand mark is just a
+  // home link. On mobile we keep the popover, because its drawer is the primary
+  // mobile navigation (the app tabs live there), not a marketing menu.
+  if (!isMobileDrawer) {
+    return brandLogo
+  }
+
   return (
     <Popover ref={popoverRef} placement="bottom" hoverable={!media.xl} stayInFrame allowFlip onOpenChange={setIsOpen}>
       <Popover.Trigger data-testid={TestID.NavCompanyMenu}>
@@ -50,18 +71,7 @@ export function CompanyMenu() {
           group
           $platform-web={{ containerType: 'normal' }}
         >
-          <Trace logPress element={ElementName.NavbarCompanyMenuLogo}>
-            <Link to="/?intro=true" onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
-              <Flex row alignItems="center" gap="$gap4" data-testid={TestID.NavUniswapLogo}>
-                <NavIcon />
-                {isLargeScreen && (
-                  <Text variant="subheading1" color="$accent1" userSelect="none">
-                    Spry
-                  </Text>
-                )}
-              </Flex>
-            </Link>
-          </Trace>
+          {brandLogo}
           {media.md && <Hamburger size={22} color="$neutral2" cursor="pointer" ml="16px" />}
           {!media.md && (
             <ArrowDownWrapper open={isOpen}>
@@ -70,7 +80,7 @@ export function CompanyMenu() {
           )}
         </Flex>
       </Popover.Trigger>
-      {isMobileDrawer ? <MobileMenuDrawer isOpen={isOpen} closeMenu={closeMenu} /> : <MenuDropdown close={closeMenu} />}
+      <MobileMenuDrawer isOpen={isOpen} closeMenu={closeMenu} />
     </Popover>
   )
 }
