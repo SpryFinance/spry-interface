@@ -99,8 +99,17 @@ export function createEVMTradeService(ctx: EVMTradeServiceContext): TradeService
         // 401s), so we synthesize the quote locally where we can and never fall
         // through to the gateway for this chain.
         if (validatedInput.currencyIn.chainId === UniverseChainId.BaseSepolia) {
+          // Resolve slippage the same way the gateway path would (the user's custom
+          // tolerance, else the L2 auto-min) and carry it on the local quote;
+          // otherwise ClassicTrade falls back to the 5.5% max and the setting is lost.
+          const slippageParams = getSlippageParams({
+            tokenInChainId: validatedInput.tokenInChainId,
+            tokenOutChainId: validatedInput.tokenOutChainId,
+            isUSDQuote: input.isUSDQuote,
+          })
+          const slippageTolerance = slippageParams?.slippageTolerance ?? getMinAutoSlippageToleranceL2()
           // Wrap/unwrap (1:1) and the sptA/sptB pool (V4 Quoter) are synthesized locally.
-          const spryLocalQuote = await buildSpryLocalQuote(validatedInput)
+          const spryLocalQuote = await buildSpryLocalQuote(validatedInput, slippageTolerance)
           if (!spryLocalQuote) {
             // No locally-synthesizable quote (e.g. a non-Spry pair or a USD price
             // quote): return no trade rather than issuing a doomed gateway request.

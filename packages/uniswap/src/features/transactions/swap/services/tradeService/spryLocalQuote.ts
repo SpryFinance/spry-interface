@@ -44,12 +44,13 @@ import { baseSepolia } from 'viem/chains'
  */
 export async function buildSpryLocalQuote(
   validatedInput: ValidatedTradeInput,
+  slippageTolerance?: number,
 ): Promise<DiscriminatedQuoteResponse | null> {
   const wrapQuote = buildSpryWrapQuote(validatedInput)
   if (wrapQuote) {
     return wrapQuote
   }
-  return buildSprySwapQuote(validatedInput)
+  return buildSprySwapQuote(validatedInput, slippageTolerance)
 }
 
 /**
@@ -181,6 +182,7 @@ function routeOutput(quoted: QuotedHop[]): bigint {
  */
 export async function buildSprySwapQuote(
   validatedInput: ValidatedTradeInput,
+  slippageTolerance?: number,
 ): Promise<DiscriminatedQuoteResponse | null> {
   const { currencyIn, currencyOut } = validatedInput
 
@@ -285,6 +287,9 @@ export async function buildSprySwapQuote(
       chainId: BASE_SEPOLIA_API_CHAIN_ID,
       tradeType: validatedInput.requestTradeType,
       route: [v4Pools],
+      // Carry the resolved tolerance so ClassicTrade derives minOut/maxIn from the
+      // user's setting (or the L2 auto-min), not the 5.5% fallback.
+      slippage: slippageTolerance,
     },
   }
   return response
