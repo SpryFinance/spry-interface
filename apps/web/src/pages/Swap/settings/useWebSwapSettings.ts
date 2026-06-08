@@ -4,14 +4,13 @@ import { chainIdToPlatform } from 'uniswap/src/features/platforms/utils/chains'
 import { SwapDeadline } from 'uniswap/src/features/transactions/components/settings/settingsConfigurations/deadline/SwapDeadline'
 import { filterSettingsByPlatformAndTradeRouting } from 'uniswap/src/features/transactions/components/settings/utils'
 import { Slippage } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/settingsConfigurations/slippage/Slippage/Slippage'
-import { TradeRoutingPreference } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/settingsConfigurations/TradeRoutingPreference/TradeRoutingPreference'
 import { useSwapFormStoreDerivedSwapInfo } from 'uniswap/src/features/transactions/swap/stores/swapFormStore/useSwapFormStore'
 import { OneClickSwap } from '~/pages/Swap/settings/OneClickSwap'
 import { useAppSelector } from '~/state/hooks'
 import { useMultichainContext } from '~/state/multichain/useMultichainContext'
 import { selectIsAtomicBatchingSupported } from '~/state/walletCapabilities/reducer'
 
-const DEFAULT_SETTINGS = [Slippage, SwapDeadline, TradeRoutingPreference]
+const DEFAULT_SETTINGS = [Slippage, SwapDeadline]
 
 export function useWebSwapSettings() {
   const batchSwapEnabled = useFeatureFlag(FeatureFlags.BatchedSwaps)
