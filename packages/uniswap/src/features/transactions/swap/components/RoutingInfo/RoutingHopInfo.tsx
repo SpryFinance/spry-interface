@@ -12,7 +12,7 @@ import { RoutingDiagram } from 'uniswap/src/components/RoutingDiagram/RoutingDia
 import { RoutingLabel } from 'uniswap/src/components/RoutingDiagram/RoutingLabel'
 import { LearnMoreLink } from 'uniswap/src/components/text/LearnMoreLink'
 import { uniswapUrls } from 'uniswap/src/constants/urls'
-import type { UniverseChainId } from 'uniswap/src/features/chains/types'
+import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { useUSDValueOfGasFee } from 'uniswap/src/features/gas/hooks'
 import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { ModalName } from 'uniswap/src/features/telemetry/constants'
@@ -88,10 +88,13 @@ export function RoutingHopInfo({
     return null
   }, [t, trade, routes, gasFeeFormatted, routingProvider, isUniswapXTrade])
 
+  // SPRY: classic trades on Base Sepolia route through Spry, not the Uniswap routing API.
+  const providerName =
+    trade.inputAmount.currency.chainId === UniverseChainId.BaseSepolia && !isUniswapXTrade
+      ? 'Spry'
+      : routingProvider?.name
   const modalTitle =
-    !isUniswapXTrade && routingProvider?.name
-      ? t('common.bestRoute.with', { provider: routingProvider.name })
-      : t('swap.tradeRoutes')
+    !isUniswapXTrade && providerName ? t('common.bestRoute.with', { provider: providerName }) : t('swap.tradeRoutes')
 
   const ModalIcon = routingProvider?.icon ?? OrderRouting
   const modalIconColor = routingProvider?.iconColor ?? '$neutral1'

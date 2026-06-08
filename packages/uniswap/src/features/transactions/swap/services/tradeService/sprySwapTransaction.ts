@@ -11,9 +11,10 @@ import { areAddressesEqual } from 'uniswap/src/utils/addresses'
 
 // 1 gwei fallback if the live gas price read fails.
 const GAS_PRICE_FALLBACK = BigInt(1_000_000_000)
-// Generous fixed limit for a SpryRouter single-hop swap (estimateGas reverts
-// before the token approval, so we cannot probe it live here).
-const SPRY_SWAP_GAS_LIMIT = BigInt(500_000)
+// Realistic fixed limit for a SpryRouter single-hop swap through the hook. A live
+// estimateGas reverts before the token approval, so the review uses this estimate
+// and the wallet computes the exact gas at signing (Base Sepolia fees are ~$0).
+const SPRY_SWAP_GAS_LIMIT = BigInt(350_000)
 
 /**
  * A rough gas fee (wei) = gasLimit * live gas price, with a price fallback. The
