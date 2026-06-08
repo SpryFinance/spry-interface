@@ -19,10 +19,11 @@ export const ZERO_ADDRESS: Address = '0x0000000000000000000000000000000000000000
  */
 export const PERMIT2_ADDRESS: Address = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
-/** Case-insensitive address equality. */
+/** Case-insensitive address equality, tolerating a missing `0x` prefix on either side. */
 export function sameAddress(a: string | undefined | null, b: string | undefined | null): boolean {
   if (!a || !b) return false;
-  return a.toLowerCase() === b.toLowerCase();
+  const normalize = (value: string): string => value.replace(/^0x/i, '').toLowerCase();
+  return normalize(a) === normalize(b);
 }
 
 /** `true` iff `address` is the pre-deployment placeholder. */

@@ -99,10 +99,17 @@ function seedSpryPoolGraph(chainId: number): SpryPoolGraph | null {
 }
 
 function addCurrency(map: Map<string, SpryPoolCurrency>, token: PoolRow['token0']): void {
+  const decimals = Number(token.decimals)
+  // Skip a token with malformed decimals (e.g. a partial / indexing-warning subgraph
+  // response) rather than letting a NaN flow into amount scaling. Its pool then drops
+  // out at quote time when the currency metadata is missing.
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) {
+    return
+  }
   const address = token.id as Address
   const key = normalizeTokenAddressForCache(address)
   if (!map.has(key)) {
-    map.set(key, { address, decimals: Number(token.decimals), symbol: token.symbol })
+    map.set(key, { address, decimals, symbol: token.symbol })
   }
 }
 
