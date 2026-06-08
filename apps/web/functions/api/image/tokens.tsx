@@ -1,7 +1,7 @@
 /* oxlint-disable react/forbid-elements -- ignoring for the whole file */
 
 import { ImageResponse } from '@vercel/og'
-import { IMAGE_DATA_FETCH_TIMEOUT_MS, WATERMARK_URL } from 'functions/constants'
+import { IMAGE_DATA_FETCH_TIMEOUT_MS, WATERMARK_PATH } from 'functions/constants'
 import getFont from 'functions/utils/getFont'
 import getNetworkLogoUrl from 'functions/utils/getNetworkLogoURL'
 import { getRequest } from 'functions/utils/getRequest'
@@ -160,7 +160,7 @@ export async function tokenImageHandler(c: Context) {
               >
                 {data.tokenData?.symbol}
               </div>
-              <img src={WATERMARK_URL} alt="Uniswap" height="72px" width="324px" />
+              <img src={`${origin}${WATERMARK_PATH}`} alt="Spry" height="72px" width="324px" />
             </div>
           </div>
         </div>

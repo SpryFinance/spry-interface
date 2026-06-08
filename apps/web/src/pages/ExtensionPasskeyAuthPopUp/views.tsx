@@ -2,7 +2,6 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Anchor, Button, Flex, SpinningLoader, Text } from 'ui/src'
 import { EnvelopeHeart } from 'ui/src/components/icons/EnvelopeHeart'
 import { Passkey } from 'ui/src/components/icons/Passkey'
-import { UniswapLogo } from 'ui/src/components/icons/UniswapLogo'
 import { EmailCodeStep } from 'uniswap/src/components/passkey/recovery/steps/EmailCodeStep'
 import { EmailEntryStep } from 'uniswap/src/components/passkey/recovery/steps/EmailEntryStep'
 import { EnterPinStep } from 'uniswap/src/components/passkey/recovery/steps/EnterPinStep'
@@ -37,7 +36,7 @@ export function DeniedView({ t }: { t: ReturnType<typeof useTranslation>['t'] })
             <GetHelpButton t={t} />
           </Flex>
           <Flex alignItems="center">
-            <UniswapLogo size="$icon.40" color="$accent1" />
+            <Passkey size="$icon.40" color="$accent1" />
           </Flex>
           <Flex alignItems="center" px="$spacing60">
             <Text variant="body3" textAlign="center">

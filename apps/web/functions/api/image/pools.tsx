@@ -2,7 +2,7 @@
 
 import { ProtocolVersion } from '@universe/api/src/clients/graphql/__generated__/schema-types'
 import { ImageResponse } from '@vercel/og'
-import { IMAGE_DATA_FETCH_TIMEOUT_MS, WATERMARK_URL } from 'functions/constants'
+import { IMAGE_DATA_FETCH_TIMEOUT_MS, WATERMARK_PATH } from 'functions/constants'
 import { Data, PositionStatus } from 'functions/utils/cache'
 import getFont from 'functions/utils/getFont'
 import getNetworkLogoUrl from 'functions/utils/getNetworkLogoURL'
@@ -250,7 +250,7 @@ export async function renderPoolOgImage({
                   </div>
                 )}
               </div>
-              <img src={WATERMARK_URL} alt="Uniswap" height="72px" width="324px" />
+              <img src={`${origin}${WATERMARK_PATH}`} alt="Spry" height="72px" width="324px" />
             </div>
           </div>
         </div>
