@@ -7,14 +7,17 @@ import { useMemo } from 'react'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { ApprovalTxInfo } from 'uniswap/src/features/transactions/swap/review/hooks/useTokenApprovalInfo'
 import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { estimateSpryGasFeeValue } from 'uniswap/src/features/transactions/swap/services/tradeService/sprySwapTransaction'
 import { ApprovalAction } from 'uniswap/src/features/transactions/swap/types/trade'
 import { WrapType } from 'uniswap/src/features/transactions/types/wrap'
 import { ONE_SECOND_MS } from 'utilities/src/time/time'
 import { encodeFunctionData, erc20Abi, maxUint256 } from 'viem'
 
-const ZERO_GAS_FEE = { value: '0', displayValue: undefined, isLoading: false, error: null } as const
+// Generous fixed limit for an erc20 approve (used for the rough fee estimate).
+const SPRY_APPROVAL_GAS_LIMIT = BigInt(60_000)
+
+const ZERO_GAS_FEE = { value: '0', displayValue: '0', isLoading: false, error: null } as const
 const LOADING_GAS_FEE = { value: undefined, displayValue: undefined, isLoading: true, error: null } as const
-const READY_GAS_FEE = { value: undefined, displayValue: undefined, isLoading: false, error: null } as const
 
 const NO_APPROVAL: ApprovalTxInfo = {
   tokenApprovalInfo: { action: ApprovalAction.None, txRequest: null, cancelTxRequest: null },
@@ -56,15 +59,20 @@ export function useSprySwapApprovalInfo(params: {
     Boolean(token) &&
     Boolean(spender)
 
-  const { data: allowance, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['sprySwapAllowance', chainId, token, address, spender],
-    queryFn: async () =>
-      spryPublicClient.readContract({
-        address: token as Address,
-        abi: erc20Abi,
-        functionName: 'allowance',
-        args: [address as Address, spender as Address],
-      }),
+    queryFn: async () => {
+      const [allowance, approvalGasFeeValue] = await Promise.all([
+        spryPublicClient.readContract({
+          address: token as Address,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address as Address, spender as Address],
+        }),
+        estimateSpryGasFeeValue(SPRY_APPROVAL_GAS_LIMIT),
+      ])
+      return { allowance, approvalGasFeeValue }
+    },
     enabled: applies,
     staleTime: 12 * ONE_SECOND_MS,
   })
@@ -75,7 +83,7 @@ export function useSprySwapApprovalInfo(params: {
     }
 
     // Allowance still loading: report pending (no error, so no "may fail").
-    if (isLoading || allowance === undefined) {
+    if (isLoading || !data) {
       return {
         tokenApprovalInfo: { action: ApprovalAction.None, txRequest: null, cancelTxRequest: null },
         approvalGasFeeResult: LOADING_GAS_FEE,
@@ -83,21 +91,30 @@ export function useSprySwapApprovalInfo(params: {
       }
     }
 
-    if (allowance >= requiredAmount) {
+    if (data.allowance >= requiredAmount) {
       return NO_APPROVAL
     }
 
     // Approve the SpryRouter to spend the input token (max, so repeat swaps skip
-    // re-approval). Gas is left to the wallet to estimate at signing.
-    const data = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [spender as Address, maxUint256] })
+    // re-approval). Gas is a rough estimate; the wallet re-estimates at signing.
+    const approveData = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: 'approve',
+      args: [spender as Address, maxUint256],
+    })
     return {
       tokenApprovalInfo: {
         action: ApprovalAction.Permit2Approve,
-        txRequest: { to: token, data, value: '0x0', chainId },
+        txRequest: { to: token, data: approveData, value: '0x0', chainId },
         cancelTxRequest: null,
       },
-      approvalGasFeeResult: READY_GAS_FEE,
+      approvalGasFeeResult: {
+        value: data.approvalGasFeeValue,
+        displayValue: data.approvalGasFeeValue,
+        isLoading: false,
+        error: null,
+      },
       revokeGasFeeResult: ZERO_GAS_FEE,
     }
-  }, [applies, token, spender, isLoading, allowance, requiredAmount, chainId])
+  }, [applies, token, spender, isLoading, data, requiredAmount, chainId])
 }

@@ -5,8 +5,30 @@ import { TradeType } from '@uniswap/sdk-core'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import type { TransactionRequestInfo } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
+import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import type { ClassicTrade } from 'uniswap/src/features/transactions/swap/types/trade'
 import { areAddressesEqual } from 'uniswap/src/utils/addresses'
+
+// 1 gwei fallback if the live gas price read fails.
+const GAS_PRICE_FALLBACK = BigInt(1_000_000_000)
+// Generous fixed limit for a SpryRouter single-hop swap (estimateGas reverts
+// before the token approval, so we cannot probe it live here).
+const SPRY_SWAP_GAS_LIMIT = BigInt(500_000)
+
+/**
+ * A rough gas fee (wei) = gasLimit * live gas price, with a price fallback. The
+ * review screen requires a defined gas-fee value to enable submission; the wallet
+ * re-estimates the real gas at signing time.
+ */
+export async function estimateSpryGasFeeValue(gasLimit: bigint): Promise<string> {
+  let gasPrice: bigint
+  try {
+    gasPrice = await spryPublicClient.getGasPrice()
+  } catch {
+    gasPrice = GAS_PRICE_FALLBACK
+  }
+  return (gasLimit * gasPrice).toString()
+}
 
 /** A ready-to-send Spry swap transaction (SpryRouter call). */
 export interface SprySwapTxRequest {
@@ -111,14 +133,15 @@ export function buildSprySwapTxRequest(args: {
  * slippage-adjusted bounds from the trade, encodes the SpryRouter calldata, and
  * returns a single populated txRequest.
  *
- * Gas is intentionally left for the wallet to estimate at signing time: the input
- * token is approved in a preceding step, so an eager estimate here would revert
- * before approval. Returns null if this is not a Base Sepolia Spry swap.
+ * Gas is a rough estimate (fixed limit * live price): a live estimateGas would
+ * revert before the token approval step, so the review uses this to enable
+ * submission and the wallet re-estimates the real gas at signing. Returns null if
+ * this is not a Base Sepolia Spry swap.
  */
-export function buildSprySwapTransactionInfo(args: {
+export async function buildSprySwapTransactionInfo(args: {
   trade: ClassicTrade
   account: string
-}): TransactionRequestInfo | null {
+}): Promise<TransactionRequestInfo | null> {
   const { trade, account } = args
   const chainId = trade.inputAmount.currency.chainId
   if (chainId !== UniverseChainId.BaseSepolia) {
@@ -148,9 +171,11 @@ export function buildSprySwapTransactionInfo(args: {
     chainId,
   }
 
+  const gasFeeValue = await estimateSpryGasFeeValue(SPRY_SWAP_GAS_LIMIT)
+
   return {
     txRequests: [txRequest],
-    gasFeeResult: { value: undefined, displayValue: undefined, isLoading: false, error: null },
+    gasFeeResult: { value: gasFeeValue, displayValue: gasFeeValue, isLoading: false, error: null },
     gasEstimate: {},
     swapRequestArgs: undefined,
   }

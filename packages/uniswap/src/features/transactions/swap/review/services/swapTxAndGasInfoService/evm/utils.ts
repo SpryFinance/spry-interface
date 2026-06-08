@@ -55,7 +55,7 @@ export function createGetEVMSwapTransactionRequestInfo(ctx: {
       ctx.account &&
       derivedSwapInfo.chainId === UniverseChainId.BaseSepolia
     ) {
-      const sprySwapInfo = buildSprySwapTransactionInfo({ trade, account: ctx.account })
+      const sprySwapInfo = await buildSprySwapTransactionInfo({ trade, account: ctx.account })
       if (sprySwapInfo) {
         return sprySwapInfo
       }
