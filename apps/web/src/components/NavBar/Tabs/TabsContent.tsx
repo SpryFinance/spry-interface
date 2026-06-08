@@ -1,14 +1,9 @@
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router'
-import { useSporeColors } from 'ui/src'
-import { ChartBar } from 'ui/src/components/icons/ChartBar'
 import { CoinConvert } from 'ui/src/components/icons/CoinConvert'
 import { Compass } from 'ui/src/components/icons/Compass'
-import { CreditCard } from 'ui/src/components/icons/CreditCard'
 import { Pools } from 'ui/src/components/icons/Pools'
-import { ReceiveAlt } from 'ui/src/components/icons/ReceiveAlt'
-import { SwapDotted } from 'ui/src/components/icons/SwapDotted'
 import { Wallet } from 'ui/src/components/icons/Wallet'
 import { ElementName } from 'uniswap/src/features/telemetry/constants'
 import { MenuItem } from '~/components/NavBar/CompanyMenu/Content'
@@ -36,7 +31,6 @@ export const useTabsContent = (): TabsSection[] => {
   const { t } = useTranslation()
   const { pathname, search, state } = useLocation()
   const { chainId: portfolioChainId, isExternalWallet } = usePortfolioRoutes()
-  const colors = useSporeColors()
   const isPortfolioDefiTabEnabled = useFeatureFlag(FeatureFlags.PortfolioDefiTab)
   const portfolioPoolsBalancesEnabled = useFeatureFlag(FeatureFlags.PortfolioPoolsBalances)
   const isToucanLaunchAuctionEnabled = useFeatureFlag(FeatureFlags.ToucanLaunchAuction)
@@ -46,41 +40,11 @@ export const useTabsContent = (): TabsSection[] => {
 
   return [
     {
-      title: t('common.trade'),
+      title: t('common.swap'),
       href: '/swap',
-      isActive: pathname.startsWith('/swap') || pathname.startsWith('/limit') || pathname.startsWith('/send'),
+      isActive: pathname.startsWith('/swap') || pathname.startsWith('/send'),
       icon: <CoinConvert color="$accent1" size="$icon.20" />,
       elementName: ElementName.NavbarTradeTab,
-      items: [
-        {
-          label: t('common.swap'),
-          icon: <SwapDotted size="$icon.24" color="$neutral2" />,
-          href: '/swap',
-          internal: true,
-          elementName: ElementName.NavbarTradeDropdownSwap,
-        },
-        {
-          label: t('swap.limit'),
-          icon: <ChartBar size="$icon.24" color="$neutral2" />,
-          href: '/limit',
-          internal: true,
-          elementName: ElementName.NavbarTradeDropdownLimit,
-        },
-        {
-          label: t('common.buy.label'),
-          icon: <CreditCard size="$icon.24" color="$neutral2" />,
-          href: '/buy',
-          internal: true,
-          elementName: ElementName.NavbarTradeDropdownBuy,
-        },
-        {
-          label: t('common.sell.label'),
-          icon: <ReceiveAlt fill={colors.neutral2.val} size={24} transform="rotate(180deg)" />,
-          href: '/sell',
-          internal: true,
-          elementName: ElementName.NavbarTradeDropdownSell,
-        },
-      ],
     },
     {
       title: t('common.explore'),
