@@ -80,6 +80,30 @@ export function usePollPendingTransactions(onActivityUpdate: OnActivityUpdate) {
         maxWait: pollingInterval,
       }
 
+      // SPRY: Base Sepolia has no Trading API swap-status endpoint (it 401s), so
+      // confirm transactions directly from the on-chain receipt instead.
+      if (account.chainId === UniverseChainId.BaseSepolia) {
+        return retry(async () => {
+          if (!tx.hash || !isValidHexString(tx.hash) || !publicClient) {
+            throw new Error('Invalid transaction hash')
+          }
+          let adaptedReceipt: TransactionReceipt | undefined
+          let isSuccess = false
+          try {
+            const viemReceipt = await publicClient.getTransactionReceipt({ hash: tx.hash })
+            adaptedReceipt = receiptFromViemReceipt(viemReceipt)
+            isSuccess = viemReceipt.status === 'success'
+          } catch {
+            // Not mined yet (or a transient RPC error): keep polling.
+            throw new RetryableError()
+          }
+          if (!adaptedReceipt) {
+            throw new RetryableError()
+          }
+          return { status: isSuccess ? 'success' : 'reverted', receipt: adaptedReceipt } as ReceiptWithStatus
+        }, retryOptions) as { promise: Promise<ReceiptWithStatus>; cancel: () => void }
+      }
+
       return retry(() => {
         if (!tx.hash) {
           throw new Error(`Invalid transaction hash: hash not defined`)
