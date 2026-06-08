@@ -3,6 +3,7 @@ import { type Hex } from '@spry/sdk'
 import { TradingApi } from '@universe/api'
 import { useMemo } from 'react'
 import { Flex, Text, Tooltip } from 'ui/src'
+import { InfoCircle } from 'ui/src/components/icons/InfoCircle'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import {
   useSprySwapFee,
@@ -78,9 +79,12 @@ export function SpryFeeInfo({ trade, chainId }: { trade: Trade; chainId: Univers
     <Flex row alignItems="center" justifyContent="space-between">
       <Tooltip placement="top">
         <Tooltip.Trigger cursor="default">
-          <Text color="$neutral2" variant="body3">
-            Dynamic fee
-          </Text>
+          <Flex row alignItems="center" gap="$spacing4">
+            <Text color="$neutral2" variant="body3">
+              Dynamic fee
+            </Text>
+            <InfoCircle color="$neutral3" size="$icon.12" />
+          </Flex>
         </Tooltip.Trigger>
         <Tooltip.Content maxWidth={320}>
           <Text variant="body4">{tooltipText}</Text>
