@@ -19,6 +19,8 @@ export interface SpryPoolFeeState {
   poolId: Hex
   tier: PoolTier
   tierLabel: string
+  /** On-chain tier index 0..4 (orders tiers within a hop). */
+  tierIndex: number
   baseFeePips: number
   capFeePips: number
   /** The pool's CURRENT resting fee (the fee a tiny swap would pay right now). */
@@ -29,6 +31,8 @@ export interface SpryPoolFeeState {
   blocksRemaining: number
   /** e.g. "ETH / sptA" - the pool's own pair (useful for multi-hop routes). */
   pairLabel: string
+  /** This pool's hop position in the route (groups multi-tier hops together). */
+  hopIndex: number
 }
 
 /**
@@ -78,16 +82,16 @@ export function useSpryPoolFeeStates(params: {
       // multi-hop pair it is the hops. Deduped by poolId. The per-swap router still
       // quotes all of these and picks the best; this widget just surfaces their state.
       const minHops = Math.min(...routes.map((candidate) => candidate.length))
-      const uniquePools = new Map<string, SpryHop>()
+      const uniquePools = new Map<string, { hop: SpryHop; hopIndex: number }>()
       for (const candidate of routes) {
         if (candidate.length !== minHops) {
           continue
         }
-        for (const hop of candidate) {
+        candidate.forEach((hop, hopIndex) => {
           if (!uniquePools.has(hop.poolId)) {
-            uniquePools.set(hop.poolId, hop)
+            uniquePools.set(hop.poolId, { hop, hopIndex })
           }
-        }
+        })
       }
 
       const read: ReadContractFn = (request) => spryPublicClient.readContract(request as never) as Promise<unknown>
@@ -100,8 +104,8 @@ export function useSpryPoolFeeStates(params: {
       const symbolOf = (address: Address): string =>
         address === NATIVE_CURRENCY ? 'ETH' : (findSpryCurrency(graph, address)?.symbol ?? 'token')
 
-      return Promise.all(
-        [...uniquePools.values()].map(async (hop) => {
+      const result = await Promise.all(
+        [...uniquePools.values()].map(async ({ hop, hopIndex }) => {
           const tier = tierFromTickSpacing(hop.poolKey.tickSpacing)
           const feeParams = tierParams(tier)
           const info = tierInfo(tier)
@@ -115,15 +119,21 @@ export function useSpryPoolFeeStates(params: {
             poolId: hop.poolId,
             tier,
             tierLabel: info.label,
+            tierIndex: info.index,
             baseFeePips: info.baseFeePips,
             capFeePips: info.capFeePips,
             currentFeePips: feeForDelta(cumulative, feeParams),
             zone: zoneOf(cumulative, feeParams),
             blocksRemaining: expired ? 0 : Number(windowEnd - currentBlock),
             pairLabel: `${symbolOf(hop.currencyIn)} / ${symbolOf(hop.currencyOut)}`,
+            hopIndex,
           }
         }),
       )
+      // Group by hop (route order), then by tier within a hop, so a multi-hop route's
+      // tiers stay grouped under each hop instead of interleaving.
+      result.sort((a, b) => a.hopIndex - b.hopIndex || a.tierIndex - b.tierIndex)
+      return result
     },
   })
 

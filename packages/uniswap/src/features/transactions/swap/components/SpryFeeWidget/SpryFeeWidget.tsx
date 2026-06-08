@@ -1,5 +1,6 @@
 import { formatFeePercent, SpryZone } from '@spry/fee'
 import { TradingApi } from '@universe/api'
+import { Fragment } from 'react'
 import { Flex, Text, useSporeColors } from 'ui/src'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { TierIcon } from 'uniswap/src/features/transactions/swap/components/SpryFeeWidget/TierIcon'
@@ -78,12 +79,19 @@ export function SpryFeeWidget(): JSX.Element | null {
       <Text color="$neutral2" variant="body3">
         Spry dynamic fee
       </Text>
-      {states.map((state) => {
+      {states.map((state, index) => {
         // "Best" is only meaningful when the pair has more than one tier to choose
         // between AND the live quote actually routed through this one.
         const hasAlternatives = (pairTierCount.get(state.pairLabel) ?? 0) > 1
         const isBest = hasAlternatives && bestPoolIds.has(state.poolId)
-        return <SpryFeeBar key={state.poolId} state={state} showPair={showPair} isBest={isBest} />
+        // States are grouped by hop; separate one hop's pools from the next with a rule.
+        const startsNewHop = index > 0 && states[index - 1]?.hopIndex !== state.hopIndex
+        return (
+          <Fragment key={state.poolId}>
+            {startsNewHop ? <Flex height={1} backgroundColor="$surface3" /> : null}
+            <SpryFeeBar state={state} showPair={showPair} isBest={isBest} />
+          </Fragment>
+        )
       })}
     </Flex>
   )
