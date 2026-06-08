@@ -14,12 +14,12 @@ import { isClassic } from 'uniswap/src/features/transactions/swap/utils/routing'
 import { CurrencyField } from 'uniswap/src/types/currency'
 
 /** Curve-zone -> Spore status color (DANGER + CAP share critical; the fill level + label separate them). */
-const ZONE_COLOR: Record<SpryZone, string> = {
+const ZONE_COLOR = {
   [SpryZone.SAFE]: '$statusSuccess',
   [SpryZone.ALERT]: '$statusWarning',
   [SpryZone.DANGER]: '$statusCritical',
   [SpryZone.CAP]: '$statusCritical',
-}
+} as const satisfies Record<SpryZone, string>
 
 /** Curve-zone -> a plain-language label for the fee's current heat. */
 const ZONE_LABEL: Record<SpryZone, string> = {
@@ -30,7 +30,7 @@ const ZONE_LABEL: Record<SpryZone, string> = {
 }
 
 /** Pool ids the live trade actually routed through (the router's best-price choice). */
-function routePoolIds(trade: Trade | undefined): Set<string> {
+function routePoolIds(trade: Trade | null | undefined): Set<string> {
   if (!trade || !isClassic(trade)) {
     return new Set()
   }
