@@ -310,7 +310,7 @@ function UniversalSwapFlow({
 
   return (
     <Flex>
-      {!hideHeader && (
+      {!hideHeader && SWAP_TAB_OPTIONS.length > 1 && (
         <Flex row gap="$spacing16">
           <SegmentedControl
             outlined={false}
