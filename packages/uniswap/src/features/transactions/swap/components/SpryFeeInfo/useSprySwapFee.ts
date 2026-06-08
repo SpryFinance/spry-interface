@@ -38,7 +38,14 @@ export interface SprySwapFee {
 export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[] }): SprySwapFee | null {
   const { chainId, hops } = params
   const enabled = chainId === UniverseChainId.BaseSepolia && hops.length > 0
-  const hopsKey = hops.map((hop) => `${hop.poolId}:${hop.amountIn.toString()}:${hop.sqrtPriceX96.toString()}`).join(',')
+  // Key on every input the fee math consumes, so a same-pool/same-amount direction
+  // flip (zeroForOne) or a liquidity change re-fetches instead of serving a stale fee.
+  const hopsKey = hops
+    .map(
+      (hop) =>
+        `${hop.poolId}:${hop.tier}:${hop.zeroForOne}:${hop.amountIn.toString()}:${hop.sqrtPriceX96.toString()}:${hop.liquidity.toString()}`,
+    )
+    .join(',')
 
   const { data } = useQuery({
     queryKey: ['sprySwapFee', chainId, hopsKey],
@@ -65,7 +72,11 @@ export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[]
             sqrtPriceX96: hop.sqrtPriceX96,
             liquidity: hop.liquidity,
             zeroForOne: hop.zeroForOne,
-            amountSpecified: -hop.amountIn, // V4 convention: negative = exact-in
+            // Priced from the resolved per-hop input (exact-in convention) for both
+            // trade types. For exact-output the hook integrates from the output side,
+            // but that input was derived from the same curve, so the fee differs by
+            // sub-pip and never changes the displayed value.
+            amountSpecified: -hop.amountIn,
           })
           // Once the window has elapsed, the hook resets the cumulative on the next
           // swap (the stored signedCum stays stale until then), so price the fee from

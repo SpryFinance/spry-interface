@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { COMMON_BASES } from 'uniswap/src/constants/routing'
+import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { type CurrencyInfo, type PortfolioBalance } from 'uniswap/src/features/dataApi/types'
 import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
@@ -34,9 +35,12 @@ function buildBalance(info: CurrencyInfo, raw: bigint): PortfolioBalance {
  * common-bases row). Empty/undefined until the read resolves or when no address.
  */
 export function useSpryOnchainBalances(evmAddress?: string): Record<CurrencyId, PortfolioBalance> | undefined {
+  // Only read Base Sepolia balances when that chain is enabled, so other chains do
+  // not pay for a Base Sepolia RPC round-trip or surface its tokens in an all-chains view.
+  const { chains } = useEnabledChains()
   const { data } = useQuery({
     queryKey: ['spryOnchainBalances', evmAddress],
-    enabled: Boolean(evmAddress),
+    enabled: Boolean(evmAddress) && chains.includes(UniverseChainId.BaseSepolia),
     refetchInterval: ONE_SECOND_MS * 15,
     staleTime: ONE_SECOND_MS * 10,
     queryFn: async (): Promise<Record<CurrencyId, PortfolioBalance>> => {
