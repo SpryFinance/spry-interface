@@ -56,11 +56,13 @@ export function SpryFeeInfo({ trade, chainId }: { trade: Trade; chainId: Univers
     return null
   }
 
-  const allSameTier = hops.every((hop) => hop.tier === firstHop.tier)
-  const info = tierInfo(firstHop.tier)
-  const baseFee = formatFeePercent(info.baseFeePips)
-  const capFee = formatFeePercent(info.capFeePips)
-  const tierLabel = allSameTier ? info.label : 'Multiple tiers'
+  // Each hop is a separate pool with its own block window; the route's fee is the
+  // sum of the per-hop fees, bounded by the sum of the per-pool [base, cap].
+  const baseFeePips = hops.reduce((sum, hop) => sum + tierInfo(hop.tier).baseFeePips, 0)
+  const capFeePips = hops.reduce((sum, hop) => sum + tierInfo(hop.tier).capFeePips, 0)
+  const baseFee = formatFeePercent(baseFeePips)
+  const capFee = formatFeePercent(capFeePips)
+  const multiHop = hops.length > 1
 
   const value = swapFee ? formatFeePercent(swapFee.feePips) : `from ${baseFee}`
 
@@ -68,8 +70,9 @@ export function SpryFeeInfo({ trade, chainId }: { trade: Trade; chainId: Univers
     swapFee && swapFee.blocksRemaining > 0
       ? ` It eases back toward ${baseFee} over ~${swapFee.blocksRemaining} block${swapFee.blocksRemaining === 1 ? '' : 's'} of quiet trading.`
       : ''
-  const tierAndRange = allSameTier ? `${tierLabel} tier (${baseFee} to ${capFee}). ` : ''
-  const tooltipText = `${tierAndRange}This is the fee your swap pays: the SpryHook's fee rises with the price movement your trade causes within the current block window.${countdown}`
+  const lead = multiHop ? `${hops.length}-hop Spry route. ` : `${tierInfo(firstHop.tier).label} tier. `
+  const recompute = multiHop ? "each pool's fee every block" : 'it every block'
+  const tooltipText = `${lead}The fee your swap pays, ${baseFee} to ${capFee}. The SpryHook recomputes ${recompute} from recent price movement, so it rises with your trade's impact.${countdown}`
 
   return (
     <Flex row alignItems="center" justifyContent="space-between">

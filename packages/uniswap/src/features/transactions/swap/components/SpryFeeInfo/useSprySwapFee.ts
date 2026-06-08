@@ -20,7 +20,7 @@ export interface SprySwapFeeHop {
 export interface SprySwapFee {
   /** The fee this swap pays across hops, in pips (sum of per-hop marginal fees). */
   feePips: number
-  /** Blocks until the soonest pool window resets, after which fees ease toward base. */
+  /** Blocks until the LAST pool window resets, i.e. when the whole route's fee has eased back to base. */
   blocksRemaining: number
   /** The pool window length, in blocks. */
   blockWindow: number
@@ -81,8 +81,10 @@ export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[]
       )
 
       const feePips = perHop.reduce((sum, hop) => sum + hop.feePips, 0)
-      const minRemaining = perHop.reduce((min, hop) => (hop.remaining < min ? hop.remaining : min), blockWindow)
-      return { feePips, blocksRemaining: Number(minRemaining), blockWindow: Number(blockWindow) }
+      // Each pool has its own window; the route's fee fully eases back to base only
+      // once the LAST window resets, so report the longest remaining.
+      const maxRemaining = perHop.reduce((max, hop) => (hop.remaining > max ? hop.remaining : max), BigInt(0))
+      return { feePips, blocksRemaining: Number(maxRemaining), blockWindow: Number(blockWindow) }
     },
   })
 
