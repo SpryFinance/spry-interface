@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Accordion, AnimateTransition, Flex, Separator, Square, Text } from 'ui/src'
+import { Accordion, AnimateTransition, Flex, Square, Text } from 'ui/src'
 import { RotatableChevron } from 'ui/src/components/icons/RotatableChevron'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
 import { HelpModal } from '~/components/HelpModal/HelpModal'
-import { MenuSectionTitle, useMenuContent } from '~/components/NavBar/CompanyMenu/Content'
 import { MenuLink } from '~/components/NavBar/CompanyMenu/MenuDropdown'
 import { LegalAndPrivacyMenu } from '~/components/NavBar/LegalAndPrivacyMenu'
 import { NavDropdown } from '~/components/NavBar/NavDropdown'
@@ -67,12 +66,6 @@ export function MobileMenuDrawer({ isOpen, closeMenu }: { isOpen: boolean; close
   const onExitPreferencesMenu = useCallback(() => changeView(PreferencesView.SETTINGS), [changeView])
   const { t } = useTranslation()
   const tabsContent = useTabsContent()
-  const productContent = useMenuContent({
-    keys: [MenuSectionTitle.Products],
-  })
-  const menuContent = useMenuContent({
-    keys: [MenuSectionTitle.Protocol, MenuSectionTitle.Company],
-  })
 
   // Collapse sections on close
   useEffect(() => {
@@ -100,6 +93,8 @@ export function MobileMenuDrawer({ isOpen, closeMenu }: { isOpen: boolean; close
             value={openSections}
             onValueChange={setOpenSections}
           >
+            {/* SPRY: only the app navigation, legal, and socials remain. The Uniswap
+                product / protocol / company marketing sections are removed. */}
             <Flex gap="$spacing20">
               <MenuSection title={t('common.app')} collapsible={false}>
                 {tabsContent.map((tab, index) => (
@@ -115,41 +110,6 @@ export function MobileMenuDrawer({ isOpen, closeMenu }: { isOpen: boolean; close
                   />
                 ))}
               </MenuSection>
-              {Object.values(productContent).map((sectionContent, index) => (
-                <MenuSection key={`${sectionContent.title}_${index}`} title={sectionContent.title} collapsible={false}>
-                  {/* oxlint-disable-next-line no-shadow */}
-                  {sectionContent.items.map(({ label, href, internal, icon, elementName }, index) => (
-                    <MenuLink
-                      key={`${label}_${index}}`}
-                      label={label}
-                      href={href}
-                      internal={internal}
-                      closeMenu={closeMenu}
-                      icon={icon}
-                      textVariant="body2"
-                      elementName={elementName}
-                    />
-                  ))}
-                </MenuSection>
-              ))}
-
-              <Separator backgroundColor="$surface3" />
-
-              {Object.values(menuContent).map((sectionContent, index) => (
-                <MenuSection key={`${sectionContent.title}_${index}`} title={sectionContent.title}>
-                  {/* oxlint-disable-next-line no-shadow */}
-                  {sectionContent.items.map(({ label, href, internal, elementName }, index) => (
-                    <MenuLink
-                      key={`${label}_${index}}`}
-                      label={label}
-                      href={href}
-                      internal={internal}
-                      closeMenu={closeMenu}
-                      elementName={elementName}
-                    />
-                  ))}
-                </MenuSection>
-              ))}
               <Flex paddingBottom="$padding8">
                 <LegalAndPrivacyMenu closeMenu={closeMenu} />
               </Flex>

@@ -4,33 +4,6 @@ import { expect, getTest } from '~/playwright/fixtures'
 
 const test = getTest()
 
-const companyMenu = [
-  {
-    label: 'Products',
-    items: [
-      { label: 'Wallet', href: 'https://wallet.uniswap.org/' },
-      { label: 'UniswapX', href: 'https://x.uniswap.org/' },
-      { label: 'API', href: 'https://hub.uniswap.org/' },
-      { label: 'Unichain', href: 'https://www.unichain.org/' },
-    ],
-  },
-  {
-    label: 'Protocol',
-    items: [
-      { label: 'Governance', href: 'https://uniswap.org/governance' },
-      { label: 'Developers', href: 'https://uniswap.org/developers' },
-      { label: 'Vote', href: 'https://vote.uniswapfoundation.org' },
-    ],
-  },
-  {
-    label: 'Company',
-    items: [
-      { label: 'Careers', href: 'https://careers.uniswap.org/' },
-      { label: 'Blog', href: 'https://blog.uniswap.org/' },
-    ],
-  },
-]
-
 const tabs = [
   {
     label: 'Trade',
@@ -110,21 +83,9 @@ test.describe(
         })
       }
 
-      test('displays complete mobile drawer with all sections, social media, and legal content', async ({ page }) => {
+      test('displays mobile drawer with social media and legal content', async ({ page }) => {
         const drawer = page.getByTestId(TestID.CompanyMenuMobileDrawer)
         await expect(drawer).toBeVisible()
-
-        // Verify all menu sections and their links
-        for (const section of companyMenu) {
-          // Products section is not expandable
-          if (section.label !== 'Products') {
-            // Expand the section
-            await drawer.getByText(section.label).click()
-          }
-          for (const item of section.items) {
-            await expect(drawer.locator(`a:has-text("${item.label}")`)).toHaveAttribute('href', item.href)
-          }
-        }
 
         // Verify social media links
         for (const link of socialMediaLinks) {
