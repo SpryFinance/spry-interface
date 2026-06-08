@@ -6,6 +6,7 @@ import { zIndexes } from 'ui/src/theme'
 import { CurrencyLogo } from 'uniswap/src/components/CurrencyLogo/CurrencyLogo'
 import { SplitLogo } from 'uniswap/src/components/CurrencyLogo/SplitLogo'
 import { BIPS_BASE } from 'uniswap/src/constants/misc'
+import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
 import { useCurrencyInfo } from 'uniswap/src/features/tokens/useCurrencyInfo'
 import { currencyId, currencyIdToChain } from 'uniswap/src/utils/currencyId'
@@ -117,6 +118,9 @@ export function RoutingDiagram({
 }): JSX.Element {
   const currencyInCurrencyInfo = useCurrencyInfo(currencyId(currencyIn))
   const currencyOutCurrencyInfo = useCurrencyInfo(currencyId(currencyOut))
+  // SPRY: hide the Uniswap protocol/percent badge ("V4 100%") for Spry routes; a
+  // single dynamic-fee pool per hop carries no useful protocol/split information.
+  const showProtocolBadge = currencyIn.chainId !== UniverseChainId.BaseSepolia
 
   return (
     <Flex>
@@ -126,6 +130,7 @@ export function RoutingDiagram({
           entry={entry}
           currencyInCurrencyInfo={currencyInCurrencyInfo}
           currencyOutCurrencyInfo={currencyOutCurrencyInfo}
+          showProtocolBadge={showProtocolBadge}
         />
       ))}
     </Flex>
@@ -136,10 +141,12 @@ function RouteRow({
   entry,
   currencyInCurrencyInfo,
   currencyOutCurrencyInfo,
+  showProtocolBadge,
 }: {
   entry: RoutingDiagramEntry
   currencyInCurrencyInfo: Maybe<CurrencyInfo>
   currencyOutCurrencyInfo: Maybe<CurrencyInfo>
+  showProtocolBadge: boolean
 }): JSX.Element {
   const { path } = entry
   const pathRows = useMemo(() => splitPathIntoRows(path), [path])
@@ -148,7 +155,7 @@ function RouteRow({
     return (
       <Flex row alignItems="center" gap="$spacing4">
         <CurrencyLogo currencyInfo={currencyInCurrencyInfo} size={16} />
-        <Route entry={entry} />
+        <Route entry={entry} showBadge={showProtocolBadge} />
         <CurrencyLogo currencyInfo={currencyOutCurrencyInfo} size={16} />
       </Flex>
     )
@@ -167,7 +174,7 @@ function RouteRow({
             </Flex>
 
             <Flex flex={1}>
-              <Route entry={{ ...entry, path: rowPath }} showBadge={isFirstRow} />
+              <Route entry={{ ...entry, path: rowPath }} showBadge={showProtocolBadge && isFirstRow} />
             </Flex>
 
             <Flex mr="$spacing4" width={16}>
