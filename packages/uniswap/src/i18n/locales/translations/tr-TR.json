@@ -2318,7 +2318,7 @@
   "swap.route.optimizedGasCost": "Bu rota, bölünmüş rotaları, çoklu atlamaları ve her adımın ağ maliyetlerini dikkate alır.",
   "swap.router.label.client": "Uniswap Client",
   "swap.routing.jupiter.description": "Jupiter aggregates liquidity from multiple sources to provide you with the most competitive prices.",
-  "swap.routing.uniswapAutoRouter.description": "The Uniswap Auto Router considers the most efficient routes and network costs to provide you with the most competitive prices.",
+  "swap.routing.uniswapAutoRouter.description": "Spry routes your swap through its dynamic-fee pool to give you the best available price.",
   "swap.settings.deadline.tooltip": "İşlemin bu süreden daha uzun süre beklemede kalırsa geri alınır. (Maksimum: 3 gün)",
   "swap.settings.deadline.warning": "Uzun son tarih",
   "swap.settings.oneClickSwap.title": "Tek tıkla swap'lar",

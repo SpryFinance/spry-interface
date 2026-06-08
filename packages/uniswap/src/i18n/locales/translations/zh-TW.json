@@ -2318,7 +2318,7 @@
   "swap.route.optimizedGasCost": "該路徑考慮了分割路徑、多跳以及每個步驟的網路費。",
   "swap.router.label.client": "Uniswap 用戶端",
   "swap.routing.jupiter.description": "Jupiter aggregates liquidity from multiple sources to provide you with the most competitive prices.",
-  "swap.routing.uniswapAutoRouter.description": "The Uniswap Auto Router considers the most efficient routes and network costs to provide you with the most competitive prices.",
+  "swap.routing.uniswapAutoRouter.description": "Spry routes your swap through its dynamic-fee pool to give you the best available price.",
   "swap.settings.deadline.tooltip": "如果你的交易處於待處理狀態超過該時間，則交易將會撤回。(最長時間：3 天)。",
   "swap.settings.deadline.warning": "緊急截止日期",
   "swap.settings.oneClickSwap.title": "一鍵交換",

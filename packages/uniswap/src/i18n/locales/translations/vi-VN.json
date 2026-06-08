@@ -2318,7 +2318,7 @@
   "swap.route.optimizedGasCost": "Tuyến này sẽ xem xét tuyến phân tách, nhiều chặng và phí mạng của từng bước.",
   "swap.router.label.client": "Uniswap Client",
   "swap.routing.jupiter.description": "Jupiter aggregates liquidity from multiple sources to provide you with the most competitive prices.",
-  "swap.routing.uniswapAutoRouter.description": "The Uniswap Auto Router considers the most efficient routes and network costs to provide you with the most competitive prices.",
+  "swap.routing.uniswapAutoRouter.description": "Spry routes your swap through its dynamic-fee pool to give you the best available price.",
   "swap.settings.deadline.tooltip": "Giao dịch của bạn sẽ hoàn tác nếu thời gian chờ dài hơn khoảng thời gian này. (Tối đa: 3 ngày).",
   "swap.settings.deadline.warning": "Sắp đến hạn",
   "swap.settings.oneClickSwap.title": "Hoán đổi với 1 lần nhấp",

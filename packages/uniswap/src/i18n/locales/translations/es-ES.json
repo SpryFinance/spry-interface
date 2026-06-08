@@ -2318,7 +2318,7 @@
   "swap.route.optimizedGasCost": "Esta ruta considera rutas divididas, varios saltos y los costos de la red de cada paso.",
   "swap.router.label.client": "Cliente de Uniswap",
   "swap.routing.jupiter.description": "Jupiter aggregates liquidity from multiple sources to provide you with the most competitive prices.",
-  "swap.routing.uniswapAutoRouter.description": "The Uniswap Auto Router considers the most efficient routes and network costs to provide you with the most competitive prices.",
+  "swap.routing.uniswapAutoRouter.description": "Spry routes your swap through its dynamic-fee pool to give you the best available price.",
   "swap.settings.deadline.tooltip": "La transacción se revertirá si está pendiente por más tiempo que el indicado. (Máximo: 3 días).",
   "swap.settings.deadline.warning": "Fecha límite alta",
   "swap.settings.oneClickSwap.title": "Intercambio con un clic",

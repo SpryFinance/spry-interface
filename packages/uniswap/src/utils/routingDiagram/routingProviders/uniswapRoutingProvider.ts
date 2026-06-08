@@ -1,6 +1,6 @@
 import { Percent, TradeType } from '@uniswap/sdk-core'
 import { TradingApi } from '@universe/api'
-import { UniswapLogo } from 'ui/src/components/icons/UniswapLogo'
+import { OrderRouting } from 'ui/src/components/icons/OrderRouting'
 import { DYNAMIC_FEE_AMOUNT, V2_DEFAULT_FEE_TIER } from 'uniswap/src/constants/pools'
 import type { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { Trade } from 'uniswap/src/features/transactions/swap/types/trade'
@@ -76,8 +76,10 @@ function parseRouteHop(pool: ApiPool): RoutingHop {
 }
 
 export const uniswapRoutingProvider: RoutingProvider = {
-  name: 'Uniswap API',
-  icon: UniswapLogo,
+  // SPRY: classic swaps route through the Spry pool (SpryRouter + SpryHook),
+  // not the Uniswap routing API, so present the provider as Spry.
+  name: 'Spry',
+  icon: OrderRouting,
   iconColor: '$accent1',
 
   getRoutingEntries: (trade: Trade): RoutingDiagramEntry[] => {
@@ -117,7 +119,7 @@ export const uniswapRoutingProvider: RoutingProvider = {
 }
 
 export const uniswapChainedRoutingProvider: RoutingProvider = {
-  name: 'Uniswap API',
+  name: 'Spry',
   icon: undefined,
   iconColor: '$neutral1',
 

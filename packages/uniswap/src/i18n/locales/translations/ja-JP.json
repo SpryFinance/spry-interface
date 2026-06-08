@@ -2318,7 +2318,7 @@
   "swap.route.optimizedGasCost": "このルートは、分割ルート、複数のホップ、および各ステップのネットワークコストを考慮します。",
   "swap.router.label.client": "Uniswap クライアント",
   "swap.routing.jupiter.description": "Jupiter aggregates liquidity from multiple sources to provide you with the most competitive prices.",
-  "swap.routing.uniswapAutoRouter.description": "The Uniswap Auto Router considers the most efficient routes and network costs to provide you with the most competitive prices.",
+  "swap.routing.uniswapAutoRouter.description": "Spry routes your swap through its dynamic-fee pool to give you the best available price.",
   "swap.settings.deadline.tooltip": "実施中になっている経過時間がこの時間を超えた場合、トランザクションは取り消されます。(最長: 3 日間)",
   "swap.settings.deadline.warning": "かなり長い期限です",
   "swap.settings.oneClickSwap.title": "ワンクリックスワップ",
