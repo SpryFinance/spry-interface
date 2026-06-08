@@ -43,8 +43,8 @@ export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[]
   const { data } = useQuery({
     queryKey: ['sprySwapFee', chainId, hopsKey],
     enabled,
-    refetchInterval: ONE_SECOND_MS * 12,
-    staleTime: ONE_SECOND_MS * 6,
+    refetchInterval: ONE_SECOND_MS * 6,
+    staleTime: ONE_SECOND_MS * 3,
     queryFn: async (): Promise<SprySwapFee | null> => {
       const config = getSpryConfig(chainId)
       if (!config) {
@@ -52,7 +52,11 @@ export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[]
       }
       const read: ReadContractFn = (request) => spryPublicClient.readContract(request as never) as Promise<unknown>
       const hook = createSpryHookClient(read, config.addresses.spryHook)
-      const [blockWindow, currentBlock] = await Promise.all([hook.getBlockWindow(), spryPublicClient.getBlockNumber()])
+      const [blockWindow, currentBlock] = await Promise.all([
+        hook.getBlockWindow(),
+        // Read fresh so window expiry is detected as blocks advance, not from a cache.
+        spryPublicClient.getBlockNumber({ cacheTime: 0 }),
+      ])
 
       const perHop = await Promise.all(
         hops.map(async (hop) => {
@@ -63,9 +67,15 @@ export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[]
             zeroForOne: hop.zeroForOne,
             amountSpecified: -hop.amountIn, // V4 convention: negative = exact-in
           })
-          const feePips = marginalFee(window.signedCum, window.signedCum + delta, tierParams(hop.tier))
+          // Once the window has elapsed, the hook resets the cumulative on the next
+          // swap (the stored signedCum stays stale until then), so price the fee from
+          // a fresh window (cumBefore = 0). Otherwise the fee never relaxes back to
+          // base after the window passes.
           const windowEnd = window.windowStart + blockWindow
-          const remaining = windowEnd > currentBlock ? windowEnd - currentBlock : BigInt(0)
+          const expired = windowEnd <= currentBlock
+          const cumBefore = expired ? BigInt(0) : window.signedCum
+          const feePips = marginalFee(cumBefore, cumBefore + delta, tierParams(hop.tier))
+          const remaining = expired ? BigInt(0) : windowEnd - currentBlock
           return { feePips, remaining }
         }),
       )
