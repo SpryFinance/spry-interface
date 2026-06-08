@@ -179,8 +179,8 @@ export const uniswapUrls = {
     tiktok: 'https://www.tiktok.com/@uniswap',
   },
   bugBountyUrl: 'https://cantina.xyz/bounties/f9df94db-c7b1-434b-bb06-d1360abdd1be',
-  termsOfServiceUrl: 'https://uniswap.org/terms-of-service',
-  privacyPolicyUrl: 'https://uniswap.org/privacy-policy',
+  termsOfServiceUrl: 'https://spry.fi/terms-of-service',
+  privacyPolicyUrl: 'https://spry.fi/privacy-policy',
   chromeExtension: 'http://uniswap.org/ext',
   chromeExtensionUninstallUrl: `${UNISWAP_WEB_URL}${CHROME_EXTENSION_UNINSTALL_URL_PATH}`,
 

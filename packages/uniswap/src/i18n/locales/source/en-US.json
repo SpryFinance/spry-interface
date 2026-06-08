@@ -3303,7 +3303,7 @@
   "wallet.connecting.solanaPrompt.noWalletDetected.header": "No Solana wallet detected",
   "wallet.connecting.title.evm": "Connect to {{walletName}}",
   "wallet.connecting.title.svm": "Connect to {{walletName}} on Solana",
-  "wallet.connectingAgreement": "By connecting a wallet, you agree to Uniswap Labs’ <termsLink>Terms of Service</termsLink> and consent to its <privacyLink>Privacy Policy</privacyLink>.",
+  "wallet.connectingAgreement": "By connecting a wallet, you agree to Spry Finance’s <termsLink>Terms of Service</termsLink> and consent to its <privacyLink>Privacy Policy</privacyLink>.",
   "wallet.connectionFailed.message": "Connection attempt failed. Please try again, following the steps to connect in your wallet.",
   "wallet.mismatch.popup.description": "Some features are not supported by your connected wallet.",
   "wallet.mismatch.popup.title": "Limited wallet support",
