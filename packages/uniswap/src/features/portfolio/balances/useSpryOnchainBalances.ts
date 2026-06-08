@@ -4,17 +4,22 @@ import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { type CurrencyInfo, type PortfolioBalance } from 'uniswap/src/features/dataApi/types'
 import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { type CurrencyId } from 'uniswap/src/types/currency'
+import { currencyId as toCurrencyId } from 'uniswap/src/utils/currencyId'
 import { ONE_SECOND_MS } from 'utilities/src/time/time'
 import { type Address, erc20Abi, formatUnits } from 'viem'
 
 function buildBalance(info: CurrencyInfo, raw: bigint): PortfolioBalance {
+  // COMMON_BASES entries are "partial" CurrencyInfos with no currencyId, so derive
+  // it from the currency. A missing currencyId crashes currencyId-based consumers
+  // such as the token warning modal (currencyIdToAddress(undefined).split).
+  const id = toCurrencyId(info.currency)
   return {
-    id: info.currencyId,
-    cacheId: `TokenBalance:${info.currencyId}`,
+    id,
+    cacheId: `TokenBalance:${id}`,
     quantity: Number(formatUnits(raw, info.currency.decimals)),
     // No price feed on this testnet, so there is no USD value to show.
     balanceUSD: null,
-    currencyInfo: info,
+    currencyInfo: { ...info, currencyId: id },
     relativeChange24: null,
     isHidden: false,
   }
@@ -57,13 +62,15 @@ export function useSpryOnchainBalances(evmAddress?: string): Record<CurrencyId, 
 
       const result: Record<CurrencyId, PortfolioBalance> = {}
       if (native && nativeBalance > BigInt(0)) {
-        result[native.currencyId] = buildBalance(native, nativeBalance)
+        const balance = buildBalance(native, nativeBalance)
+        result[balance.id] = balance
       }
       erc20s.forEach((base, index) => {
         const entry = erc20Balances[index]
         const raw = entry?.status === 'success' ? (entry.result as bigint) : BigInt(0)
         if (raw > BigInt(0)) {
-          result[base.currencyId] = buildBalance(base, raw)
+          const balance = buildBalance(base, raw)
+          result[balance.id] = balance
         }
       })
       return result
