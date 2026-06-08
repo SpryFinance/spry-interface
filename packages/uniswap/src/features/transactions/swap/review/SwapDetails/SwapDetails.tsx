@@ -158,9 +158,11 @@ export function SwapDetails({
           />
         )}
         {!acceptedTrade.indicative && (
-          <RoutingInfo trade={acceptedTrade} gasFee={gasFee} chainId={acceptedTrade.inputAmount.currency.chainId} />
+          <>
+            <RoutingInfo trade={acceptedTrade} gasFee={gasFee} chainId={acceptedTrade.inputAmount.currency.chainId} />
+            <SpryFeeInfo trade={acceptedTrade} chainId={acceptedTrade.inputAmount.currency.chainId} />
+          </>
         )}
-        <SpryFeeInfo trade={acceptedTrade} chainId={acceptedTrade.inputAmount.currency.chainId} />
         <PriceImpactRow derivedSwapInfo={acceptedDerivedSwapInfo} />
       </TransactionDetails>
     </HeightAnimator>

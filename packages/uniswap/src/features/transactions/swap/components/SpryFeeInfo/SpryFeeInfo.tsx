@@ -1,5 +1,6 @@
 import { formatFeePercent, isValidTickSpacing, tierFromTickSpacing, tierInfo } from '@spry/fee'
 import { type Hex } from '@spry/sdk'
+import { TradingApi } from '@universe/api'
 import { useMemo } from 'react'
 import { Flex, Text, Tooltip } from 'ui/src'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
@@ -16,11 +17,9 @@ function spryRouteHops(trade: Trade): SprySwapFeeHop[] {
     return []
   }
   const firstRoute = trade.quote.quote.route?.[0] ?? []
+  const v4Pools = firstRoute.filter((pool): pool is TradingApi.V4PoolInRoute => pool.type === 'v4-pool')
   const hops: SprySwapFeeHop[] = []
-  for (const pool of firstRoute) {
-    if (pool.type !== 'v4-pool') {
-      continue
-    }
+  for (const pool of v4Pools) {
     const tickSpacing = Number(pool.tickSpacing)
     const tokenIn = pool.tokenIn.address
     const tokenOut = pool.tokenOut.address
@@ -30,8 +29,8 @@ function spryRouteHops(trade: Trade): SprySwapFeeHop[] {
     hops.push({
       poolId: pool.address as Hex,
       tier: tierFromTickSpacing(tickSpacing),
-      sqrtPriceX96: BigInt(pool.sqrtRatioX96 ?? '0'),
-      liquidity: BigInt(pool.liquidity ?? '0'),
+      sqrtPriceX96: BigInt(pool.sqrtRatioX96),
+      liquidity: BigInt(pool.liquidity),
       amountIn: BigInt(pool.amountIn ?? '0'),
       // currency0 is the lower-sorted address, so the input is token0 iff it sorts first.
       zeroForOne: BigInt(tokenIn) < BigInt(tokenOut),
