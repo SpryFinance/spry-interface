@@ -290,6 +290,9 @@ export function useSwapParams(): {
     wrapType,
     currencyInAmount: currencyAmounts[CurrencyField.INPUT],
     currencyOutAmount: currencyAmounts[CurrencyField.OUTPUT],
+    // Slippage-adjusted max input, so the local Base Sepolia allowance check covers
+    // the most an exact-output swap could pull (not just the quoted input).
+    currencyInMaxAmount: trade?.maxAmountIn,
     routing: trade?.routing,
   })
 

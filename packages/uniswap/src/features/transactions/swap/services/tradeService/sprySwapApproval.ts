@@ -40,16 +40,24 @@ export function useSprySwapApprovalInfo(params: {
   chainId: UniverseChainId
   address?: string
   currencyInAmount: Maybe<CurrencyAmount<Currency>>
+  /**
+   * The slippage-adjusted maximum input (trade.maxAmountIn) - the most the swap can
+   * actually pull. Preferred for the allowance check so exact-output swaps (whose
+   * realized input exceeds the quote) are not under-approved.
+   */
+  currencyInMaxAmount: Maybe<CurrencyAmount<Currency>>
   routing: TradingApi.Routing | undefined
   wrapType: WrapType
 }): ApprovalTxInfo | null {
-  const { chainId, address, currencyInAmount, routing, wrapType } = params
+  const { chainId, address, currencyInAmount, currencyInMaxAmount, routing, wrapType } = params
 
   const config = getSpryConfig(UniverseChainId.BaseSepolia)
   const spender = config?.addresses.spryRouter
   const currencyIn = currencyInAmount?.currency
   const token = currencyIn && !currencyIn.isNative ? currencyIn.wrapped.address : undefined
-  const requiredAmount = currencyInAmount ? BigInt(currencyInAmount.quotient.toString()) : BigInt(0)
+  // Cover the max the swap can spend (maxAmountIn >= the quoted input), not just the quote.
+  const requiredCurrencyAmount = currencyInMaxAmount ?? currencyInAmount
+  const requiredAmount = requiredCurrencyAmount ? BigInt(requiredCurrencyAmount.quotient.toString()) : BigInt(0)
 
   const applies =
     chainId === UniverseChainId.BaseSepolia &&

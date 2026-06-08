@@ -23,6 +23,8 @@ export interface TokenApprovalInfoParams {
   wrapType: WrapType
   currencyInAmount: Maybe<CurrencyAmount<Currency>>
   currencyOutAmount?: Maybe<CurrencyAmount<Currency>>
+  /** Slippage-adjusted max input (trade.maxAmountIn); used by the Base Sepolia local approval. */
+  currencyInMaxAmount?: Maybe<CurrencyAmount<Currency>>
   routing: TradingApi.Routing | undefined
   address?: string
 }
@@ -43,7 +45,7 @@ function useApprovalWillBeBatchedWithSwap(chainId: UniverseChainId, routing: Tra
 }
 
 export function useTokenApprovalInfo(params: TokenApprovalInfoParams): ApprovalTxInfo {
-  const { address, chainId, wrapType, currencyInAmount, currencyOutAmount, routing } = params
+  const { address, chainId, wrapType, currencyInAmount, currencyInMaxAmount, currencyOutAmount, routing } = params
 
   const isWrap = wrapType !== WrapType.NotApplicable
   /** Approval is included elsewhere for Chained Actions so it can be skipped */
@@ -108,7 +110,14 @@ export function useTokenApprovalInfo(params: TokenApprovalInfoParams): ApprovalT
   // SPRY: Base Sepolia classic swaps use a local allowance check + erc20 approve
   // (the gateway /approval endpoint 401s here). When this applies, skip the
   // gateway query and return the local result below.
-  const spryApproval = useSprySwapApprovalInfo({ chainId, address, currencyInAmount, routing, wrapType })
+  const spryApproval = useSprySwapApprovalInfo({
+    chainId,
+    address,
+    currencyInAmount,
+    currencyInMaxAmount,
+    routing,
+    wrapType,
+  })
 
   const shouldSkip =
     !approvalRequestArgs || isWrap || !address || approvalWillBeBatchedWithSwap || isChained || Boolean(spryApproval)

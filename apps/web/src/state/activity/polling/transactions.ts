@@ -94,7 +94,18 @@ export function usePollPendingTransactions(onActivityUpdate: OnActivityUpdate) {
             adaptedReceipt = receiptFromViemReceipt(viemReceipt)
             isSuccess = viemReceipt.status === 'success'
           } catch {
-            // Not mined yet (or a transient RPC error): keep polling.
+            // Not mined yet (or a transient RPC error). Drop transactions past their
+            // deadline (or, if none, older than 6h) so they don't poll forever;
+            // otherwise keep polling. Mirrors the gateway path's cleanup.
+            if (account.isConnected) {
+              if (tx.deadline) {
+                if (blockTimestamp && tx.deadline < Number(blockTimestamp)) {
+                  removeTransaction(tx.id)
+                }
+              } else if (tx.addedTime + ms(`6h`) < Date.now()) {
+                removeTransaction(tx.id)
+              }
+            }
             throw new RetryableError()
           }
           if (!adaptedReceipt) {
