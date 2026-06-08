@@ -67,7 +67,7 @@ export function SwapRateRatio({
           color={isPrimary ? '$neutral2' : '$neutral3'}
           variant="body3"
         >
-          {rateAmountUSD && ` (${rateAmountUSD})`}
+          {usdAmountOut ? ` (${rateAmountUSD})` : null}
         </Text>
       </Flex>
     </TouchableArea>

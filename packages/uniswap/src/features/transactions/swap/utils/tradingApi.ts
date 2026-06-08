@@ -273,6 +273,12 @@ function parseV4PoolApi({
   const currencyIn = inputIsNative ? nativeOnChain(tokenIn.chainId) : parseTokenApi(tokenIn)
   const currencyOut = outputIsNative ? nativeOnChain(tokenOut.chainId) : parseTokenApi(tokenOut)
 
+  // SPRY: the v4-sdk Pool sorts the pair by WRAPPED address, while on-chain a native
+  // pool sorts ETH as address(0) (currency0) - the orientation sqrtRatioX96/tick are
+  // read in. These agree only when the ETH-paired token's address sorts AFTER WETH
+  // (true for the deployed sptA/sptB). A future ETH-paired token below WETH's address
+  // would invert the displayed mid-price/price-impact (amounts + execution unaffected);
+  // normalize this orientation before adding one.
   return new V4Pool(
     currencyIn,
     currencyOut,
