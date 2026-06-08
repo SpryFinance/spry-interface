@@ -160,7 +160,7 @@ export interface ExactOutputArgs {
   amountInMax: bigint;
   recipient: Address;
   deadline: bigint;
-  /** For exactOutput the path is reversed, so the native input cannot be auto-detected; set this when the input currency is native ETH. */
+  /** buildSwapExactOutput receives currencyOut, not the input currency, so a native input cannot be auto-detected here; set this when the input currency is native ETH. (The path is forward: path[0].intermediateCurrency is the input side.) */
   inputIsNative?: boolean;
 }
 

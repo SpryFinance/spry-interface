@@ -1,5 +1,5 @@
 import { PoolTier } from '@spry/fee'
-import { poolId, spryPoolKey, spryRouterAbi, type Address } from '@spry/sdk'
+import { NATIVE_CURRENCY, poolId, spryPoolKey, spryRouterAbi, type Address } from '@spry/sdk'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { SpryHop } from 'uniswap/src/features/transactions/swap/services/tradeService/spryRouting'
 import { buildSprySwapTxRequest } from 'uniswap/src/features/transactions/swap/services/tradeService/sprySwapTransaction'
@@ -26,6 +26,33 @@ function sptABRoute(tokenIn: Address, tokenOut: Address): SpryHop[] {
       zeroForOne: BigInt(tokenIn) === BigInt(poolKey.currency0),
       currencyIn: tokenIn,
       currencyOut: tokenOut,
+    },
+  ]
+}
+
+/** A two-hop ETH -> sptA -> sptB route (the multi-hop path through the sptA hub). */
+function ethSptAsptBRoute(): SpryHop[] {
+  const ethSptA = spryPoolKey({
+    tokenA: NATIVE_CURRENCY,
+    tokenB: SPT_A,
+    tier: PoolTier.BLUE_CHIP,
+    hookAddress: SPRY_HOOK,
+  })
+  const sptASptB = spryPoolKey({ tokenA: SPT_A, tokenB: SPT_B, tier: PoolTier.BLUE_CHIP, hookAddress: SPRY_HOOK })
+  return [
+    {
+      poolKey: ethSptA,
+      poolId: poolId(ethSptA),
+      zeroForOne: BigInt(NATIVE_CURRENCY) === BigInt(ethSptA.currency0),
+      currencyIn: NATIVE_CURRENCY,
+      currencyOut: SPT_A,
+    },
+    {
+      poolKey: sptASptB,
+      poolId: poolId(sptASptB),
+      zeroForOne: BigInt(SPT_A) === BigInt(sptASptB.currency0),
+      currencyIn: SPT_A,
+      currencyOut: SPT_B,
     },
   ]
 }
@@ -143,5 +170,58 @@ describe('buildSprySwapTxRequest', () => {
         deadline: DEADLINE,
       }),
     ).toThrow(/amountInMax/)
+  })
+
+  it('encodes a forward output path for a multi-hop ETH->sptA->sptB exact-input swap', () => {
+    const tx = buildSprySwapTxRequest({
+      chainId: UniverseChainId.BaseSepolia,
+      route: ethSptAsptBRoute(),
+      exactInput: true,
+      amountIn: ONE_E18,
+      amountOut: BigInt(0),
+      amountOutMin: BigInt(900),
+      amountInMax: BigInt(0),
+      recipient: ACCOUNT,
+      deadline: DEADLINE,
+    })
+    expect(tx).not.toBeNull()
+    expect(tx?.value).toBe(ONE_E18) // native ETH input -> msg.value = amountIn
+
+    const decoded = decodeFunctionData({ abi: spryRouterAbi, data: tx?.data ?? '0x' })
+    expect(decoded.functionName).toBe('swapExactInput')
+    const args = decoded.args as readonly unknown[]
+    // [currencyIn, path, amountIn, amountOutMin, recipient, deadline]
+    expect(BigInt(args[0] as string)).toBe(BigInt(NATIVE_CURRENCY))
+    const path = args[1] as readonly { intermediateCurrency: string }[]
+    // exact-in: each hop's intermediateCurrency is its OUTPUT side.
+    expect(path.map((p) => BigInt(p.intermediateCurrency))).toEqual([BigInt(SPT_A), BigInt(SPT_B)])
+    expect(args[2]).toBe(ONE_E18)
+  })
+
+  it('builds a FORWARD exact-output path (path[0] = the user input), not a reversed one', () => {
+    const tx = buildSprySwapTxRequest({
+      chainId: UniverseChainId.BaseSepolia,
+      route: ethSptAsptBRoute(),
+      exactInput: false,
+      amountIn: BigInt(0),
+      amountOut: ONE_E18,
+      amountOutMin: BigInt(0),
+      amountInMax: BigInt(5000),
+      recipient: ACCOUNT,
+      deadline: DEADLINE,
+    })
+    expect(tx).not.toBeNull()
+    expect(tx?.value).toBe(BigInt(5000)) // native ETH input -> msg.value = amountInMax
+
+    const decoded = decodeFunctionData({ abi: spryRouterAbi, data: tx?.data ?? '0x' })
+    expect(decoded.functionName).toBe('swapExactOutput')
+    const args = decoded.args as readonly unknown[]
+    // [currencyOut, path, amountOut, amountInMax, recipient, deadline]
+    expect(BigInt(args[0] as string)).toBe(BigInt(SPT_B))
+    const path = args[1] as readonly { intermediateCurrency: string }[]
+    // SpryRouter.swapExactOutput wants path[0].intermediateCurrency = the user's INPUT
+    // (ETH), then the mid currency (sptA). A reversed [sptA, ETH] here was the bug.
+    expect(path.map((p) => BigInt(p.intermediateCurrency))).toEqual([BigInt(NATIVE_CURRENCY), BigInt(SPT_A)])
+    expect(args[3]).toBe(BigInt(5000))
   })
 })

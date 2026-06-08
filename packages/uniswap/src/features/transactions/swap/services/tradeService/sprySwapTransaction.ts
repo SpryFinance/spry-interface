@@ -158,9 +158,11 @@ export function buildSprySwapTxRequest(args: {
       deadline: args.deadline,
     })
   } else {
-    // Exact-output path is reversed: start at the output, and each hop's
-    // intermediateCurrency is the currency it is reached from going backward.
-    const path: PathKey[] = [...args.route].reverse().map((hop) => ({
+    // Exact-output path is FORWARD: SpryRouter.swapExactOutput expects
+    // path[0].intermediateCurrency to be the user's input side (for A -> B -> C
+    // with currencyOut = C, path = [{A}, {B}]); the router walks it backward
+    // internally. Each hop's intermediateCurrency is its from-side currency.
+    const path: PathKey[] = args.route.map((hop) => ({
       intermediateCurrency: hop.currencyIn,
       fee: hop.poolKey.fee,
       tickSpacing: hop.poolKey.tickSpacing,
