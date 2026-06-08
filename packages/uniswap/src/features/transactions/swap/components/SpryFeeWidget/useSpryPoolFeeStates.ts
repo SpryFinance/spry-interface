@@ -10,6 +10,7 @@ import {
   findSpryCurrency,
   findSpryRoutes,
   toPoolCurrency,
+  type SpryHop,
 } from 'uniswap/src/features/transactions/swap/services/tradeService/spryRouting'
 import { ONE_SECOND_MS } from 'utilities/src/time/time'
 
@@ -72,9 +73,22 @@ export function useSpryPoolFeeStates(params: {
       if (routes.length === 0) {
         return []
       }
-      // Represent the pair with its shortest route (fewest hops); the per-swap best
-      // route depends on the amount, which this amount-less widget does not have.
-      const route = routes.reduce((shortest, candidate) => (candidate.length < shortest.length ? candidate : shortest))
+      // Show every pool the pair could route through at the shortest hop count: for a
+      // multi-tier pair that is each of its tiers (a tier IS a distinct pool); for a
+      // multi-hop pair it is the hops. Deduped by poolId. The per-swap router still
+      // quotes all of these and picks the best; this widget just surfaces their state.
+      const minHops = Math.min(...routes.map((candidate) => candidate.length))
+      const uniquePools = new Map<string, SpryHop>()
+      for (const candidate of routes) {
+        if (candidate.length !== minHops) {
+          continue
+        }
+        for (const hop of candidate) {
+          if (!uniquePools.has(hop.poolId)) {
+            uniquePools.set(hop.poolId, hop)
+          }
+        }
+      }
 
       const read: ReadContractFn = (request) => spryPublicClient.readContract(request as never) as Promise<unknown>
       const hook = createSpryHookClient(read, config.addresses.spryHook)
@@ -87,7 +101,7 @@ export function useSpryPoolFeeStates(params: {
         address === NATIVE_CURRENCY ? 'ETH' : (findSpryCurrency(graph, address)?.symbol ?? 'token')
 
       return Promise.all(
-        route.map(async (hop) => {
+        [...uniquePools.values()].map(async (hop) => {
           const tier = tierFromTickSpacing(hop.poolKey.tickSpacing)
           const feeParams = tierParams(tier)
           const info = tierInfo(tier)
