@@ -1,5 +1,5 @@
 import { UseQueryResult } from '@tanstack/react-query'
-import { useQueryWithImmediateGarbageCollection } from '@universe/api'
+import { is404Error, useQueryWithImmediateGarbageCollection } from '@universe/api'
 import { useRef } from 'react'
 import { useTradeService } from 'uniswap/src/features/services'
 import {
@@ -13,6 +13,23 @@ import { UseTradeArgs } from 'uniswap/src/features/transactions/swap/types/trade
 import { useEvent } from 'utilities/src/react/hooks'
 import { ONE_SECOND_MS } from 'utilities/src/time/time'
 
+/**
+ * SPRY: poll cadence for a quote whose last fetch failed with a 404 (no
+ * fillable route, or amount too low). That outcome is deterministic for the
+ * current input, and each Spry repricing simulates every candidate route
+ * on-chain, so block-time polling (~3s on Base Sepolia) only churns the RPC.
+ * Editing the form changes the query key and starts fresh at full cadence.
+ */
+export const NO_ROUTES_QUOTE_POLL_INTERVAL_MS = 30 * ONE_SECOND_MS
+
+/** Next poll delay: back off after a 404 quote failure, else the chain cadence. */
+export function getQuoteRefetchIntervalMs(args: { error: unknown; baseInterval: number | (() => number) }): number {
+  if (is404Error(args.error)) {
+    return NO_ROUTES_QUOTE_POLL_INTERVAL_MS
+  }
+  return typeof args.baseInterval === 'function' ? args.baseInterval() : args.baseInterval
+}
+
 export function useTradeQuery(params: UseTradeArgs): UseQueryResult<TradeWithGasEstimates> {
   const quoteCurrencyData = parseQuoteCurrencies(params)
   const chainId = quoteCurrencyData.currencyIn?.chainId
@@ -22,8 +39,13 @@ export function useTradeQuery(params: UseTradeArgs): UseQueryResult<TradeWithGas
   // randomization on both lines. `refetchIntervalForChain` may be a number or
   // a function (when randomized); `maxRefetchIntervalMs` mirrors it as a plain
   // number so we can size `immediateGcTime` from the upper-bound interval.
-  const refetchInterval = params.pollInterval ?? refetchIntervalForChain
+  const baseRefetchInterval = params.pollInterval ?? refetchIntervalForChain
   const maxRefetchIntervalMs = params.pollInterval ?? chainDefaultPollIntervalMs
+  // Stable reference (like the randomized interval) so react-query does not
+  // perceive an option change between polls.
+  const refetchInterval = useEvent((query: { state: { error: unknown } }): number =>
+    getQuoteRefetchIntervalMs({ error: query.state.error, baseInterval: baseRefetchInterval }),
+  )
   const tradeService = useTradeService()
   const getTradeQueryOptions = useEvent(createTradeServiceQueryOptions({ tradeService }))
 
