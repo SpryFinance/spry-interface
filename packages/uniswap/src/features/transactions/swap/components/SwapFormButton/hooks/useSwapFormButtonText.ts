@@ -8,6 +8,7 @@ import { useIsWebFORNudgeEnabled } from 'uniswap/src/features/providers/webForNu
 import { useTransactionModalContext } from 'uniswap/src/features/transactions/components/TransactionModal/TransactionModalContext'
 import { useIsAmountSelectionInvalid } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsAmountSelectionInvalid'
 import { useIsMissingPlatformWallet } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsMissingPlatformWallet'
+import { useIsQuoteLoading } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsQuoteLoading'
 import { useIsTokenSelectionInvalid } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsTokenSelectionInvalid'
 import { useIsTradeIndicative } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsTradeIndicative'
 import { useParsedSwapWarnings } from 'uniswap/src/features/transactions/swap/hooks/useSwapWarnings/useSwapWarnings'
@@ -38,6 +39,7 @@ export const useSwapFormButtonText = (): string => {
   const nativeCurrency = nativeOnChain(chainId)
 
   const isIndicative = useIsTradeIndicative()
+  const isQuoteLoading = useIsQuoteLoading()
   const isWebFORNudgeEnabled = useIsWebFORNudgeEnabled()
   const isWrap = wrapType !== WrapType.NotApplicable
 
@@ -51,6 +53,12 @@ export const useSwapFormButtonText = (): string => {
 
   if (isIndicative) {
     return t('swap.finalizingQuote')
+  }
+
+  // SPRY: local quotes are priced via on-chain Quoter reads, which take a
+  // moment; say a price is being fetched instead of showing an inert "Review".
+  if (isQuoteLoading) {
+    return t('swap.button.fetchingBestPrice')
   }
 
   if (isDisconnected) {

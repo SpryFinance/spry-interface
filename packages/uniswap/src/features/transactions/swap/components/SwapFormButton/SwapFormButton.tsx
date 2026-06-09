@@ -6,6 +6,7 @@ import {
   useSetIsShowingWebFORNudge,
 } from 'uniswap/src/features/providers/webForNudgeProvider'
 import { useTransactionModalContext } from 'uniswap/src/features/transactions/components/TransactionModal/TransactionModalContext'
+import { useIsQuoteLoading } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsQuoteLoading'
 import { useIsSwapButtonDisabled } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsSwapButtonDisabled'
 import { useIsTradeIndicative } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsTradeIndicative'
 import { useOnReviewPress } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useOnReviewPress'
@@ -21,6 +22,7 @@ export const SWAP_BUTTON_TEXT_VARIANT = 'buttonLabel1'
 export function SwapFormButton({ tokenColor }: { tokenColor?: string }): JSX.Element {
   const isShortMobileDevice = useIsShortMobileDevice()
   const indicative = useIsTradeIndicative()
+  const isQuoteLoading = useIsQuoteLoading()
   const { handleOnReviewPress } = useOnReviewPress()
   const disabled = useIsSwapButtonDisabled()
   const buttonText = useSwapFormButtonText()
@@ -34,9 +36,10 @@ export function SwapFormButton({ tokenColor }: { tokenColor?: string }): JSX.Ele
   const isShowingWebFORNudge = useIsShowingWebFORNudge()
   const setIsShowingWebFORNudge = useSetIsShowingWebFORNudge()
   const promptWebFORNudge = useIsWebFORNudgeEnabled() && !swapRedirectCallback && !isShowingWebFORNudge
-  // Only show loading state if the trade is `indicative` and we're not on the landing page.
-  // This is so that the `Get Started` button is always enabled/clickable.
-  const shouldShowLoading = !!indicative && !swapRedirectCallback
+  // Show loading while the trade is `indicative` or the quote is still being
+  // priced (SPRY: on-chain Quoter reads), but never on the landing page, so the
+  // `Get Started` button stays enabled/clickable.
+  const shouldShowLoading = (!!indicative || isQuoteLoading) && !swapRedirectCallback
 
   // preload cex transfer providers to avoid flickering when showing web for nudge
   useCexTransferProviders({ isDisabled: !promptWebFORNudge })

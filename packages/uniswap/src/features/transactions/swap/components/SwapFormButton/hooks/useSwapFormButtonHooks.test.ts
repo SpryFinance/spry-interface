@@ -146,6 +146,7 @@ type UseSwapFormStoreDerivedSwapInfoSelector<T> = (s: {
   currencies: Record<string, { currency: { symbol?: string } } | undefined>
   wrapType: WrapType
   chainId: number
+  trade: { isLoading: boolean }
 }) => T
 
 describe('swap form button hooks', () => {
@@ -178,10 +179,12 @@ describe('swap form button hooks', () => {
     wrapType = WrapType.NotApplicable,
     chainId = 1,
     inputSymbol = 'ABC',
+    tradeIsLoading = false,
   }: {
     wrapType?: WrapType
     chainId?: number
     inputSymbol?: string
+    tradeIsLoading?: boolean
   } = {}): void => {
     mockUseSwapFormStoreDerivedSwapInfo.mockImplementation(
       (selector: UseSwapFormStoreDerivedSwapInfoSelector<unknown>) =>
@@ -191,6 +194,7 @@ describe('swap form button hooks', () => {
           },
           wrapType,
           chainId,
+          trade: { isLoading: tradeIsLoading },
         }),
     )
   }
@@ -328,6 +332,25 @@ describe('swap form button hooks', () => {
       mockUseIsTradeIndicative.mockReturnValue(true)
       const { result } = renderHook(() => useSwapFormButtonText())
       expect(result.current).toBe('swap.finalizingQuote')
+    })
+
+    it('returns getting best price while the quote is loading', () => {
+      setDerivedSwapInfo({ tradeIsLoading: true })
+      const { result } = renderHook(() => useSwapFormButtonText())
+      expect(result.current).toBe('swap.button.fetchingBestPrice')
+    })
+
+    it('prefers finalizing quote over getting best price when indicative', () => {
+      mockUseIsTradeIndicative.mockReturnValue(true)
+      setDerivedSwapInfo({ tradeIsLoading: true })
+      const { result } = renderHook(() => useSwapFormButtonText())
+      expect(result.current).toBe('swap.finalizingQuote')
+    })
+
+    it('does not show getting best price for wraps', () => {
+      setDerivedSwapInfo({ wrapType: WrapType.Wrap, tradeIsLoading: true })
+      const { result } = renderHook(() => useSwapFormButtonText())
+      expect(result.current).toBe('Wrap ETH')
     })
 
     it('returns get started when disconnected, embedded wallet enabled, and showGetStarted', () => {
