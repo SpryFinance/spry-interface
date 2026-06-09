@@ -337,7 +337,7 @@ describe('swap form button hooks', () => {
     it('returns getting best price while the quote is loading', () => {
       setDerivedSwapInfo({ tradeIsLoading: true })
       const { result } = renderHook(() => useSwapFormButtonText())
-      expect(result.current).toBe('swap.button.fetchingBestPrice')
+      expect(result.current).toBe('Getting best price')
     })
 
     it('prefers finalizing quote over getting best price when indicative', () => {

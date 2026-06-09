@@ -57,8 +57,10 @@ export const useSwapFormButtonText = (): string => {
 
   // SPRY: local quotes are priced via on-chain Quoter reads, which take a
   // moment; say a price is being fetched instead of showing an inert "Review".
+  // A plain literal (like the other Spry-only UI text): the app ships
+  // English-only and a literal can never render as a raw i18n key.
   if (isQuoteLoading) {
-    return t('swap.button.fetchingBestPrice')
+    return 'Getting best price'
   }
 
   if (isDisconnected) {

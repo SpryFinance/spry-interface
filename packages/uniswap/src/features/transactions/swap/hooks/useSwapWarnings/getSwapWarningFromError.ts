@@ -55,6 +55,9 @@ export function getSwapWarningFromError({
           severity: WarningSeverity.Low,
           action: WarningAction.DisableReview,
           title: t('swap.warning.noRoutesFound.title'),
+          // SPRY: put the verdict on the disabled button itself, so an
+          // unfillable amount is impossible to mistake for a broken form.
+          buttonText: t('swap.warning.noRoutesFound.title'),
           message: t('swap.warning.noRoutesFound.message'),
         }
       }
