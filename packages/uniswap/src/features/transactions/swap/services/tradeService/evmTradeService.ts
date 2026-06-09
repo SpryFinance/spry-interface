@@ -1,4 +1,4 @@
-import { TradingApi } from '@universe/api'
+import { FetchError, TradingApi } from '@universe/api'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { GetQuoteRequestResult } from 'uniswap/src/features/transactions/swap/hooks/useTrade/createGetQuoteRequestArgs'
 import { buildSpryLocalQuote } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
@@ -111,9 +111,21 @@ export function createEVMTradeService(ctx: EVMTradeServiceContext): TradeService
           // Wrap/unwrap (1:1) and the sptA/sptB pool (V4 Quoter) are synthesized locally.
           const spryLocalQuote = await buildSpryLocalQuote(validatedInput, slippageTolerance)
           if (!spryLocalQuote) {
-            // No locally-synthesizable quote (e.g. a non-Spry pair or a USD price
-            // quote): return no trade rather than issuing a doomed gateway request.
-            return { trade: null }
+            // USD valuation quotes for pairs without a Spry route have no local
+            // answer; stay silent (no trade) so the price poller does not spam
+            // route-not-found errors.
+            if (input.isUSDQuote) {
+              return { trade: null }
+            }
+            // No fillable Spry route: either the pair is unroutable, or every
+            // candidate pool reverted (e.g. an exact-output larger than the
+            // in-range liquidity). Throw the gateway-equivalent 404 so the form
+            // shows the standard "No routes available" warning and disables
+            // review, instead of silently clearing the other amount field.
+            throw new FetchError({
+              response: new Response(null, { status: 404 }),
+              data: { errorCode: TradingApi.Err404.errorCode.RESOURCE_NOT_FOUND },
+            })
           }
           const localResult = transformQuoteToTrade({
             quote: spryLocalQuote,
