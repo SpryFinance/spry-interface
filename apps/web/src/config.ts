@@ -126,8 +126,20 @@ const webConfigSchema = z.object({
   walletConnectProjectId: z.string().min(1).describe('Project ID for WalletConnect'),
 
   // Endpoint URLs
-  awsApiEndpoint: z.string().min(1).describe('URL for Apollo GraphQL API'),
-  uniswapGatewayDns: z.string().min(1).describe('URL for Uniswap gateway v2'),
+  // SPRY: defaulted instead of env-required. Neither endpoint serves Base
+  // Sepolia (the local rails replace them); requests fail gracefully exactly
+  // as they did when the values came from .env. Override via AWS_API_ENDPOINT
+  // / UNISWAP_GATEWAY_DNS if they ever need repointing.
+  awsApiEndpoint: z
+    .string()
+    .min(1)
+    .default('https://interface.gateway.uniswap.org/v1/graphql')
+    .describe('URL for Apollo GraphQL API'),
+  uniswapGatewayDns: z
+    .string()
+    .min(1)
+    .default('https://interface.gateway.uniswap.org/v2')
+    .describe('URL for Uniswap gateway v2'),
   entryGatewayApiUrl: z.string().optional().describe('URL for entry gateway BFF proxy'),
   websocketUrl: z.string().optional().describe('URL for WebSocket proxy'),
   viteBackendUrl: z.string().optional().describe('Override URL for Vite dev proxy target'),

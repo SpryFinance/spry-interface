@@ -218,8 +218,12 @@ export default defineConfig(({ mode, isPreview }) => {
     }
   }
 
-  // Log environment loading for CI verification
-  console.log(`ENV_LOADED: mode=${mode} AWS_API_ENDPOINT=${env.AWS_API_ENDPOINT ?? env.REACT_APP_AWS_API_ENDPOINT}`)
+  // Log environment loading for CI verification. The sentinel is the
+  // WalletConnect project ID: it is required, lives only in .env, and proves
+  // the env file was loaded (the gateway endpoints moved to config defaults).
+  console.log(
+    `ENV_LOADED: mode=${mode} WALLET_CONNECT_PROJECT_ID=${env.WALLETCONNECT_PROJECT_ID ?? env.REACT_APP_WALLET_CONNECT_PROJECT_ID}`,
+  )
 
   const isProduction = mode === 'production'
   const isStaging = mode === 'staging'

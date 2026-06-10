@@ -21,14 +21,15 @@ echo "🧪 Testing production environment variable loading..."
 # Run production build and capture output
 BUILD_OUTPUT=$(NODE_OPTIONS="--max-old-space-size=16384" bun run build:production 2>&1)
 
-# Check that the correct production GraphQL endpoint is loaded
-if echo "$BUILD_OUTPUT" | grep -q "ENV_LOADED:.*mode=production.*interface\.gateway\.uniswap\.org/v1/graphql"; then
-    echo "✅ Production GraphQL endpoint loaded correctly"
+# Check that the .env file was loaded: the WalletConnect project ID is required,
+# lives only in .env, and is printed by the ENV_LOADED log in vite.config.mts.
+if echo "$BUILD_OUTPUT" | grep -qE "ENV_LOADED:.*mode=production.*WALLET_CONNECT_PROJECT_ID=[a-z0-9]+"; then
+    echo "✅ Production env file loaded correctly"
     echo "✅ Environment loading test PASSED"
     exit 0
 else
     echo "❌ Production environment variables not loaded correctly"
-    echo "Expected: mode=production with interface.gateway.uniswap.org/v1/graphql"
+    echo "Expected: mode=production with a non-empty WALLET_CONNECT_PROJECT_ID"
     echo "Build output:"
     echo "$BUILD_OUTPUT" | grep "ENV_LOADED:" || echo "No ENV_LOADED found"
     echo "❌ Environment loading test FAILED"

@@ -146,7 +146,7 @@ Optional (the app degrades gracefully without them):
 | `REACT_APP_INFURA_KEY`, `REACT_APP_QUICKNODE_ENDPOINT_NAME`, `REACT_APP_QUICKNODE_ENDPOINT_TOKEN` | RPC for non-Spry chains only. **Base Sepolia does not use them** - it talks to `https://sepolia.base.org` directly (hardcoded in the chain info; the UniRPC proxy is disabled for 84532). |
 | `REACT_APP_TRADING_API_KEY` | `x-api-key` for the Trading API / Blockaid. Inert on Base Sepolia (local rails replace the Trading API); kept as an inherited placeholder. |
 | `REACT_APP_VERSION_TAG` | Version label shown in diagnostics. |
-| `REACT_APP_AWS_API_ENDPOINT`, `REACT_APP_UNISWAP_GATEWAY_DNS` | Inherited Uniswap gateway endpoints (Apollo GraphQL + gateway v2). They do not serve Base Sepolia (the app's local rails replace them) but are schema-required, so they must stay non-empty for the app to boot. |
+| `AWS_API_ENDPOINT`, `UNISWAP_GATEWAY_DNS` | Override hooks for the inherited Uniswap gateway endpoints (Apollo GraphQL + gateway v2). Not set in `.env` - the URLs are defaulted in [`apps/web/src/config.ts`](apps/web/src/config.ts) since they do not serve Base Sepolia anyway (the local rails replace them). |
 | `VITE_ENABLE_ENTRY_GATEWAY_PROXY` | Keep `false` in production (worker-side gateway proxying, staging-only). |
 
 Worker runtime variables (set per environment in
