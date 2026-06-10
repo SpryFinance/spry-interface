@@ -15,7 +15,9 @@ import {
   getPositionPageTitle,
 } from '~/pages/getPositionPageTitle'
 // High-traffic pages (index and /swap) should not be lazy-loaded.
-import { Landing } from '~/pages/Landing'
+// SPRY: index serves the swap page while testnet-only, so the Landing import is parked
+// (restore it with the `/` getElement below for mainnets). Landing still renders /preview.
+// import { Landing } from '~/pages/Landing'
 import { SwapPage } from '~/pages/Swap'
 import { isBrowserRouterEnabled } from '~/utils/env'
 
@@ -153,8 +155,14 @@ export const routes: RouteDefinition[] = [
     path: '/',
     getTitle: () => StaticTitlesAndDescriptions.UniswapTitle,
     getDescription: () => StaticTitlesAndDescriptions.SwapDescription,
+    // SPRY: index serves the swap page (same as /swap) while testnet-only. Original Landing
+    // index, restore for mainnets: `... && args.hash ? <Navigate .../> : <Landing />`
     getElement: (args) => {
-      return args.browserRouterEnabled && args.hash ? <Navigate to={args.hash.replace('#', '')} replace /> : <Landing />
+      return args.browserRouterEnabled && args.hash ? (
+        <Navigate to={args.hash.replace('#', '')} replace />
+      ) : (
+        <SwapPage />
+      )
     },
   }),
   createRouteDefinition({
