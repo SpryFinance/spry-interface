@@ -2,21 +2,14 @@ import { useMemo } from 'react'
 import { CONNECTION_PROVIDER_IDS } from 'uniswap/src/constants/web3'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { useEvent } from 'utilities/src/react/hooks'
-import { useAccountDrawer } from '~/components/AccountDrawer/MiniPortfolio/hooks'
-import {
-  getWalletRequiresSeparatePrompt,
-  useHasAcceptedSolanaConnectionPrompt,
-} from '~/components/WalletModal/PendingWalletConnectionModal/state'
 import { useAccountsStore } from '~/features/accounts/store/hooks'
 import type { ExternalConnector, ExternalWallet } from '~/features/accounts/store/types'
 import {
   useUniswapEmbeddedConnectionService,
   useUniswapMobileConnectionService,
 } from '~/features/wallet/connection/connectors/custom'
-import { useSolanaConnectionService } from '~/features/wallet/connection/connectors/solana'
 import { getEVMConnectionService } from '~/features/wallet/connection/connectors/wagmi'
 import type { ConnectionService } from '~/features/wallet/connection/services/IConnectionService'
-import { createMultiPlatformConnectionService } from '~/features/wallet/connection/services/multiplatformConnectionService'
 
 type GetConnectionServiceFn = (params: { wallet: ExternalWallet; individualPlatform?: Platform }) => ConnectionService
 
@@ -31,22 +24,13 @@ function useGetConnector() {
   })
 }
 
-/** Returns a function capable of returning the proper connection service for a given wallet / platform. */
+/**
+ * Returns a function capable of returning the proper connection service for a given wallet.
+ * SPRY: Solana support is pruned; every wallet connects through the EVM service.
+ */
 export function useGetConnectionService(): GetConnectionServiceFn {
-  const accountDrawer = useAccountDrawer()
   const getConnector = useGetConnector()
-  const svmConnectionService = useSolanaConnectionService(getConnector)
   const evmConnectionService = useMemo(() => getEVMConnectionService(getConnector), [getConnector])
-  const getShouldMultiConnect = useGetShouldMultiConnect()
-  const onRejectSVMConnection = useOnRejectSVMConnection()
-
-  const multiPlatformService = useMemo(() => {
-    return createMultiPlatformConnectionService({
-      platformServices: { [Platform.EVM]: evmConnectionService, [Platform.SVM]: svmConnectionService },
-      onCompletedPlatform: accountDrawer.close,
-      onRejectSVMConnection,
-    })
-  }, [evmConnectionService, svmConnectionService, accountDrawer.close, onRejectSVMConnection])
 
   const uniswapEmbeddedService = useUniswapEmbeddedConnectionService()
   const uniswapMobileService = useUniswapMobileConnectionService()
@@ -65,40 +49,6 @@ export function useGetConnectionService(): GetConnectionServiceFn {
       return overrideService
     }
 
-    // If connection is requested for a specific platform, return the corresponding service
-    if (params.individualPlatform) {
-      switch (params.individualPlatform) {
-        case Platform.EVM:
-          return evmConnectionService
-        case Platform.SVM:
-          return svmConnectionService
-      }
-    }
-
-    // If multi-connection should not be used, return the EVM service. UI will prompt solana separately.
-    if (!getShouldMultiConnect(params)) {
-      return evmConnectionService
-    }
-
-    return multiPlatformService
+    return evmConnectionService
   })
-}
-
-function useOnRejectSVMConnection() {
-  const { setHasAcceptedSolanaConnectionPrompt } = useHasAcceptedSolanaConnectionPrompt()
-
-  return useEvent((walletId: string) => {
-    if (getWalletRequiresSeparatePrompt(walletId)) {
-      setHasAcceptedSolanaConnectionPrompt(false)
-    }
-  })
-}
-
-function useGetShouldMultiConnect() {
-  const { hasAcceptedSolanaConnectionPrompt } = useHasAcceptedSolanaConnectionPrompt()
-
-  return useEvent(
-    ({ wallet }: { wallet: ExternalWallet }) =>
-      !getWalletRequiresSeparatePrompt(wallet.id) || hasAcceptedSolanaConnectionPrompt,
-  )
 }

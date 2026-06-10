@@ -21,7 +21,6 @@ import { FALLBACK_SWAP_REQUEST_POLL_INTERVAL_MS } from 'uniswap/src/features/tra
 import { createEVMSwapInstructionsService } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/evm/evmSwapInstructionsService'
 import { usePresignPermit } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/evm/hooks'
 import { createDecorateSwapTxInfoServiceWithEVMLogging } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/evm/logging'
-import { createSolanaSwapTxAndGasInfoService } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/svm/solanaSwapTxAndGasInfoService'
 import type {
   RoutingServicesMap,
   SwapTxAndGasInfoParameters,
@@ -150,10 +149,6 @@ export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
     return decorateWithEVMLogging(wrapService)
   }, [swapConfig, transactionSettings, instructionService, hasOverrides, decorateWithEVMLogging])
 
-  const solanaSwapTxInfoService = useMemo(() => {
-    return createSolanaSwapTxAndGasInfoService()
-  }, [])
-
   const services = useMemo(() => {
     return {
       [TradingApi.Routing.CLASSIC]: classicSwapTxInfoService,
@@ -166,7 +161,9 @@ export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
       [TradingApi.Routing.CHAINED]: chainedSwapTxInfoService,
       [TradingApi.Routing.LIMIT_ORDER]: createNoopService(),
       [TradingApi.Routing.DUTCH_LIMIT]: createNoopService(),
-      [TradingApi.Routing.JUPITER]: solanaSwapTxInfoService,
+      // SPRY: Solana support is pruned; the generated Routing enum keeps the
+      // JUPITER member, so the exhaustive map points it at the no-op service.
+      [TradingApi.Routing.JUPITER]: createNoopService(),
     } satisfies RoutingServicesMap
   }, [
     classicSwapTxInfoService,
@@ -174,7 +171,6 @@ export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
     uniswapXSwapTxInfoService,
     chainedSwapTxInfoService,
     wrapTxInfoService,
-    solanaSwapTxInfoService,
   ])
 
   return useMemo(() => {

@@ -43,15 +43,9 @@ export { GQLQueries } from '@universe/api/src/clients/graphql/queries'
 export type { GqlResult } from '@universe/api/src/clients/graphql/types'
 export { isError, isNonPollingRequestInFlight, isWarmLoadingStatus } from '@universe/api/src/clients/graphql/utils'
 
-// Jupiter API
-export { createJupiterApiClient, type JupiterApiClient } from '@universe/api/src/clients/jupiter/createJupiterApiClient'
-export type {
-  JupiterExecuteResponse,
-  JupiterOrderResponse,
-  JupiterExecuteUrlParams,
-  JupiterOrderUrlParams,
-} from '@universe/api/src/clients/jupiter/types'
-export { jupiterExecuteResponseSchema, jupiterOrderResponseSchema } from '@universe/api/src/clients/jupiter/types'
+// Jupiter API (SPRY: Solana support is pruned; only the response types remain,
+// because the stranded SolanaTrade type in packages/uniswap references them)
+export type { JupiterOrderResponse } from '@universe/api/src/clients/jupiter/types'
 
 // Blockaid API
 export {

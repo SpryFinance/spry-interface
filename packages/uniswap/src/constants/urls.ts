@@ -97,7 +97,6 @@ export const uniswapUrls = {
     hiddenTokenInfo: createHelpArticleUrl('30432674756749-How-to-hide-and-unhide-tokens-in-the-Uniswap-Wallet'),
     hiddenNFTInfo: createHelpArticleUrl('14185028445837-How-to-hide-and-unhide-NFTs-in-the-Uniswap-Wallet'),
     impermanentLoss: createHelpArticleUrl('20904453751693-What-is-Impermanent-Loss'),
-    jupiterApiError: createHelpArticleUrl('39829559404685'),
     limitsFailure: createHelpArticleUrl('24300813697933-Why-did-my-limit-order-fail-or-not-execute'),
     limitsInfo: createHelpArticleUrl('24470337797005'),
     limitsNetworkSupport: createHelpArticleUrl('24470251716237-What-networks-do-limits-support'),

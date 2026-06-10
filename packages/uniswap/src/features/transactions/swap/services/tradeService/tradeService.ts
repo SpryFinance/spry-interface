@@ -1,5 +1,4 @@
 import { GasEstimate } from '@universe/api'
-import type { JupiterOrderUrlParams } from '@universe/api/src/clients/jupiter/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { chainIdToPlatform } from 'uniswap/src/features/platforms/utils/chains'
 import { type ValidatedTradeInput } from 'uniswap/src/features/transactions/swap/services/tradeService/transformations/buildQuoteRequest'
@@ -12,7 +11,7 @@ export interface TradeWithGasEstimates {
 
 export interface TradeService {
   getTrade(input: UseTradeArgs): Promise<TradeWithGasEstimates>
-  prepareTradeInput(input?: UseTradeArgs): ValidatedTradeInput | JupiterOrderUrlParams | null // TODO(SWAP-383): Remove JupiterOrderUrlParams from union once Solana trade repo is implemented
+  prepareTradeInput(input?: UseTradeArgs): ValidatedTradeInput | null
   getIndicativeTrade(input: UseTradeArgs): Promise<IndicativeTrade | null>
   prepareIndicativeTradeInput(input?: UseTradeArgs): ValidatedTradeInput | null
 }

@@ -1,4 +1,3 @@
-import type { WalletName as SolanaWalletName } from '@solana/wallet-adapter-base'
 import type { AccountsData } from 'uniswap/src/features/accounts/store/types/AccountsState'
 import type { Connector } from 'uniswap/src/features/accounts/store/types/Connector'
 import type { Session, SingleChainScope } from 'uniswap/src/features/accounts/store/types/Session'
@@ -16,7 +15,9 @@ export interface ExternalWallet extends Wallet<SigningCapability.Interactive> {
 
 type LibraryIdFormatByPlatform = {
   [Platform.EVM]: string
-  [Platform.SVM]: SolanaWalletName
+  // SPRY: Solana support is pruned; SVM connectors are never built, the key
+  // stays only because the Platform enum member is stranded.
+  [Platform.SVM]: string
 }
 
 type BaseExternalConnector<P extends Platform> = Connector<P, ExternalSession<P>> & {

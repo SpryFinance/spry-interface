@@ -5,7 +5,6 @@ import { Flex, Separator } from 'ui/src'
 import { CONNECTION_PROVIDER_IDS } from 'uniswap/src/constants/web3'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { MenuStateVariant, useSetMenuCallback } from '~/components/AccountDrawer/menuState'
-import { NoSolanaWalletConnectedView } from '~/components/WalletModal/NoSolanaWalletConnectedView'
 import { UniswapMobileWalletConnectorOption } from '~/components/WalletModal/UniswapMobileWalletConnectorOption'
 import { OtherWalletsOption, WalletConnectorOption } from '~/components/WalletModal/WalletConnectorOption'
 import { useRecentConnectorId } from '~/connection/constants'
@@ -39,10 +38,6 @@ export function WalletOptionsGrid({
     (recentConnectorId === CONNECTION_PROVIDER_IDS.UNISWAP_WALLET_CONNECT_CONNECTOR_ID ||
       isMobileWeb ||
       isEmbeddedWalletEnabled)
-
-  if (connectOnPlatform === Platform.SVM && wallets.length === 0) {
-    return <NoSolanaWalletConnectedView />
-  }
 
   return (
     <Flex row alignItems="flex-start">

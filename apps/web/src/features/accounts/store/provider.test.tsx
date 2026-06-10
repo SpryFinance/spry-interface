@@ -1,4 +1,3 @@
-import { WalletReadyState as SolanaWalletReadyState } from '@solana/wallet-adapter-base'
 import { CONNECTION_PROVIDER_IDS } from 'uniswap/src/constants/web3'
 import { ConnectorStatus } from 'uniswap/src/features/accounts/store/types/Connector'
 import { ChainScopeType } from 'uniswap/src/features/accounts/store/types/Session'
@@ -12,9 +11,6 @@ const mockUseWagmiAccount = vitest.fn()
 const mockUseWagmiConnectors = vitest.fn()
 const mockUseWagmiChainId = vitest.fn()
 const mockUsePendingConnectorId = vitest.fn()
-
-// Mock Solana wallet adapter
-const mockUseSolanaWallet = vitest.fn()
 
 vi.mock('wagmi', async () => ({
   ...(await vi.importActual('wagmi')),
@@ -34,11 +30,6 @@ vi.mock('~/features/wallet/connection/connectors/state', () => ({
   usePendingConnectorId: () => mockUsePendingConnectorId(),
 }))
 
-vi.mock('@solana/wallet-adapter-react', () => ({
-  useWallet: () => mockUseSolanaWallet(),
-  WalletProvider: ({ children }: { children: React.ReactNode }) => children,
-}))
-
 describe('Web Accounts Store Provider', () => {
   const createMockWagmiConnector = (overrides = {}) => ({
     id: 'metamask',
@@ -56,26 +47,6 @@ describe('Web Accounts Store Provider', () => {
     ...overrides,
   })
 
-  const createMockSolanaWallet = (overrides = {}) => ({
-    adapter: {
-      name: 'Phantom',
-      icon: 'phantom-icon',
-      connected: true,
-      connecting: false,
-      publicKey: {
-        toBase58: () => '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM',
-      },
-    },
-    readyState: SolanaWalletReadyState.Installed,
-    ...overrides,
-  })
-
-  const createMockSolanaWalletContext = (overrides = {}) => ({
-    wallet: createMockSolanaWallet(),
-    wallets: [createMockSolanaWallet()],
-    ...overrides,
-  })
-
   const renderWithProvider = () => {
     return renderHook(() => useAccountsStoreContext())
   }
@@ -88,7 +59,6 @@ describe('Web Accounts Store Provider', () => {
     mockUseWagmiConnectors.mockReturnValue([createMockWagmiConnector()])
     mockUseWagmiChainId.mockReturnValue(1)
     mockUsePendingConnectorId.mockReturnValue(null)
-    mockUseSolanaWallet.mockReturnValue(createMockSolanaWalletContext())
   })
 
   describe('Given a connected MetaMask wallet on EVM', () => {
@@ -127,110 +97,6 @@ describe('Web Accounts Store Provider', () => {
       expect(state.accounts).toHaveProperty('0x1234567890123456789012345678901234567890')
       expect(state.accounts['0x1234567890123456789012345678901234567890'].platform).toBe(Platform.EVM)
       expect(state.accounts['0x1234567890123456789012345678901234567890'].walletId).toBe('metamask')
-    })
-  })
-
-  describe('Given a connected Phantom wallet on SVM', () => {
-    it('When the provider builds the accounts state, Then it should create the correct SVM connector and wallet', () => {
-      // Given
-      const solanaWallet = createMockSolanaWallet({
-        adapter: {
-          name: 'Phantom',
-          icon: 'phantom-icon',
-          connected: true,
-          connecting: false,
-          publicKey: {
-            toBase58: () => '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM',
-          },
-        },
-        readyState: SolanaWalletReadyState.Installed,
-      })
-
-      mockUseSolanaWallet.mockReturnValue({
-        wallet: solanaWallet,
-        wallets: [solanaWallet],
-      })
-
-      // When
-      const { result } = renderWithProvider()
-      const state = result.current.getState()
-
-      // Then
-      expect(state.activeConnectors.svm).toBeDefined()
-      expect(state.activeConnectors.svm?.platform).toBe(Platform.SVM)
-      expect(state.activeConnectors.svm?.status).toBe(ConnectorStatus.Connected)
-      expect(state.activeConnectors.svm?.access).toBe('Injected')
-      expect(state.activeConnectors.svm?.externalLibraryId).toBe('Phantom')
-
-      expect(state.wallets).toHaveProperty('Phantom')
-      expect(state.wallets.Phantom.name).toBe('Phantom')
-      expect(state.wallets.Phantom.signingCapability).toBe(SigningCapability.Interactive)
-      expect(state.wallets.Phantom.addresses[0].svm).toBe('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM')
-
-      expect(state.accounts).toHaveProperty('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM')
-      expect(state.accounts['9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'].platform).toBe(Platform.SVM)
-      expect(state.accounts['9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'].walletId).toBe('Phantom')
-    })
-  })
-
-  describe('Given a cross-platform wallet (MetaMask on both EVM and SVM)', () => {
-    it('When the provider builds the accounts state, Then it should deduplicate the wallet and create connectors for both platforms', () => {
-      // Given
-      const wagmiAccount = createMockWagmiAccount({
-        address: '0x1234567890123456789012345678901234567890',
-        chainId: 1,
-        status: 'connected',
-      })
-      const wagmiConnector = createMockWagmiConnector({
-        id: 'metamask',
-        name: 'MetaMask',
-        type: CONNECTION_PROVIDER_IDS.INJECTED_CONNECTOR_TYPE,
-      })
-
-      const solanaWallet = createMockSolanaWallet({
-        adapter: {
-          name: 'MetaMask',
-          icon: 'metamask-icon',
-          connected: true,
-          connecting: false,
-          publicKey: {
-            toBase58: () => '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM',
-          },
-        },
-        readyState: SolanaWalletReadyState.Installed,
-      })
-
-      mockUseWagmiAccount.mockReturnValue(wagmiAccount)
-      mockUseWagmiConnectors.mockReturnValue([wagmiConnector])
-      mockUseSolanaWallet.mockReturnValue({
-        wallet: solanaWallet,
-        wallets: [solanaWallet],
-      })
-
-      // When
-      const { result } = renderWithProvider()
-      const state = result.current.getState()
-
-      // Then
-      expect(state.activeConnectors.evm).toBeDefined()
-      expect(state.activeConnectors.svm).toBeDefined()
-      expect(state.activeConnectors.evm?.platform).toBe(Platform.EVM)
-      expect(state.activeConnectors.svm?.platform).toBe(Platform.SVM)
-
-      // Should have only one wallet (deduplicated)
-      const walletIds = Object.keys(state.wallets)
-      expect(walletIds).toHaveLength(2) // Uniswap wallet connect connector is added manually to store, so its always defined, hence length is 2
-      expect(walletIds[0]).toBe('metamask') // EVM library ID takes precedence
-
-      const wallet = state.wallets.metamask
-      expect(wallet.addresses[0].evm).toBe('0x1234567890123456789012345678901234567890')
-      expect(wallet.addresses[0].svm).toBe('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM')
-      expect(wallet.connectorIds.evm).toBe('WagmiConnector_metamask')
-      expect(wallet.connectorIds.svm).toBe('SolanaWalletAdapter_MetaMask')
-
-      // Should have accounts for both platforms
-      expect(state.accounts).toHaveProperty('0x1234567890123456789012345678901234567890')
-      expect(state.accounts).toHaveProperty('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM')
     })
   })
 
@@ -369,50 +235,6 @@ describe('Web Accounts Store Provider', () => {
     })
   })
 
-  describe('Given multiple Solana wallets', () => {
-    it('When the provider builds the accounts state, Then it should create connectors for all wallets', () => {
-      // Given
-      const phantomWallet = createMockSolanaWallet({
-        adapter: {
-          name: 'Phantom',
-          icon: 'phantom-icon',
-          connected: false,
-          connecting: false,
-          publicKey: null,
-        },
-        readyState: SolanaWalletReadyState.Installed,
-      })
-      const solflareWallet = createMockSolanaWallet({
-        adapter: {
-          name: 'Solflare',
-          icon: 'solflare-icon',
-          connected: true,
-          connecting: false,
-          publicKey: {
-            toBase58: () => '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM',
-          },
-        },
-        readyState: SolanaWalletReadyState.Installed,
-      })
-
-      mockUseSolanaWallet.mockReturnValue({
-        wallet: solflareWallet,
-        wallets: [phantomWallet, solflareWallet],
-      })
-
-      // When
-      const { result } = renderWithProvider()
-      const state = result.current.getState()
-
-      // Then
-      expect(state.connectors).toHaveProperty('SolanaWalletAdapter_Phantom')
-      expect(state.connectors).toHaveProperty('SolanaWalletAdapter_Solflare')
-      expect(state.wallets).toHaveProperty('Phantom')
-      expect(state.wallets).toHaveProperty('Solflare')
-      expect(state.activeConnectors.svm?.externalLibraryId).toBe('Solflare')
-    })
-  })
-
   describe('Given a wallet with SDK access pattern', () => {
     it('When the provider builds the accounts state, Then it should set the access pattern to SDK', () => {
       // Given
@@ -430,34 +252,6 @@ describe('Web Accounts Store Provider', () => {
 
       // Then
       expect(state.connectors.WagmiConnector_walletconnect.access).toBe('SDK')
-    })
-  })
-
-  describe('Given a Solana wallet that is not installed', () => {
-    it('When the provider builds the accounts state, Then it should set the access pattern to SDK', () => {
-      // Given
-      const solanaWallet = createMockSolanaWallet({
-        adapter: {
-          name: 'Phantom',
-          icon: 'phantom-icon',
-          connected: false,
-          connecting: false,
-          publicKey: null,
-        },
-        readyState: SolanaWalletReadyState.NotDetected,
-      })
-
-      mockUseSolanaWallet.mockReturnValue({
-        wallet: null,
-        wallets: [solanaWallet],
-      })
-
-      // When
-      const { result } = renderWithProvider()
-      const state = result.current.getState()
-
-      // Then
-      expect(state.connectors.SolanaWalletAdapter_Phantom.access).toBe('SDK')
     })
   })
 
@@ -515,7 +309,8 @@ describe('Web Accounts Store Provider', () => {
 
       // Then
       expect(evmAddress).toBe('0x1234567890123456789012345678901234567890')
-      expect(svmAddress).toBe('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM')
+      // SPRY: Solana support is pruned; no SVM connector ever exists.
+      expect(svmAddress).toBeUndefined()
       expect(connectionStatus).toMatchObject({
         status: ConnectorStatus.Connected,
         isConnected: true,

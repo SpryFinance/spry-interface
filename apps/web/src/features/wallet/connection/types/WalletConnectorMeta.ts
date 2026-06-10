@@ -1,4 +1,3 @@
-import type { WalletName as SolanaWalletName } from '@solana/wallet-adapter-base'
 import type { CustomConnectorId } from '~/features/wallet/connection/types/CustomConnectorId'
 
 type AtLeastOne<T, K extends keyof T = keyof T> = K extends keyof T
@@ -24,6 +23,9 @@ type WagmiConnectorDetails = {
 }
 
 type SolanaConnectorDetails = {
-  /** The "@solana/wallet-adapter-base" `WalletName` of this connector, if this connector is linked to a solana wallet. */
-  walletName: SolanaWalletName
+  /**
+   * SPRY: Solana support is pruned; no connector ever populates this field.
+   * The shape is kept so the generic dedup/merge utilities keep compiling.
+   */
+  walletName: string
 }

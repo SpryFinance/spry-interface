@@ -13,10 +13,6 @@ function getTitle(t: TFunction, connectOnPlatform: Platform | 'any'): string {
     return t('common.connectAWallet.button.evm')
   }
 
-  if (connectOnPlatform === Platform.SVM) {
-    return t('common.connectAWallet.button.svm')
-  }
-
   return t('common.connectAWallet.button.switch')
 }
 

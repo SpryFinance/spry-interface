@@ -95,16 +95,6 @@ export class TransactionStepFailedError extends TransactionError {
   }
 }
 
-export class JupiterExecuteError extends TransactionError {
-  code: number
-
-  constructor(message: string, code: number) {
-    super(message)
-    this.name = 'JupiterExecuteError'
-    this.code = code
-  }
-}
-
 export class ApprovalEditedInWalletError extends TransactionStepFailedError {
   logError = false
 
@@ -157,65 +147,10 @@ export function getErrorContent(
     return getStepSpecificErrorContent(t, error)
   }
 
-  if (error instanceof JupiterExecuteError) {
-    return getJupiterExecuteErrorContent(t, error.code)
-  }
-
   // Generic / default error
   return {
     title: t('common.unknownError.error'),
     message: t('common.swap.failed'),
-  }
-}
-
-function getJupiterExecuteErrorContent(
-  t: AppTFunction,
-  code: number,
-): {
-  title: string
-  message: string
-  supportArticleURL?: string
-} {
-  const errorContent = {
-    title: t('common.swap.failed'),
-    message: t('error.jupiterApi.execute.default.title'),
-    supportArticleURL: uniswapUrls.helpArticleUrls.jupiterApiError,
-  }
-
-  switch (code) {
-    case -1:
-      errorContent.message += ' ' + t('error.jupiterApi.missingCachedOrder')
-      return errorContent
-    case -2:
-      errorContent.message += ' ' + t('error.jupiterApi.invalidSignedTransaction')
-      return errorContent
-    case -3:
-      errorContent.message += ' ' + t('error.jupiterApi.invalidMessageBytes')
-      return errorContent
-    case -1000:
-    case -2000:
-      errorContent.message += ' ' + t('error.jupiterApi.failedToLand', { code })
-      return errorContent
-    case -2002:
-      errorContent.message += ' ' + t('error.jupiterApi.invalidPayload')
-      return errorContent
-    case -2003:
-      errorContent.title = t('transaction.status.swap.expired')
-      errorContent.message = t('error.jupiterApi.quoteExpired')
-      return errorContent
-    case -1002:
-      errorContent.message += ' ' + t('error.jupiterApi.invalidTransaction')
-      return errorContent
-    case -1003:
-      errorContent.message += ' ' + t('error.jupiterApi.notFullySigned')
-      return errorContent
-    case -1004:
-      errorContent.message += ' ' + t('error.jupiterApi.invalidBlockHeight')
-      return errorContent
-    default:
-      // Fallback for unmapped codes
-      errorContent.message += ' ' + t('error.jupiterApi.unknownErrorCode', { code })
-      return errorContent
   }
 }
 

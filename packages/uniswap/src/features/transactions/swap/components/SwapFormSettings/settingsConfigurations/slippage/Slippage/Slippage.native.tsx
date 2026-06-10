@@ -7,7 +7,7 @@ import { SlippageScreenNative } from 'uniswap/src/features/transactions/swap/com
 
 export const Slippage: TransactionSettingConfig = {
   renderTitle: (t) => t('swap.slippage.settings.title'),
-  applicablePlatforms: [Platform.EVM, Platform.SVM],
+  applicablePlatforms: [Platform.EVM],
   inapplicableTradeRouting: [
     TradingApi.Routing.WRAP,
     TradingApi.Routing.UNWRAP,

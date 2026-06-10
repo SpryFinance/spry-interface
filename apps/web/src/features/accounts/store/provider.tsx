@@ -1,5 +1,3 @@
-import { WalletName as SolanaWalletName, WalletReadyState as SolanaWalletReadyState } from '@solana/wallet-adapter-base'
-import { Wallet as SolanaWallet, useWallet as useSolanaWallet } from '@solana/wallet-adapter-react'
 import { useMemo } from 'react'
 import { CONNECTION_PROVIDER_IDS, CONNECTION_PROVIDER_NAMES } from 'uniswap/src/constants/web3'
 import type { Account } from 'uniswap/src/features/accounts/store/types/Account'
@@ -9,7 +7,7 @@ import { SigningCapability } from 'uniswap/src/features/accounts/store/types/Wal
 import { createAccountsStoreContextProvider } from 'uniswap/src/features/accounts/store/utils/createAccountsStoreContextProvider'
 import { CAIP25Session } from 'uniswap/src/features/capabilities/caip25/types'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
-import { EVMUniverseChainId, UniverseChainId } from 'uniswap/src/features/chains/types'
+import { EVMUniverseChainId } from 'uniswap/src/features/chains/types'
 import { isUniverseChainId } from 'uniswap/src/features/chains/utils'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import type { PlatformSpecificAddress } from 'uniswap/src/features/platforms/types/PlatformSpecificAddress'
@@ -40,15 +38,16 @@ import { useOneClickSwapSetting } from '~/pages/Swap/settings/OneClickSwap'
 
 /**
  * Web package implementation of the unified accounts store architecture.
- * Transforms external wallet data (wagmi + solana-adapter) into our common format,
- * providing consistent APIs across web, mobile, and shared packages.
+ * Transforms external wallet data (wagmi) into our common format, providing
+ * consistent APIs across web, mobile, and shared packages.
+ * SPRY: Solana support is pruned; only EVM (wagmi) wallets are sourced.
  */
 
 /** Utility intermediary type, for storing a flat representation of a single wallet/account/connector grouping, for a single wallet on one platform. */
 type PlatformWalletInfo<P extends Platform> = {
   platform: P
   /** A identifier provided by the external library that sources a wallet. */
-  libraryId: P extends Platform.EVM ? string : SolanaWalletName
+  libraryId: string
   connectorId: string
   walletName: string
   walletIcon?: string
@@ -107,52 +106,6 @@ function buildEVMWalletInfo(params: {
     injected,
     deduplicationId,
     analyticsWalletType: walletTypeToAmplitudeWalletType(connector.type),
-  }
-}
-
-/** Determines connector status for a Solana wallet based on connection state. */
-function getSolanaWalletStatus(wallet: SolanaWallet, isCurrentWalletActive: boolean): ConnectorStatus {
-  if (!isCurrentWalletActive) {
-    return ConnectorStatus.Disconnected
-  }
-
-  if (wallet.adapter.connected) {
-    return ConnectorStatus.Connected
-  }
-  if (wallet.adapter.connecting) {
-    return ConnectorStatus.Connecting
-  }
-  return ConnectorStatus.Disconnected
-}
-
-/** Builds platform wallet info from Solana wallet adapter data. */
-function buildSVMWalletInfo(wallet: SolanaWallet, isCurrentWalletActive: boolean): PlatformWalletInfo<Platform.SVM> {
-  const connectorStatus = getSolanaWalletStatus(wallet, isCurrentWalletActive)
-  const injected = wallet.readyState === SolanaWalletReadyState.Installed
-  const walletIcon = wallet.adapter.icon
-  const walletName = wallet.adapter.name
-  const deduplicationId = normalizeWalletName(wallet.adapter.name)
-
-  // `@solana/wallet-adapter` does not expose a unique id for the wallet -- name is used in lieu of a more formal id.
-  const libraryId = wallet.adapter.name
-  const connectorId = 'SolanaWalletAdapter_' + libraryId
-
-  const accountInfo = wallet.adapter.publicKey
-    ? { address: wallet.adapter.publicKey.toBase58(), chainId: UniverseChainId.Solana }
-    : undefined
-
-  return {
-    platform: Platform.SVM,
-    connectorId,
-    libraryId,
-    walletName,
-    walletIcon,
-    connectorStatus,
-    injected,
-    accountInfo,
-    deduplicationId,
-    // TODO(SWAP-17): get better amplitude type mapping for Solana wallet connectors
-    analyticsWalletType: injected ? 'Browser Extension' : wallet.adapter.name,
   }
 }
 
@@ -245,28 +198,19 @@ function buildEVMConnector({
   }
 }
 
-/** Creates an SVM-specific connector with external library ID. */
-function buildSVMConnector(info: PlatformWalletInfo<Platform.SVM>, walletId: string): ExternalConnector<Platform.SVM> {
-  return { ...buildConnector({ info, walletId }), platform: info.platform, externalLibraryId: info.libraryId }
-}
-
-/** Builds complete store components (wallet, connectors, accounts) from cross-platform wallet info. */
+/** Builds complete store components (wallet, connectors, accounts) from wallet info. */
 function buildStoreComponents({
   evm,
-  svm,
   caip25Session,
 }: {
   evm?: PlatformWalletInfo<Platform.EVM>
-  svm?: PlatformWalletInfo<Platform.SVM>
   caip25Session: CAIP25Session
 }): {
   wallet: ExternalWallet
   evmConnector?: ExternalConnector<Platform.EVM>
-  svmConnector?: ExternalConnector<Platform.SVM>
   accounts: Account<Platform>[]
 } {
-  // Merge all wallet infos into a single item, preferring fields from the EVM library.
-  const infos: PlatformWalletInfo<Platform>[] = [evm, svm].flatMap((info) => (info ? [info] : []))
+  const infos: PlatformWalletInfo<Platform>[] = [evm].flatMap((info) => (info ? [info] : []))
   const {
     libraryId: walletId,
     walletName,
@@ -277,7 +221,6 @@ function buildStoreComponents({
   const accounts: Account<Platform>[] = infos.flatMap((info) => buildAccount(info, walletId) ?? [])
 
   const evmConnector = evm ? buildEVMConnector({ info: evm, walletId, caip25Session }) : undefined
-  const svmConnector = svm ? buildSVMConnector(svm, walletId) : undefined
 
   const wallet: ExternalWallet = {
     id: walletId,
@@ -292,19 +235,17 @@ function buildStoreComponents({
     ],
     connectorIds: {
       [Platform.EVM]: evmConnector?.id,
-      [Platform.SVM]: svmConnector?.id,
     },
     analyticsWalletType,
   }
 
-  return { wallet, evmConnector, svmConnector, accounts }
+  return { wallet, evmConnector, accounts }
 }
 
 /** Maps deduplication ids to the wallet infos that share that id (to deduplicate info for the same wallet on different platforms). */
 type DeduplicationMap = {
   [id in string]: {
     [Platform.EVM]?: PlatformWalletInfo<Platform.EVM>
-    [Platform.SVM]?: PlatformWalletInfo<Platform.SVM>
   }
 }
 
@@ -348,12 +289,6 @@ function buildAccountsState({
       }
       connectors[components.evmConnector.id] = components.evmConnector
     }
-    if (components.svmConnector) {
-      if (components.svmConnector.status !== ConnectorStatus.Disconnected) {
-        activeConnectors.svm = components.svmConnector
-      }
-      connectors[components.svmConnector.id] = components.svmConnector
-    }
 
     // Step 3: Store all accounts.
     for (const account of components.accounts) {
@@ -391,44 +326,16 @@ function useEVMWalletInfos(pendingConnection: ExternalWallet | undefined): Platf
   }, [connectors, wagmiAccount, fallbackChainId, pendingConnection])
 }
 
-/** Hook that builds SVM wallet infos from Solana wallet adapter data. */
-function useSVMWalletInfos(): PlatformWalletInfo<Platform.SVM>[] {
-  const solanaWallet = useSolanaWallet()
-
-  return useMemo(() => {
-    const activeSolanaWallet = solanaWallet.wallet
-    const allSolanaWallets = solanaWallet.wallets
-
-    return allSolanaWallets.flatMap((wallet) => {
-      const currentSolanaWalletIsActive = wallet.adapter.name === activeSolanaWallet?.adapter.name
-
-      const walletToUse = currentSolanaWalletIsActive ? activeSolanaWallet : wallet
-
-      // Ignore the coinbase adapter if the extension is not detected, as it errs upon connection attempt in this state.
-      if (
-        wallet.readyState === SolanaWalletReadyState.NotDetected &&
-        wallet.adapter.name === CONNECTION_PROVIDER_NAMES.COINBASE_SOLANA_WALLET_ADAPTER
-      ) {
-        return []
-      }
-
-      return buildSVMWalletInfo(walletToUse, currentSolanaWalletIsActive)
-    })
-    // `@solana/wallet-adapter` has inconsistent behavior for when sub-fields of the `useSolanaWallet` return types re-render -- to account for this, we use the entire return value as a dependency instead of its fields.
-  }, [solanaWallet])
-}
-
-/** Main hook that combines EVM and SVM wallet data into unified accounts state. */
+/** Main hook that builds the unified accounts state from EVM wallet data. */
 function useAccountsState(): WebAccountsData {
   const { pendingWallet, isConnecting } = useConnectWalletMutation()
 
   const evmWalletInfos = useEVMWalletInfos(pendingWallet)
-  const svmWalletInfos = useSVMWalletInfos()
   const caip25Session = useCAIP25Session()
 
   return useMemo(
-    () => buildAccountsState({ infos: [...evmWalletInfos, ...svmWalletInfos], isConnecting, caip25Session }),
-    [evmWalletInfos, svmWalletInfos, isConnecting, caip25Session],
+    () => buildAccountsState({ infos: evmWalletInfos, isConnecting, caip25Session }),
+    [evmWalletInfos, isConnecting, caip25Session],
   )
 }
 

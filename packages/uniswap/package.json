@@ -49,7 +49,6 @@
     "@reduxjs/toolkit": "1.9.3",
     "@shopify/flash-list": "1.8.3",
     "@simplewebauthn/browser": "13.1.0",
-    "@solana/web3.js": "1.92.0",
     "@spry/config": "workspace:^",
     "@spry/fee": "workspace:^",
     "@spry/sdk": "workspace:^",

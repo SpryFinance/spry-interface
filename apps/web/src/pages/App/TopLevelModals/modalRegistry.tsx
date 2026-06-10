@@ -9,9 +9,6 @@ import { createLazy } from '~/utils/lazyWithRetry'
 
 const AddressClaimModal = createLazy(() => import('~/components/claim/AddressClaimModal'))
 const ConnectedAccountBlocked = createLazy(() => import('~/components/ConnectedAccountBlocked'))
-const PendingWalletConnectionModal = createLazy(
-  () => import('~/components/WalletModal/PendingWalletConnectionModal/PendingWalletConnectionModal'),
-)
 const UniwalletModal = createLazy(() => import('~/components/AccountDrawer/UniwalletModal'))
 const OffchainActivityModal = createLazy(() => import('~/components/modals/OffchainActivityModal'))
 const TransactionDetailsModalDispatcher = createLazy(() =>
@@ -179,10 +176,6 @@ export const modalRegistry: ModalRegistry = {
   },
   [ModalName.GetTheApp]: {
     component: GetTheAppModal,
-    shouldMount: () => true,
-  },
-  [ModalName.PendingWalletConnection]: {
-    component: PendingWalletConnectionModal,
     shouldMount: () => true,
   },
   [ModalName.PrivacyPolicy]: {

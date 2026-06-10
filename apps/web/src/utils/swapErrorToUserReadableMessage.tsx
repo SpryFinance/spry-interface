@@ -1,4 +1,3 @@
-import { WalletSignTransactionError } from '@solana/wallet-adapter-base'
 import { TFunction } from 'i18next'
 import { logger } from 'utilities/src/logger/logger'
 import { UserRejectedRequestError } from '~/utils/errors'
@@ -57,8 +56,6 @@ export function didUserReject(error: any): boolean {
   return false
 }
 
-// oxlint-disable-next-line no-unused-expressions -- biome-parity: oxlint is stricter here
-WalletSignTransactionError
 /**
  * This is hacking out the revert reason from the ethers provider thrown error however it can.
  * This object seems to be undocumented by ethers.

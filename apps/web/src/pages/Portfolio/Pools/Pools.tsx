@@ -14,7 +14,6 @@ import Trace from 'uniswap/src/features/telemetry/Trace'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
 import { EmptyPositionsView } from '~/features/Liquidity/components/emptyStates/EmptyPositionsView'
 import { ErrorPositionsView } from '~/features/Liquidity/components/emptyStates/ErrorPositionsView'
-import { PoolsUnavailableOnSolanaView } from '~/features/Liquidity/components/emptyStates/PoolsUnavailableOnSolanaView'
 import { DEFAULT_LP_POSITION_PROTOCOL_FILTER, DEFAULT_LP_POSITION_STATUS_FILTER } from '~/features/Liquidity/constants'
 import { useWalletPositionsWeb } from '~/features/Liquidity/hooks/useWalletPositionsWeb'
 import { LiquidityPositionCardLoader } from '~/features/Liquidity/LiquidityPositionCard'
@@ -22,7 +21,6 @@ import { PositionsListSection } from '~/features/Liquidity/PositionsListSection'
 import { PortfolioBalanceCountIndicator } from '~/pages/Portfolio/components/PortfolioBalanceCountIndicator'
 import { usePortfolioRoutes } from '~/pages/Portfolio/Header/hooks/usePortfolioRoutes'
 import { usePortfolioAddresses } from '~/pages/Portfolio/hooks/usePortfolioAddresses'
-import { useResolvedAddresses } from '~/pages/Portfolio/hooks/useResolvedAddresses'
 import { PortfolioPoolsFeesPanel } from '~/pages/Portfolio/Pools/components/PortfolioPoolsFeesPanel'
 import { PortfolioPoolsRewardsCard } from '~/pages/Portfolio/Pools/components/PortfolioPoolsRewardsCard'
 import { PoolsActionRow } from '~/pages/Portfolio/Pools/PoolsActionRow'
@@ -66,7 +64,6 @@ function positionMatchesSearch(position: PositionInfo, normalizedSearch: string)
 export function PortfolioPools() {
   const { t } = useTranslation()
   const { evmAddress, isExternalWallet } = usePortfolioAddresses()
-  const { evmAddress: resolvedEvmAddress, svmAddress: resolvedSvmAddress } = useResolvedAddresses()
   const { chainId, externalAddress } = usePortfolioRoutes()
   const isLpIncentivesEnabled = useFeatureFlag(FeatureFlags.LpIncentives)
 
@@ -114,7 +111,6 @@ export function PortfolioPools() {
   const hasLoadedBalance = poolsBalance !== undefined
   const totalPoolsCount = poolsBalance?.count
 
-  const hasSolanaOnlyWallet = !resolvedEvmAddress && !!resolvedSvmAddress
   const normalizedSearch = search.trim().toLowerCase()
   const hasModifiedPositionFilters =
     !hasSameItems(versionFilter, DEFAULT_LP_POSITION_PROTOCOL_FILTER) ||
@@ -183,9 +179,6 @@ export function PortfolioPools() {
   }
 
   const renderContent = (): JSX.Element => {
-    if (hasSolanaOnlyWallet) {
-      return <PoolsUnavailableOnSolanaView />
-    }
     if (showEmptyState) {
       return <EmptyPositionsView newPositionHref={newPositionHref} showNewPositionAction={!isExternalWallet} />
     }

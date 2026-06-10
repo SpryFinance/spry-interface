@@ -1,5 +1,4 @@
 import { queryOptions, UseQueryOptions } from '@tanstack/react-query'
-import type { JupiterOrderUrlParams } from '@universe/api/src/clients/jupiter/types'
 import type {
   TradeService,
   TradeWithGasEstimates,
@@ -22,12 +21,7 @@ export type TradeServiceQueryOptions = UseQueryOptions<
   TradeWithGasEstimates,
   Error,
   TradeWithGasEstimates,
-  [
-    ReactQueryCacheKey.TradeService,
-    'getTrade',
-    ValidatedTradeInput | JupiterOrderUrlParams | null, // TODO(SWAP-383): Remove JupiterOrderUrlParams from union once Solana trade repo is implemented
-    TradeQuoteSettings,
-  ]
+  [ReactQueryCacheKey.TradeService, 'getTrade', ValidatedTradeInput | null, TradeQuoteSettings]
 >
 
 export function createTradeServiceQueryOptions(ctx: {

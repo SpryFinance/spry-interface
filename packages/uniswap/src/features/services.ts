@@ -7,7 +7,6 @@ import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { getEVMTradeRepository } from 'uniswap/src/features/repositories'
 import { useWithQuoteLogging } from 'uniswap/src/features/transactions/swap/hooks/useTrade/logging'
 import { createEVMTradeService } from 'uniswap/src/features/transactions/swap/services/tradeService/evmTradeService'
-import { createSolanaTradeService } from 'uniswap/src/features/transactions/swap/services/tradeService/svmTradeService'
 import {
   createTradeService,
   TradeService,
@@ -52,14 +51,13 @@ export function getTradeService(ctx: TradeServiceContext): TradeService {
     logger: getLogger(),
   })
 
-  const svmTradeService = createSolanaTradeService(
-    // { tradeRepository: getSolanaTradeRepository() } // TODO(SWAP-383): build Solana Trade Repository
-  )
-
   return createTradeService({
     serviceByPlatform: {
       [Platform.EVM]: evmTradeService,
-      [Platform.SVM]: svmTradeService,
+      // SPRY: Solana support is pruned and SVM chains are unreachable (the app
+      // serves Base Sepolia only), so the exhaustive platform map reuses the
+      // EVM service rather than carrying a dead Solana implementation.
+      [Platform.SVM]: evmTradeService,
     },
   })
 }

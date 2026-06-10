@@ -13,7 +13,9 @@ const WalletContext = createContext<WalletContext | undefined>(undefined)
 type WalletProviderProps = PropsWithChildren<{
   walletService: WalletService
   evmAddress: HexString | undefined
-  svmAddress: string | undefined
+  // SPRY: Solana support is pruned; optional so legacy callers passing
+  // undefined keep compiling while the web app omits it entirely.
+  svmAddress?: string
 }>
 
 export function WalletProvider({ children, walletService, evmAddress, svmAddress }: WalletProviderProps): JSX.Element {

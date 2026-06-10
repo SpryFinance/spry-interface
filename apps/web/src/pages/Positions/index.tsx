@@ -4,17 +4,13 @@ import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Anchor, Flex, Text } from 'ui/src'
 import type { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { InterfacePageName, UniswapEventName } from 'uniswap/src/features/telemetry/constants'
 import { sendAnalyticsEvent } from 'uniswap/src/features/telemetry/send'
 import Trace from 'uniswap/src/features/telemetry/Trace'
-import { useIsMissingPlatformWallet } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/hooks/useIsMissingPlatformWallet'
 import tokenLogo from '~/assets/images/token-logo.png'
 import { DisconnectedWalletView } from '~/features/Liquidity/components/emptyStates/DisconnectedWalletView'
 import { EmptyPositionsView } from '~/features/Liquidity/components/emptyStates/EmptyPositionsView'
 import { ErrorPositionsView } from '~/features/Liquidity/components/emptyStates/ErrorPositionsView'
-import { PoolsUnavailableOnSolanaView } from '~/features/Liquidity/components/emptyStates/PoolsUnavailableOnSolanaView'
-import { LiquidityLearnMoreTiles } from '~/features/Liquidity/components/LearnMoreTiles'
 import { useLpIncentives } from '~/features/Liquidity/hooks/useLpIncentives'
 import { useWalletPositionsWeb } from '~/features/Liquidity/hooks/useWalletPositionsWeb'
 import { LiquidityPositionCardLoader } from '~/features/Liquidity/LiquidityPositionCard'
@@ -38,7 +34,6 @@ export function Pool() {
 
   const isLPIncentivesEnabled = useFeatureFlag(FeatureFlags.LpIncentives) && isConnected
   const newPositionHref = useCreatePositionHref()
-  const connectedWithoutEVM = useIsMissingPlatformWallet(Platform.EVM)
 
   const { chainFilter, setChainFilter, versionFilter, toggleVersion, statusFilter, toggleStatus } = usePositionFilters()
   const [showHiddenPositions, setShowHiddenPositions] = useState(false)
@@ -124,12 +119,7 @@ export function Pool() {
               onStatusChange={toggleStatus}
             />
           </Flex>
-          {connectedWithoutEVM ? (
-            <>
-              <PoolsUnavailableOnSolanaView withBorder />
-              <LiquidityLearnMoreTiles />
-            </>
-          ) : hasErrorWithoutData && isConnected ? (
+          {hasErrorWithoutData && isConnected ? (
             <ErrorPositionsView onRetry={refetch} />
           ) : !isLoadingPositions ? (
             visiblePositions.length > 0 || hiddenPositions.length > 0 ? (

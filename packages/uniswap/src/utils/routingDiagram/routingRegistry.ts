@@ -1,7 +1,6 @@
 import { TradingApi } from '@universe/api'
 import { useMemo } from 'react'
 import { Trade } from 'uniswap/src/features/transactions/swap/types/trade'
-import { jupiterRoutingProvider } from 'uniswap/src/utils/routingDiagram/routingProviders/jupiterRoutingProvider'
 import {
   uniswapChainedRoutingProvider,
   uniswapRoutingProvider,
@@ -16,7 +15,8 @@ import { logger } from 'utilities/src/logger/logger'
 const ROUTING_PROVIDER_MAP: Record<TradingApi.Routing, RoutingProvider | undefined> = {
   [TradingApi.Routing.CLASSIC]: uniswapRoutingProvider,
   [TradingApi.Routing.CHAINED]: uniswapChainedRoutingProvider,
-  [TradingApi.Routing.JUPITER]: jupiterRoutingProvider,
+  // SPRY: Solana support is pruned; the generated Routing enum keeps JUPITER.
+  [TradingApi.Routing.JUPITER]: undefined,
   [TradingApi.Routing.DUTCH_V2]: undefined,
   [TradingApi.Routing.DUTCH_V3]: undefined,
   [TradingApi.Routing.DUTCH_LIMIT]: undefined,

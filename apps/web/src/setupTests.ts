@@ -24,12 +24,6 @@ import './test-utils/mockTamagui' // mock problematic Tamagui components
 import { Readable } from 'stream'
 import { TextDecoder, TextEncoder } from 'util'
 import { type createPopper } from '@popperjs/core'
-import {
-  BaseWalletAdapter,
-  type SupportedTransactionVersions,
-  type WalletName,
-  WalletReadyState,
-} from '@solana/wallet-adapter-base'
 import { useFeatureFlag } from '@universe/gating'
 import { useWeb3React } from '@web3-react/core'
 import { config as loadEnv } from 'dotenv'
@@ -43,60 +37,6 @@ import { toBeVisible } from '~/test-utils/matchers'
 import { mocked } from '~/test-utils/mocked'
 
 loadEnv()
-
-// Mock @solana/wallet-adapter-coinbase to prevent window access errors
-vi.mock('@solana/wallet-adapter-coinbase', () => ({
-  CoinbaseWalletName: 'Coinbase Wallet',
-  CoinbaseWalletAdapter: class MockCoinbaseWalletAdapter extends BaseWalletAdapter {
-    name = 'Coinbase Wallet' as WalletName
-    url = 'https://www.coinbase.com/wallet'
-    icon = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAyNCIgaGVpZ2h0PSIxMDI0Ij48L3N2Zz4='
-    supportedTransactionVersions = new Set(['legacy', 0]) as SupportedTransactionVersions
-
-    private _connecting = false
-    private _publicKey = null
-    private _readyState = WalletReadyState.NotDetected // Use string instead of enum to avoid async import
-
-    constructor(_config = {}) {
-      super()
-      // Mock constructor - no actual initialization needed
-    }
-
-    get publicKey() {
-      return this._publicKey
-    }
-    get connecting() {
-      return this._connecting
-    }
-    get readyState() {
-      return this._readyState
-    }
-    get connected() {
-      return !!this._publicKey
-    }
-
-    async connect() {
-      this._connecting = true
-      // Mock connection logic without actual browser APIs
-      this._connecting = false
-    }
-    async disconnect() {
-      this._publicKey = null
-    }
-    async sendTransaction(): Promise<string> {
-      throw new Error('Mock adapter cannot send transactions')
-    }
-    async signTransaction() {
-      throw new Error('Mock adapter cannot sign transactions')
-    }
-    async signAllTransactions() {
-      throw new Error('Mock adapter cannot sign transactions')
-    }
-    async signMessage() {
-      throw new Error('Mock adapter cannot sign messages')
-    }
-  },
-}))
 
 vi.mock('react-native-reanimated', async () => {
   const mock = await vi.importActual<any>('react-native-reanimated/src/mock')

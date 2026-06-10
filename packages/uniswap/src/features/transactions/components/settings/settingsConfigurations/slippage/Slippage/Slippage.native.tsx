@@ -5,7 +5,7 @@ import type { TransactionSettingConfig } from 'uniswap/src/features/transactions
 
 export const Slippage: TransactionSettingConfig = {
   renderTitle: (t) => t('swap.slippage.settings.title'),
-  applicablePlatforms: [Platform.EVM, Platform.SVM],
+  applicablePlatforms: [Platform.EVM],
   Control() {
     return <SlippageControl />
   },

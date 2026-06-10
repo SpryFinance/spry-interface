@@ -25,11 +25,7 @@ import {
 } from 'uniswap/src/features/transactions/swap/types/trade'
 import { slippageToleranceToPercent } from 'uniswap/src/features/transactions/swap/utils/format'
 import { generateSwapTransactionSteps } from 'uniswap/src/features/transactions/swap/utils/generateSwapTransactionSteps'
-import {
-  isJupiter,
-  requireRouting,
-  UNISWAPX_ROUTING_VARIANTS,
-} from 'uniswap/src/features/transactions/swap/utils/routing'
+import { requireRouting, UNISWAPX_ROUTING_VARIANTS } from 'uniswap/src/features/transactions/swap/utils/routing'
 import { createMonitoredSaga } from 'uniswap/src/utils/saga'
 import { logger } from 'utilities/src/logger/logger'
 import { DEFAULT_TXN_DISMISS_MS, L2_TXN_DISMISS_MS, ZERO_PERCENT } from '~/constants/misc'
@@ -37,7 +33,6 @@ import { formatSwapSignedAnalyticsEventProperties } from '~/lib/utils/analytics'
 import { popupRegistry } from '~/state/popups/registry'
 import { PopupType } from '~/state/popups/types'
 import { handleAtomicSendCalls } from '~/state/sagas/transactions/5792'
-import { jupiterSwap } from '~/state/sagas/transactions/solana'
 import { sendSwapSignedEvent } from '~/state/sagas/transactions/swapSignedAnalytics'
 import { handleUniswapXSignatureStep } from '~/state/sagas/transactions/uniswapx'
 import {
@@ -206,13 +201,6 @@ function* swap(params: SwapParams) {
   const handleSwapTransactionWalletCallStep = createHandleSwapTransactionWalletCallStep({ disableOneClickSwap })
 
   try {
-    // TODO(SWAP-287): Integrate jupiter swap into TransactionStep, rather than special-casing.
-    if (isJupiter(swapTxContext)) {
-      yield* call(jupiterSwap, { ...params, swapTxContext })
-      yield* call(onSuccess)
-      return
-    }
-
     for (step of steps) {
       switch (step.type) {
         case TransactionStepType.TokenRevocationTransaction:
