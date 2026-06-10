@@ -12,7 +12,6 @@ import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { MismatchToastItem } from '~/components/Popups/MismatchToastItem'
 import {
   FailedNetworkSwitchPopup,
-  FORTransactionPopupContent,
   PlanPopupContent,
   TransactionPopupContent,
   UniswapXOrderPopupContent,
@@ -61,9 +60,6 @@ export function PopupItem({ content, onClose }: { content: PopupContent; popKey:
     }
     case PopupType.Mismatch: {
       return <MismatchToastItem onDismiss={onClose} />
-    }
-    case PopupType.FORTransaction: {
-      return <FORTransactionPopupContent transaction={content.transaction} onClose={onClose} />
     }
     case PopupType.Error: {
       return (

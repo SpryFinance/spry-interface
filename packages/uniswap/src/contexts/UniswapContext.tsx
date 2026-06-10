@@ -28,7 +28,8 @@ export type NavigateToSwapFlowArgs = {
 /** Stores objects/utils that exist on all platforms, abstracting away app-level specifics for each, in order to allow usage in cross-platform code. */
 interface UniswapContextValue {
   navigateToBuyOrReceiveWithEmptyWallet?: () => void
-  navigateToFiatOnRamp: (args: { prefilledCurrency?: FiatOnRampCurrency }) => void
+  // SPRY: optional so the web app (which has no fiat on-ramp) can omit it; the mobile wallet still provides it.
+  navigateToFiatOnRamp?: (args: { prefilledCurrency?: FiatOnRampCurrency }) => void
   navigateToSwapFlow: (args: NavigateToSwapFlowArgs) => void
   navigateToSendFlow: (args: { chainId: UniverseChainId; currencyAddress?: Address; recipient?: Address }) => void
   navigateToReceive: () => void

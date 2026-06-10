@@ -10,7 +10,6 @@ import { ZERO_ADDRESS } from 'uniswap/src/constants/misc'
 import { nativeOnChain } from 'uniswap/src/constants/tokens'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
-import type { FORTransaction } from 'uniswap/src/features/fiatOnRamp/types'
 import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { isUniswapX } from 'uniswap/src/features/transactions/swap/utils/routing'
@@ -57,16 +56,10 @@ import {
 } from '~/components/AccountDrawer/MiniPortfolio/Activity/parseRemote'
 import type { Activity, ActivityMap } from '~/components/AccountDrawer/MiniPortfolio/Activity/types'
 import { createActivityMapByHash } from '~/components/AccountDrawer/MiniPortfolio/Activity/utils'
-import { FiatOnRampTransactionStatus } from '~/state/fiatOnRampTransactions/types'
-import {
-  forTransactionStatusToTransactionStatus,
-  statusToTransactionInfoStatus,
-} from '~/state/fiatOnRampTransactions/utils'
 import { useMultichainTransactions } from '~/state/transactions/hooks'
 import { isConfirmedTx } from '~/state/transactions/utils'
 
 type FormatNumberFunctionType = ReturnType<typeof useLocalizationContext>['formatNumberOrString']
-type FormatFiatPriceFunctionType = ReturnType<typeof useLocalizationContext>['convertFiatAmountFormatted']
 
 // Narrowing helper for when we actually need UniswapX-specific fields
 function isUniswapXDetails(
@@ -800,77 +793,6 @@ export function getTransactionToActivityQueryOptions({
     queryKey: [ReactQueryCacheKey.TransactionToActivity, transaction],
     queryFn: async () => transactionToActivity({ details: transaction, formatNumber }),
   })
-}
-
-export function getFORTransactionToActivityQueryOptions({
-  transaction,
-  formatNumber,
-  formatFiatPrice,
-}: {
-  transaction?: FORTransaction
-  formatNumber: FormatNumberFunctionType
-  formatFiatPrice: FormatFiatPriceFunctionType
-}) {
-  return queryOptions({
-    queryKey: [ReactQueryCacheKey.TransactionToActivity, transaction],
-    queryFn: async () => forTransactionToActivity({ transaction, formatNumber, formatFiatPrice }),
-  })
-}
-
-async function forTransactionToActivity({
-  transaction,
-  formatNumber,
-  formatFiatPrice,
-}: {
-  transaction?: FORTransaction
-  formatNumber: FormatNumberFunctionType
-  formatFiatPrice: FormatFiatPriceFunctionType
-}): Promise<Activity | undefined> {
-  if (!transaction) {
-    return undefined
-  }
-
-  const chainId = Number(transaction.cryptoDetails?.chainId) as UniverseChainId
-  const currency = await getCurrencyFromCurrencyId(buildCurrencyId(chainId, transaction.sourceCurrencyCode))
-  const status = statusToTransactionInfoStatus(transaction.status)
-  const serviceProvider = transaction.serviceProviderDetails?.name ?? ''
-  const tokenAmount = formatNumber({ value: transaction.sourceAmount, type: NumberType.TokenNonTx })
-  const fiatAmount = formatFiatPrice(transaction.destinationAmount, NumberType.FiatTokenPrice)
-
-  let title = ''
-  switch (status) {
-    case FiatOnRampTransactionStatus.PENDING:
-      title = i18n.t('transaction.status.sale.pendingOn', { serviceProvider })
-      break
-    case FiatOnRampTransactionStatus.COMPLETE:
-      title = i18n.t('transaction.status.sale.successOn', { serviceProvider })
-      break
-    case FiatOnRampTransactionStatus.FAILED:
-      title = i18n.t('transaction.status.sale.failedOn', { serviceProvider })
-      break
-  }
-
-  return {
-    id: transaction.externalSessionId,
-    hash: transaction.externalSessionId,
-    chainId,
-    title,
-    descriptor: `${tokenAmount} ${transaction.sourceCurrencyCode} ${i18n.t('common.for').toLocaleLowerCase()} ${fiatAmount}`,
-    currencies: [currency],
-    status: forTransactionStatusToTransactionStatus(status),
-    timestamp: convertToSecTimestamp(Number(transaction.createdAt)),
-    from: transaction.cryptoDetails?.walletAddress ?? '',
-  }
-}
-
-function convertToSecTimestamp(timestamp: number) {
-  // UNIX timestamp in ms for Jan 1, 2100
-  const threshold: number = 4102444800000
-  if (timestamp >= threshold) {
-    return Math.floor(timestamp / 1000)
-  } else {
-    return timestamp
-  }
 }
 
 export function useLocalActivities(account: string): ActivityMap {

@@ -1,14 +1,11 @@
 import { GraphQLApi } from '@universe/api'
-import ms from 'ms'
 import { PropsWithChildren, useEffect, useMemo, useState } from 'react'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { logger } from 'utilities/src/logger/logger'
 import { useEvent } from 'utilities/src/react/hooks'
-import { useInterval } from 'utilities/src/time/timing'
 import { createAdaptiveRefetchContext } from '~/appGraphql/data/apollo/AdaptiveRefetch'
 import { useAccount } from '~/hooks/useAccount'
 import { usePrevious } from '~/hooks/usePrevious'
-import { useFiatOnRampTransactions } from '~/state/fiatOnRampTransactions/hooks'
 
 const { Provider: AdaptiveAssetActivityProvider } = createAdaptiveRefetchContext<GraphQLApi.ActivityWebQueryResult>()
 
@@ -21,14 +18,7 @@ function AssetActivityProviderInternal({ children }: PropsWithChildren) {
   const { isTestnetModeEnabled, gqlChains } = useEnabledChains()
   const previousIsTestnetModeEnabled = usePrevious(isTestnetModeEnabled)
 
-  const fiatOnRampTransactions = useFiatOnRampTransactions()
-
   const [lazyFetch, query] = GraphQLApi.useActivityWebLazyQuery()
-
-  const transactionIds = useMemo(
-    () => Object.values(fiatOnRampTransactions).map((tx) => tx.externalSessionId),
-    [fiatOnRampTransactions],
-  )
 
   const baseVariables = useMemo<GraphQLApi.ActivityWebQueryVariables>(
     () => ({
@@ -36,14 +26,12 @@ function AssetActivityProviderInternal({ children }: PropsWithChildren) {
       chains: gqlChains,
       // Backend will return off-chain activities even if gqlChains are all testnets.
       includeOffChain: !isTestnetModeEnabled,
-      // Include the externalsessionIDs of all FOR transactions in the local store,
-      // so that the backend can find the transactions without signature authentication.
-      // Note: No FOR transactions are included in activity without explicity passing IDs from local storage
-      onRampTransactionIDs: transactionIds,
+      // SPRY: the web fiat on-ramp was removed, so no FOR transaction IDs are passed.
+      onRampTransactionIDs: [],
       pageSize: PAGE_SIZE,
       page: INITIAL_PAGE,
     }),
-    [account.address, gqlChains, isTestnetModeEnabled, transactionIds],
+    [account.address, gqlChains, isTestnetModeEnabled],
   )
 
   const fetch = useEvent(() => {
@@ -58,16 +46,6 @@ function AssetActivityProviderInternal({ children }: PropsWithChildren) {
       })
     })
   })
-
-  useInterval(async () => {
-    if (
-      Object.values(fiatOnRampTransactions).some(
-        (transaction) => !transaction.syncedWithBackend && transaction.forceFetched,
-      )
-    ) {
-      fetch()
-    }
-  }, ms('15s'))
 
   return (
     <AdaptiveAssetActivityProvider

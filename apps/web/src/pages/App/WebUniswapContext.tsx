@@ -8,7 +8,6 @@ import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { toGraphQLChain } from 'uniswap/src/features/chains/utils'
-import { FiatOnRampCurrency } from 'uniswap/src/features/fiatOnRamp/types'
 import { useNavigateToNftExplorerLink } from 'uniswap/src/features/nfts/hooks/useNavigateToNftExplorerLink'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { useSetActiveChainId } from 'uniswap/src/features/smartWallet/delegation/hooks/useSetActiveChainId'
@@ -19,7 +18,7 @@ import { ModalName } from 'uniswap/src/features/telemetry/constants'
 import { useGetCanSignPermits } from 'uniswap/src/features/transactions/hooks/useGetCanSignPermits'
 import { CurrencyField } from 'uniswap/src/types/currency'
 import { currencyIdToAddress, currencyIdToChain } from 'uniswap/src/utils/currencyId'
-import { getFiatOnRampURL, getPoolDetailsURL } from 'uniswap/src/utils/linking'
+import { getPoolDetailsURL } from 'uniswap/src/utils/linking'
 import { useEvent, usePrevious } from 'utilities/src/react/hooks'
 import { noop } from 'utilities/src/react/noop'
 import { getTokenDetailsURL } from '~/appGraphql/data/util'
@@ -36,7 +35,6 @@ import { PageType } from '~/hooks/useIsPage'
 import { useModalState } from '~/hooks/useModalState'
 import { buildPortfolioUrl } from '~/pages/Portfolio/utils/portfolioUrls'
 import { useOneClickSwapSetting } from '~/pages/Swap/settings/OneClickSwap'
-import { useMultichainContext } from '~/state/multichain/useMultichainContext'
 import { SwitchNetworkAction } from '~/state/popups/types'
 import { useIsAtomicBatchingSupportedByChainIdCallback } from '~/state/walletCapabilities/hooks/useIsAtomicBatchingSupportedByChain'
 import { useHasMismatchCallback, useShowMismatchToast } from '~/state/walletCapabilities/hooks/useMismatchAccount'
@@ -63,9 +61,7 @@ function WebUniswapProviderInner({ children }: PropsWithChildren) {
   const location = useLocation()
   const accountDrawer = useAccountDrawer()
   const navigate = useNavigate()
-  const { chainId } = useMultichainContext()
 
-  const { closeModal: closeSendModal } = useModalState(ModalName.Send)
   const { closeModal: closeSearchModal } = useModalState(ModalName.Search)
   const { openModal: openSendModal } = useModalState(ModalName.Send)
 
@@ -97,7 +93,6 @@ function WebUniswapProviderInner({ children }: PropsWithChildren) {
   )
 
   const navigateToPoolDetails = useCallback(
-    // oxlint-disable-next-line no-shadow
     ({ poolId, chainId }: { poolId: Address; chainId: UniverseChainId }) => {
       const url = getPoolDetailsURL(poolId, chainId)
       navigate(url)
@@ -106,29 +101,8 @@ function WebUniswapProviderInner({ children }: PropsWithChildren) {
     [navigate, closeSearchModal],
   )
 
-  const navigateToFiatOnRamp = useCallback(
-    ({ prefilledCurrency }: { prefilledCurrency?: FiatOnRampCurrency } = {}) => {
-      const currencyInfo = prefilledCurrency?.currencyInfo
-      navigate(
-        getFiatOnRampURL({
-          chainId: currencyInfo?.currency.chainId,
-          currencyCode: prefilledCurrency?.meldCurrencyCode,
-          currencyId: currencyInfo?.currencyId,
-        }),
-      )
-    },
-    [navigate],
-  )
-
-  const navigateToBuyOrReceiveWithEmptyWallet = useCallback(() => {
-    const url = getFiatOnRampURL(chainId ?? undefined)
-    navigate(url)
-    closeSendModal()
-  }, [navigate, chainId, closeSendModal])
-
   const navigateToSendFlow = useCallback(
     ({
-      // oxlint-disable-next-line no-shadow
       chainId,
       currencyAddress,
       recipient,
@@ -210,8 +184,7 @@ function WebUniswapProviderInner({ children }: PropsWithChildren) {
   const isAtomicBatchingSupportedByChain = useIsAtomicBatchingSupportedByChainIdCallback()
 
   const { enabled: isOneClickSwapSettingEnabled } = useOneClickSwapSetting()
-  // oxlint-disable-next-line typescript/no-duplicate-type-constituents no-shadow -- biome-parity: oxlint is stricter here
-  const getCanBatchTransactions = useEvent((chainId?: UniverseChainId | undefined) => {
+  const getCanBatchTransactions = useEvent((chainId?: UniverseChainId) => {
     return Boolean(
       isBatchedSwapsFlagEnabled && isOneClickSwapSettingEnabled && chainId && isAtomicBatchingSupportedByChain(chainId),
     )
@@ -221,7 +194,6 @@ function WebUniswapProviderInner({ children }: PropsWithChildren) {
 
   const onSwapChainsChanged = useEvent(
     ({
-      // oxlint-disable-next-line no-shadow
       chainId,
       prevChainId,
       outputChainId,
@@ -264,11 +236,9 @@ function WebUniswapProviderInner({ children }: PropsWithChildren) {
       useProviderHook={useWebProvider}
       useWalletDisplayName={useOnchainDisplayName}
       onSwapChainsChanged={onSwapChainsChanged}
-      navigateToFiatOnRamp={navigateToFiatOnRamp}
       navigateToSwapFlow={navigateToSwapFlow}
       navigateToSendFlow={navigateToSendFlow}
       navigateToReceive={navigateToReceive}
-      navigateToBuyOrReceiveWithEmptyWallet={navigateToBuyOrReceiveWithEmptyWallet}
       navigateToTokenDetails={navigateToTokenDetails}
       navigateToExternalProfile={navigateToExternalProfile}
       navigateToNftDetails={navigateToNftDetails}

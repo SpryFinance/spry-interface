@@ -10,16 +10,11 @@ import { CrossChainIcon } from 'uniswap/src/components/CurrencyLogo/SplitLogo'
 import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import { useIsSupportedChainId } from 'uniswap/src/features/chains/hooks/useSupportedChainId'
 import type { UniverseChainId } from 'uniswap/src/features/chains/types'
-import type { FORTransaction } from 'uniswap/src/features/fiatOnRamp/types'
 import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { TransactionStatus } from 'uniswap/src/features/transactions/types/transactionDetails'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
 import { ExplorerDataType, getExplorerLink } from 'uniswap/src/utils/linking'
-import { noop } from 'utilities/src/react/noop'
-import {
-  getFORTransactionToActivityQueryOptions,
-  getTransactionToActivityQueryOptions,
-} from '~/components/AccountDrawer/MiniPortfolio/Activity/parseLocal'
+import { getTransactionToActivityQueryOptions } from '~/components/AccountDrawer/MiniPortfolio/Activity/parseLocal'
 import type { Activity } from '~/components/AccountDrawer/MiniPortfolio/Activity/types'
 import { PendingPortfolioLogo } from '~/components/AccountDrawer/MiniPortfolio/PendingPortfolioLogo'
 import { PortfolioLogo } from '~/components/AccountDrawer/MiniPortfolio/PortfolioLogo'
@@ -282,27 +277,4 @@ export function UniswapXOrderPopupContent({ orderHash, onClose }: { orderHash: s
   const onClick = () => openOffchainActivityModal(order)
 
   return <ActivityPopupContent activity={activity} onClose={onClose} onClick={onClick} />
-}
-
-export function FORTransactionPopupContent({
-  transaction,
-  onClose,
-}: {
-  transaction: FORTransaction
-  onClose: () => void
-}) {
-  const { formatNumberOrString, convertFiatAmountFormatted } = useLocalizationContext()
-  const { data: activity } = useQuery(
-    getFORTransactionToActivityQueryOptions({
-      transaction,
-      formatNumber: formatNumberOrString,
-      formatFiatPrice: convertFiatAmountFormatted,
-    }),
-  )
-
-  if (!activity) {
-    return null
-  }
-
-  return <ActivityPopupContent activity={activity} onClose={onClose} onClick={noop} />
 }

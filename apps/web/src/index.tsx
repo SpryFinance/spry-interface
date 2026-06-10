@@ -89,7 +89,6 @@ const loadListsUpdater = () => import('~/state/lists/updater')
 const loadApplicationUpdater = () => import('~/state/application/updater')
 const loadActivityStateUpdater = () => import('~/state/activity/updater')
 const loadLogsUpdater = () => import('~/state/logs/updater')
-const loadFiatOnRampTransactionsUpdater = () => import('~/state/fiatOnRampTransactions/updater')
 const loadWebAccountsStoreUpdater = () => import('~/features/accounts/store/updater')
 
 const provideSessionInitService = () => {
@@ -159,7 +158,6 @@ function Updaters() {
   const ApplicationUpdater = useDeferredComponent(loadApplicationUpdater)
   const ActivityStateUpdater = useDeferredComponent(loadActivityStateUpdater)
   const LogsUpdater = useDeferredComponent(loadLogsUpdater)
-  const FiatOnRampTransactionsUpdater = useDeferredComponent(loadFiatOnRampTransactionsUpdater)
   const WebAccountsStoreUpdater = useDeferredComponent(loadWebAccountsStoreUpdater)
 
   return (
@@ -171,7 +169,6 @@ function Updaters() {
       {ApplicationUpdater && <ApplicationUpdater />}
       {ActivityStateUpdater && <ActivityStateUpdater />}
       {LogsUpdater && <LogsUpdater />}
-      {FiatOnRampTransactionsUpdater && <FiatOnRampTransactionsUpdater />}
       {WebAccountsStoreUpdater && <WebAccountsStoreUpdater />}
       <AccountsStoreDevTool />
       <ApiInit getSessionInitService={provideSessionInitService} isSessionServiceEnabled={isSessionServiceEnabled} />

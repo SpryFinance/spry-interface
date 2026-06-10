@@ -6,7 +6,6 @@ import { useDispatch } from 'react-redux'
 import { type AppStateResetter, createAppStateResetter } from 'uniswap/src/state/createAppStateResetter'
 import { createLogger } from 'utilities/src/logger/logger'
 import { resetApplication } from '~/state/application/reducer'
-import { resetFiatOnRamp } from '~/state/fiatOnRampTransactions/reducer'
 import { resetLists } from '~/state/lists/actions'
 import { resetLogs } from '~/state/logs/slice'
 import { resetRoutingApi } from '~/state/routing/slice'
@@ -31,7 +30,6 @@ export function createWebAppStateResetter({
     dispatch,
 
     onResetAccountHistory: () => {
-      dispatch(resetFiatOnRamp())
       dispatch(resetApplication())
       dispatch(resetLogs())
     },

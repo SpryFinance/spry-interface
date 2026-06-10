@@ -25,7 +25,6 @@ import { formatSwapSignedAnalyticsEventProperties } from '~/lib/utils/analytics'
 import { useMultichainContext } from '~/state/multichain/useMultichainContext'
 import {
   DutchOrderTrade,
-  LimitOrderTrade,
   OffchainOrderType,
   PriorityOrderTrade,
   TradeFillType,
@@ -93,7 +92,7 @@ function buildUniswapXSignableOrder({
   updatedNonce,
   now,
 }: {
-  trade: DutchOrderTrade | V2DutchOrderTrade | V3DutchOrderTrade | LimitOrderTrade | PriorityOrderTrade
+  trade: DutchOrderTrade | V2DutchOrderTrade | V3DutchOrderTrade | PriorityOrderTrade
   swapperAddress: string
   updatedNonce: BigNumber | null
   now: number
@@ -137,11 +136,11 @@ function buildUniswapXSignableOrder({
     const { domain, types, values } = updatedOrder.permitData()
     return { deadline, updatedOrder, domain, types, values }
   }
-  // DutchOrderTrade or LimitOrderTrade, both adapt to a DutchOrder
+  // UniswapX order trades adapt to a DutchOrder
   const startTime = now + trade.startTimeBufferSecs
   const endTime = startTime + trade.auctionPeriodSecs
   const deadline = endTime + trade.deadlineBufferSecs
-  const order = trade.asDutchOrderTrade({ nonce: updatedNonce, swapper: swapperAddress }).order
+  const order = trade.asDutchOrderTrade().order
   const updatedOrder = DutchOrderBuilder.fromOrder(order)
     .decayStartTime(startTime)
     .decayEndTime(endTime)
@@ -160,7 +159,7 @@ export function useUniswapXSwapCallback({
   allowedSlippage,
   fiatValues,
 }: {
-  trade?: DutchOrderTrade | V2DutchOrderTrade | V3DutchOrderTrade | LimitOrderTrade | PriorityOrderTrade
+  trade?: DutchOrderTrade | V2DutchOrderTrade | V3DutchOrderTrade | PriorityOrderTrade
   fiatValues: { amountIn?: number; amountOut?: number; feeUsd?: number }
   allowedSlippage: Percent
 }) {
@@ -293,7 +292,7 @@ export function useUniswapXSwapCallback({
           forceOpenOrder: trade.forceOpenOrder,
         }
       } else {
-        endpoint = trade.offchainOrderType === OffchainOrderType.LIMIT_ORDER ? 'limit-order' : 'order'
+        endpoint = 'order'
         body = {
           encodedOrder,
           orderType: trade.offchainOrderType,

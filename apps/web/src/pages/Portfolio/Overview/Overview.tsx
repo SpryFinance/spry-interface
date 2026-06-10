@@ -186,7 +186,6 @@ export const PortfolioOverview = memo(function PortfolioOverview() {
             <ActionsAndStatsContainer minHeight={120} fullWidth={isFullWidth}>
               <EmptyWalletCards
                 receiveElementName={ElementName.EmptyStateReceive}
-                cexTransferElementName={ElementName.EmptyStateCEXTransfer}
                 horizontalLayout={isFullWidth && !media.sm}
                 growFullWidth={isFullWidth && !media.sm}
               />

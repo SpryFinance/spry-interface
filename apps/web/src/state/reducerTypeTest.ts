@@ -21,7 +21,6 @@ import {
 import { type VisibilityState } from 'uniswap/src/features/visibility/slice'
 import { type SagaState } from 'uniswap/src/utils/saga'
 import { type ApplicationState, type OpenModalParams } from '~/state/application/reducer'
-import { type FiatOnRampTransactionsState } from '~/state/fiatOnRampTransactions/reducer'
 import { type ListsState } from '~/state/lists/types'
 import { type LogsState } from '~/state/logs/slice'
 import { type Log } from '~/state/logs/utils'
@@ -55,7 +54,6 @@ import { type InterfaceState } from '~/state/webReducer'
 type ExpectedAppState = CombinedState<{
   // Web State
   readonly user: UserState
-  readonly fiatOnRampTransactions: FiatOnRampTransactionsState
   readonly lists: ListsState
   readonly application: ApplicationState
   readonly logs: LogsState

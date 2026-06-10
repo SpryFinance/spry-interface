@@ -147,7 +147,9 @@ export function EarnVaultModal({
     if (!currencyInfoForActions) {
       return
     }
-    navigateToFiatOnRamp({
+    // SPRY: the web app has no fiat on-ramp, so navigateToFiatOnRamp is undefined here (the Earn
+    // section is also gated off on testnet). Kept as a no-op so the shared YouNeedTokenView prop is satisfied.
+    navigateToFiatOnRamp?.({
       prefilledCurrency: { currencyInfo: currencyInfoForActions },
     })
     handleClose()

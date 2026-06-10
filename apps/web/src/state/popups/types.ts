@@ -1,6 +1,4 @@
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { FORTransaction } from 'uniswap/src/features/fiatOnRamp/types'
-import { CurrencyId } from 'uniswap/src/types/currency'
 
 export enum PopupType {
   Transaction = 'transaction',
@@ -10,7 +8,6 @@ export enum PopupType {
   SwitchNetwork = 'switchNetwork',
   Bridge = 'bridge',
   Mismatch = 'mismatch',
-  FORTransaction = 'forTransaction',
   Error = 'error',
   Success = 'success',
   Unhide = 'unhide',
@@ -55,11 +52,6 @@ export type PopupContent =
     }
   | {
       type: PopupType.Mismatch
-    }
-  | {
-      type: PopupType.FORTransaction
-      transaction: FORTransaction
-      currencyId: CurrencyId
     }
   | {
       type: PopupType.Error

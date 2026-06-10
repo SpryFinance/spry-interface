@@ -36,10 +36,11 @@ export function BuyNativeTokenButton({
 
   const onPressBuyFiatOnRamp = (): void => {
     onPress?.()
-    navigateToFiatOnRamp({ prefilledCurrency: fiatOnRampCurrency })
+    navigateToFiatOnRamp?.({ prefilledCurrency: fiatOnRampCurrency })
   }
 
-  if ((!isLoading && !fiatOnRampCurrency) || fiatOnRampCurrencyNotSupportedForMonad) {
+  // SPRY: hide on apps that do not provide fiat on-ramp navigation (the web app). Mobile still provides it.
+  if (!navigateToFiatOnRamp || (!isLoading && !fiatOnRampCurrency) || fiatOnRampCurrencyNotSupportedForMonad) {
     return null
   }
 
