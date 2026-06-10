@@ -100,7 +100,7 @@ frame headers. Worker names and per-environment variables live in
 
 ```bash
 # 1) build (from the repo root; needs Node 22.22.2 + bun on PATH)
-bun web build:production         # or build:staging
+bun web build:production         # build:staging also exists (same .env, staging worker)
 
 # 2) deploy with wrangler (4.x, already a devDependency)
 #    auth: `bunx wrangler login`, or set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
@@ -122,10 +122,12 @@ headers, and meta-tag injection.
 
 All app configuration is **build-time** (Vite inlines `process.env.*` values;
 see [`packages/config/src/BaseConfig.ts`](packages/config/src/BaseConfig.ts)
-for the full schema). Values come from `apps/web/.env` (dev base), layered with
-`.env.production` / `.env.staging` per build mode. The checked-in values are
-inherited Uniswap **public dev keys** - fine for local dev, but see the launch
-checklist below before deploying to your own domain.
+for the full schema). There is a single **`apps/web/.env`** loaded for every
+build mode (dev, staging, production) - no per-mode `.env.production` /
+`.env.staging` split. The checked-in values are inherited Uniswap **public dev
+keys** - fine for local dev, but see the launch checklist below before
+deploying to your own domain. For machine-specific secrets, add an untracked
+`apps/web/.env.local` (it overrides `.env` and is gitignored).
 
 Required:
 
@@ -139,9 +141,10 @@ Optional (the app degrades gracefully without them):
 | Variable | Purpose |
 | --- | --- |
 | `REACT_APP_STATSIG_API_KEY`, `REACT_APP_STATSIG_PROXY_URL` | Feature-flag service. Without it, flags fall back to their code defaults (current behavior). |
-| `PRIVY_APP_ID`, `PRIVY_CLIENT_ID` | Privy embedded wallet. Unset locally; the app falls back to the standard wallet modal. |
+| `PRIVY_APP_ID`, `PRIVY_CLIENT_ID` | Privy embedded wallet. Unset by default (Spry uses the standard wallet modal); set both, with your own Privy project, only to enable embedded wallets. |
+| `REACT_APP_ANALYTICS_ENABLED` | Amplitude analytics on/off. Unset (off) by default so events don't flow to Uniswap's pipeline; enable once you have your own. |
+| `REACT_APP_AMPLITUDE_PROXY_URL` | Amplitude proxy endpoint (only used when analytics is enabled). |
 | `REACT_APP_INFURA_KEY`, `REACT_APP_QUICKNODE_ENDPOINT_NAME`, `REACT_APP_QUICKNODE_ENDPOINT_TOKEN` | RPC for non-Spry chains only. **Base Sepolia does not use them** - it talks to `https://sepolia.base.org` directly (hardcoded in the chain info; the UniRPC proxy is disabled for 84532). |
-| `REACT_APP_ANALYTICS_ENABLED`, `REACT_APP_AMPLITUDE_PROXY_URL` | Amplitude analytics (proxied through the Uniswap gateway). |
 | `REACT_APP_VERSION_TAG` | Version label shown in diagnostics. |
 | `REACT_APP_AWS_API_ENDPOINT`, `REACT_APP_UNISWAP_GATEWAY_DNS`, `REACT_APP_TEMP_API_URL` | Inherited Uniswap gateway endpoints. They do not serve Base Sepolia (the app's local rails replace them); requests to them fail gracefully. |
 | `VITE_ENABLE_ENTRY_GATEWAY_PROXY` | Keep `false` in production (worker-side gateway proxying, staging-only). |
@@ -166,8 +169,8 @@ into a meta tag for both dev and the deployed worker).
 
 1. Register a **WalletConnect Cloud project** for your domain and set
    `REACT_APP_WALLET_CONNECT_PROJECT_ID` (the single hard requirement).
-2. If you add any private keys, move them to `.env.local` / CI secrets and
-   untrack `apps/web/.env` first - the checked-in `.env` files are public.
+2. If you add any private keys, put them in an untracked `apps/web/.env.local`
+   (or CI secrets) - the checked-in `apps/web/.env` is public.
 3. Optionally provision your own Statsig key (feature flags) and analytics.
 4. Verify `packages/spry-config` has the right addresses for the target chain,
    and that the RPC + subgraph hosts are in `csp.json`.

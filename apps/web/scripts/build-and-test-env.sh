@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Build production and test that environment variables are loaded correctly
-# This prevents regression of the NX environment loading bug
-# 
+# Build production and test that environment variables are loaded correctly.
+#
 # This script serves dual purposes:
 # 1. Builds the web app for production
-# 2. Verifies that .env.production overrides are loaded correctly
+# 2. Verifies that the single .env is loaded for a production build (asserts the
+#    production GraphQL endpoint is present)
 #
 # Note: this must be run in the apps/web directory
 
