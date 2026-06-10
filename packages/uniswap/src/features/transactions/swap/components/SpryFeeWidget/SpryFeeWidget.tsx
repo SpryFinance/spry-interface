@@ -1,7 +1,8 @@
-import { formatFeePercent, SpryZone } from '@spry/fee'
+import { formatFeePercent, SpryZone, tierInfo } from '@spry/fee'
 import { TradingApi } from '@universe/api'
 import { Fragment } from 'react'
-import { Flex, Text, useSporeColors } from 'ui/src'
+import { Flex, Text, Tooltip, useSporeColors } from 'ui/src'
+import { InfoCircle } from 'ui/src/components/icons/InfoCircle'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { TierIcon } from 'uniswap/src/features/transactions/swap/components/SpryFeeWidget/TierIcon'
 import {
@@ -99,6 +100,13 @@ export function SpryFeeWidget(): JSX.Element | null {
   )
 }
 
+/** Tier explainer for the hover tooltip: what the tier is for, its fee band, and how the fee moves. */
+function tierTooltipText(state: SpryPoolFeeState): string {
+  const base = formatFeePercent(state.baseFeePips)
+  const cap = formatFeePercent(state.capFeePips)
+  return `${state.tierLabel} tier, for pairs like ${tierInfo(state.tier).typicalPairs}. The fee floats between ${base} (base) and ${cap} (cap): the SpryHook raises it with recent price movement, then eases it back toward base over quiet blocks.`
+}
+
 function SpryFeeBar({
   state,
   showPair,
@@ -130,10 +138,21 @@ function SpryFeeBar({
     >
       <Flex row alignItems="center" justifyContent="space-between">
         <Flex row alignItems="center" gap="$spacing6">
-          <TierIcon tier={state.tier} color={sporeColors.neutral2.val} />
-          <Text color="$neutral2" variant="body3">
-            {state.tierLabel.toUpperCase()}
-          </Text>
+          <Tooltip placement="top">
+            <Tooltip.Trigger cursor="default">
+              <Flex row alignItems="center" gap="$spacing6">
+                <TierIcon tier={state.tier} color={sporeColors.neutral2.val} />
+                <Text color="$neutral2" variant="body3">
+                  {state.tierLabel.toUpperCase()}
+                </Text>
+                <InfoCircle color="$neutral3" size="$icon.12" />
+              </Flex>
+            </Tooltip.Trigger>
+            <Tooltip.Content maxWidth={320}>
+              <Text variant="body4">{tierTooltipText(state)}</Text>
+              <Tooltip.Arrow />
+            </Tooltip.Content>
+          </Tooltip>
           {showPair ? (
             <Text color="$neutral3" variant="body3">
               {`· ${state.pairLabel}`}
