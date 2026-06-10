@@ -26,6 +26,21 @@ import { ClearRecentSearchesButton } from 'uniswap/src/features/search/ClearRece
 // Matches the default 40px section header plus the single-line outage banner and spacing on web.
 const PORTFOLIO_OUTAGE_SECTION_HEADER_ROW_HEIGHT = 104
 
+/**
+ * A portfolio outage is real only when the data API actually serves the chain.
+ * SPRY: on a gateway-unsupported chain (Base Sepolia) the API never returns
+ * token prices, so its error is expected - not an outage - and the "Cannot load
+ * latest token prices" banner must not show. Extracted so the gateway guard does
+ * not push useTokenSectionsForSwap past its complexity ceiling.
+ */
+function getIsPortfolioOutage(args: {
+  isGatewayUnsupportedChain: boolean
+  portfolioTokenOptions: unknown
+  portfolioTokenOptionsError: unknown
+}): boolean {
+  return !args.isGatewayUnsupportedChain && !!args.portfolioTokenOptions && !!args.portfolioTokenOptionsError
+}
+
 function useTokenSectionsForSwap({
   addresses,
   chainFilter,
@@ -123,7 +138,11 @@ function useTokenSectionsForSwap({
     options: suggestedSectionOptions,
   })
 
-  const isPortfolioOutage = !!portfolioTokenOptions && !!portfolioTokenOptionsError
+  const isPortfolioOutage = getIsPortfolioOutage({
+    isGatewayUnsupportedChain,
+    portfolioTokenOptions,
+    portfolioTokenOptionsError,
+  })
 
   const portfolioOutageSectionHeader = useMemo(() => {
     if (!isPortfolioOutage) {

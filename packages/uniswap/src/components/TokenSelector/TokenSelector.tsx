@@ -2,7 +2,7 @@ import type { BottomSheetView } from '@gorhom/bottom-sheet'
 import { Currency } from '@uniswap/sdk-core'
 import { isExtensionApp, isMobileApp, isMobileWeb, isWebApp, isWebPlatform } from '@universe/environment'
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
-import { ComponentProps, memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { ComponentProps, memo, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, ModalCloseIcon, Text, useMedia, useScrollbarStyles, useSporeColors } from 'ui/src'
 import { InfoCircleFilled } from 'ui/src/components/icons/InfoCircleFilled'
@@ -15,12 +15,10 @@ import { NetworkFilter } from 'uniswap/src/components/network/NetworkFilter'
 import { NetworkFilterV2 } from 'uniswap/src/components/network/NetworkFilterV2/NetworkFilterV2'
 import type { TieredNetworkOptions } from 'uniswap/src/components/network/NetworkFilterV2/types'
 import { useNetworkSelectorOptions } from 'uniswap/src/components/network/NetworkFilterV2/useNetworkSelectorOptions'
-import { CrosschainSwapsPromoBanner } from 'uniswap/src/components/TokenSelector/CrosschainSwapsPromoBanner'
 import { useClipboardCheck } from 'uniswap/src/components/TokenSelector/hooks/useClipboardCheck'
 import { useTokenSelectionHandler } from 'uniswap/src/components/TokenSelector/hooks/useTokenSelectionHandler'
 import { TokenSelectorListSwitch } from 'uniswap/src/components/TokenSelector/TokenSelectorListSwitch'
 import { TokenSelectorFlow, TokenSelectorVariation } from 'uniswap/src/components/TokenSelector/types'
-import { UnsupportedChainedActionsBanner } from 'uniswap/src/components/TokenSelector/UnsupportedChainedActionsBanner'
 import { flowToModalName } from 'uniswap/src/components/TokenSelector/utils'
 import { useUniswapContext } from 'uniswap/src/contexts/UniswapContext'
 import { TradeableAsset } from 'uniswap/src/entities/assets'
@@ -31,7 +29,6 @@ import { useFilterCallbacks } from 'uniswap/src/features/search/SearchModal/hook
 import { SearchTextInput } from 'uniswap/src/features/search/SearchTextInput'
 import { InterfaceEventName, ModalName, SectionName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
-import { isChainSupportedForChainedActions } from 'uniswap/src/features/transactions/swap/utils/chainedActions'
 import { CurrencyField } from 'uniswap/src/types/currency'
 import { getClipboard } from 'utilities/src/clipboard/clipboard'
 import { dismissNativeKeyboard } from 'utilities/src/device/keyboard/dismissNativeKeyboard'
@@ -168,11 +165,6 @@ export function TokenSelectorContent({
 
   const shouldAutoFocusSearch = isWebPlatform && !media.sm
 
-  const shouldShowCrosschainPromoBanner = useMemo(
-    () => flow === TokenSelectorFlow.Swap && (!chainFilter || isChainSupportedForChainedActions(chainFilter)),
-    [flow, chainFilter],
-  )
-
   return (
     <Trace
       logImpression={isWebApp} // TODO(WEB-5161): Deduplicate shared vs interface-only trace event
@@ -234,8 +226,6 @@ export function TokenSelectorContent({
           <Flex grow>
             {isSurfaceReady ? (
               <>
-                {shouldShowCrosschainPromoBanner && <CrosschainSwapsPromoBanner />}
-                <UnsupportedChainedActionsBanner oppositeToken={oppositeToken} chainFilter={chainFilter ?? undefined} />
                 <TokenSelectorListSwitch
                   searchInFocus={searchInFocus}
                   searchFilter={searchFilter}
