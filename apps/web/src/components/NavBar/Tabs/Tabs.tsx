@@ -60,12 +60,14 @@ const Tab = ({
   path,
   items,
   elementName,
+  comingSoon,
 }: {
   label: string
   isActive?: boolean
   path: string
   items?: TabsItem[]
   elementName: ElementName
+  comingSoon?: boolean
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const popoverRef = useRef<Popover>(null)
@@ -75,6 +77,30 @@ const Tab = ({
     popoverRef.current?.close()
   }, [popoverRef])
   useEffect(() => closeMenu(), [location, closeMenu])
+
+  // SPRY: a "coming soon" tab renders grayed out and unreachable (no link, no dropdown) with a small
+  // "Soon" badge. Drop the `comingSoon` flag in TabsContent.tsx to restore full navigation.
+  if (comingSoon) {
+    return (
+      <Flex position="relative" alignItems="center">
+        <TabText variant="subheading1" color="$neutral3" cursor="default" hoverStyle={{ color: '$neutral3' }}>
+          {label}
+        </TabText>
+        <Flex
+          position="absolute"
+          top={-2}
+          right={-4}
+          backgroundColor="$surface3"
+          borderRadius="$rounded8"
+          px="$spacing4"
+        >
+          <Text variant="body4" color="$neutral2">
+            Soon
+          </Text>
+        </Flex>
+      </Flex>
+    )
+  }
 
   const Label = (
     <Trace logPress element={elementName}>
@@ -126,7 +152,7 @@ export function Tabs() {
   const tabsContent: TabsSection[] = useTabsContent()
   return (
     <>
-      {tabsContent.map(({ title, isActive, href, items, elementName }, index) => (
+      {tabsContent.map(({ title, isActive, href, items, elementName, comingSoon }, index) => (
         <Tab
           key={`${title}_${index}`}
           label={title}
@@ -134,6 +160,7 @@ export function Tabs() {
           path={href}
           items={items}
           elementName={elementName}
+          comingSoon={comingSoon}
         />
       ))}
     </>

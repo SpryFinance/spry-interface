@@ -7,8 +7,9 @@ import { CompanyMenu } from '~/components/NavBar/CompanyMenu'
 import { NewUserCTAButton } from '~/components/NavBar/DownloadApp/NewUserCTAButton'
 import { PreferenceMenu } from '~/components/NavBar/PreferencesMenu'
 import { useTabsVisible } from '~/components/NavBar/ScreenSizes'
-import { SearchBar } from '~/components/NavBar/SearchBar'
-import { useIsSearchBarVisible } from '~/components/NavBar/SearchBar/useIsSearchBarVisible'
+// SPRY: search box temporarily hidden across the nav (restore these imports + the usages below to re-enable).
+// import { SearchBar } from '~/components/NavBar/SearchBar'
+// import { useIsSearchBarVisible } from '~/components/NavBar/SearchBar/useIsSearchBarVisible'
 import { Tabs } from '~/components/NavBar/Tabs/Tabs'
 import { TestnetModeTooltip } from '~/components/NavBar/TestnetMode/TestnetModeTooltip'
 import { Web3Status } from '~/components/Web3Status'
@@ -33,7 +34,7 @@ export function Navbar() {
   const media = useMedia()
   const isSmallScreen = media.md
   const areTabsVisible = useTabsVisible()
-  const isSearchBarVisible = useIsSearchBarVisible()
+  // const isSearchBarVisible = useIsSearchBarVisible() // SPRY: search box temporarily hidden
   const { isConnected } = useConnectionStatus()
 
   const { isTestnetModeEnabled } = useEnabledChains()
@@ -63,11 +64,11 @@ export function Navbar() {
         </NavItemsRow>
 
         <Flex position="unset" centered>
-          {isSearchBarVisible ? <SearchBar /> : null}
+          {/* SPRY: search box temporarily hidden. Restore: {isSearchBarVisible ? <SearchBar /> : null} */}
         </Flex>
 
         <NavItemsRow justifyContent="flex-end">
-          {!isSearchBarVisible && <SearchBar />}
+          {/* SPRY: search box temporarily hidden. Restore: {!isSearchBarVisible && <SearchBar />} */}
           {!isEmbeddedWalletEnabled && isLandingPage && !isSmallScreen && <NewUserCTAButton />}
           {!isConnected && <PreferenceMenu />}
           {isTestnetModeEnabled && <TestnetModeTooltip />}

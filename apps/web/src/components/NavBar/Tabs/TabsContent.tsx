@@ -21,6 +21,9 @@ export type TabsSection = {
   closeMenu?: () => void
   icon?: JSX.Element
   elementName: ElementName
+  // SPRY: temporarily renders the tab grayed out, unreachable, with a "Soon" badge (see Tabs.tsx).
+  // Remove this field and the `comingSoon: true` usages below to fully re-enable a tab.
+  comingSoon?: boolean
 }
 
 export type TabsItem = MenuItem & {
@@ -46,39 +49,8 @@ export const useTabsContent = (): TabsSection[] => {
       icon: <CoinConvert color="$accent1" size="$icon.20" />,
       elementName: ElementName.NavbarTradeTab,
     },
-    {
-      title: t('common.explore'),
-      href: '/explore',
-      isActive: pathname.startsWith('/explore') || pathname.startsWith('/nfts'),
-      icon: <Compass color="$accent1" size="$icon.20" />,
-      elementName: ElementName.NavbarExploreTab,
-      items: [
-        {
-          label: t('common.tokens'),
-          href: '/explore/tokens',
-          internal: true,
-          elementName: ElementName.NavbarExploreDropdownTokens,
-        },
-        {
-          label: t('toucan.auctions'),
-          href: '/explore/auctions',
-          internal: true,
-          elementName: ElementName.NavbarExploreDropdownToucan,
-        },
-        {
-          label: t('common.pools'),
-          href: '/explore/pools',
-          internal: true,
-          elementName: ElementName.NavbarExploreDropdownPools,
-        },
-        {
-          label: t('common.transactions'),
-          href: '/explore/transactions',
-          internal: true,
-          elementName: ElementName.NavbarExploreDropdownTransactions,
-        },
-      ],
-    },
+    // SPRY: Pool sits right next to Swap (the two live Spry surfaces). Explore and Portfolio follow,
+    // both temporarily marked comingSoon below.
     {
       title: t('common.pool'),
       href: '/positions',
@@ -112,6 +84,41 @@ export const useTabsContent = (): TabsSection[] => {
       ],
     },
     {
+      title: t('common.explore'),
+      href: '/explore',
+      isActive: pathname.startsWith('/explore') || pathname.startsWith('/nfts'),
+      icon: <Compass color="$accent1" size="$icon.20" />,
+      elementName: ElementName.NavbarExploreTab,
+      // SPRY: temporarily disabled - grayed/unreachable with a "Soon" badge. Remove to re-enable.
+      comingSoon: true,
+      items: [
+        {
+          label: t('common.tokens'),
+          href: '/explore/tokens',
+          internal: true,
+          elementName: ElementName.NavbarExploreDropdownTokens,
+        },
+        {
+          label: t('toucan.auctions'),
+          href: '/explore/auctions',
+          internal: true,
+          elementName: ElementName.NavbarExploreDropdownToucan,
+        },
+        {
+          label: t('common.pools'),
+          href: '/explore/pools',
+          internal: true,
+          elementName: ElementName.NavbarExploreDropdownPools,
+        },
+        {
+          label: t('common.transactions'),
+          href: '/explore/transactions',
+          internal: true,
+          elementName: ElementName.NavbarExploreDropdownTransactions,
+        },
+      ],
+    },
+    {
       title: t('common.portfolio'),
       href: buildPortfolioUrl({
         tab: PortfolioTab.Overview,
@@ -120,6 +127,8 @@ export const useTabsContent = (): TabsSection[] => {
       isActive: (pathname.startsWith(PageType.PORTFOLIO) && !isExternalWallet) || isPortfolioPoolsEntryPointActive,
       icon: <Wallet color="$accent1" size="$icon.20" />,
       elementName: ElementName.NavbarPortfolioTab,
+      // SPRY: temporarily disabled - grayed/unreachable with a "Soon" badge. Remove to re-enable.
+      comingSoon: true,
       items: [
         {
           label: t('portfolio.overview.title'),
