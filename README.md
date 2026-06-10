@@ -140,13 +140,13 @@ Optional (the app degrades gracefully without them):
 
 | Variable | Purpose |
 | --- | --- |
-| `REACT_APP_STATSIG_API_KEY`, `REACT_APP_STATSIG_PROXY_URL` | Feature-flag service. Without it, flags fall back to their code defaults (current behavior). |
+| `REACT_APP_STATSIG_API_KEY` | Feature-flag service key. The checked-in value is a placeholder, so flags fall back to their code defaults (current behavior); set a real key to use Statsig. |
 | `PRIVY_APP_ID`, `PRIVY_CLIENT_ID` | Privy embedded wallet. Unset by default (Spry uses the standard wallet modal); set both, with your own Privy project, only to enable embedded wallets. |
 | `REACT_APP_ANALYTICS_ENABLED` | Amplitude analytics on/off. Unset (off) by default so events don't flow to Uniswap's pipeline; enable once you have your own. |
-| `REACT_APP_AMPLITUDE_PROXY_URL` | Amplitude proxy endpoint (only used when analytics is enabled). |
 | `REACT_APP_INFURA_KEY`, `REACT_APP_QUICKNODE_ENDPOINT_NAME`, `REACT_APP_QUICKNODE_ENDPOINT_TOKEN` | RPC for non-Spry chains only. **Base Sepolia does not use them** - it talks to `https://sepolia.base.org` directly (hardcoded in the chain info; the UniRPC proxy is disabled for 84532). |
+| `REACT_APP_TRADING_API_KEY` | `x-api-key` for the Trading API / Blockaid. Inert on Base Sepolia (local rails replace the Trading API); kept as an inherited placeholder. |
 | `REACT_APP_VERSION_TAG` | Version label shown in diagnostics. |
-| `REACT_APP_AWS_API_ENDPOINT`, `REACT_APP_UNISWAP_GATEWAY_DNS`, `REACT_APP_TEMP_API_URL` | Inherited Uniswap gateway endpoints. They do not serve Base Sepolia (the app's local rails replace them); requests to them fail gracefully. |
+| `REACT_APP_AWS_API_ENDPOINT`, `REACT_APP_UNISWAP_GATEWAY_DNS` | Inherited Uniswap gateway endpoints (Apollo GraphQL + gateway v2). They do not serve Base Sepolia (the app's local rails replace them) but are schema-required, so they must stay non-empty for the app to boot. |
 | `VITE_ENABLE_ENTRY_GATEWAY_PROXY` | Keep `false` in production (worker-side gateway proxying, staging-only). |
 
 Worker runtime variables (set per environment in
