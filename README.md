@@ -8,102 +8,216 @@ against upstream is meant to stay small and auditable.
 
 ## Current state
 
-This repository is being built in increments. Right now it contains the
-**foundation packages** that the forked web app will depend on. The upstream
-Uniswap `apps/web` and shared `packages/*` have **not** been brought in yet.
+The upstream monorepo fork (pinned at `web/5.148.6`, commit `417e7724`) is
+landed and functional. The app runs as a single-protocol, single-chain
+interface on **Base Sepolia (84532)**, and the full swap path is verified
+end-to-end on-chain: quote (V4 `Quoter`, reflecting the `SpryHook` dynamic
+fee), approve (ERC-20 to `SpryRouter`), swap (`SpryRouter` calldata), and
+confirmation (RPC receipt).
+
+Because the Uniswap Trading API gateway does not serve Base Sepolia, the swap
+pipeline runs on **local rails**: quotes are priced on-chain via the `Quoter`
+across every candidate route and tier, transactions are built locally from
+`@spry/sdk` calldata builders, approvals are read directly from the chain, and
+confirmations come from RPC receipts. The trade objects still flow through the
+upstream `transformQuoteToTrade` pipeline, so everything downstream (review
+modal, slippage, settings) is stock upstream code.
+
+Spry-native UI on top of upstream: a per-pool dynamic fee/tier/zone widget in
+the swap form (all tiers of a pair, grouped by hop, best route highlighted), a
+"Dynamic fee" row in the swap review showing the exact fee this swap pays, and
+route labeling ("Spry").
+
+Pruned from upstream (gone, not hidden): limit orders, fiat buy/sell, the
+trade-options / routing-preference surface, **all Solana/SVM support** (wallet
+adapters, trade service, Jupiter clients, dependencies), and **all cross-chain
+/ bridging functionality** (bridge trades, the Across routing surface, the
+wormhole bridged-asset withdraw flow). Type-level members that exhaustive
+upstream type maps require (e.g. the `Platform.SVM` enum member, the generated
+`Routing.BRIDGE`/`JUPITER` members) are deliberately stranded and routed to
+no-op implementations.
 
 ```
 spry-interface/
+├── apps/
+│   └── web/            the forked Uniswap web app (Vite + Cloudflare Worker)
 ├── packages/
 │   ├── spry-fee/       @spry/fee       tier table + cached tierParams + JS four-zone curve
 │   ├── spry-config/    @spry/config    per-chain addresses, subgraph URL, Spry-pool predicate
-│   ├── spry-slippage/  @spry/slippage  dynamic-fee-aware slippage / fee-tolerance (brief section 7)
+│   ├── spry-slippage/  @spry/slippage  dynamic-fee-aware slippage / fee-tolerance
 │   ├── spry-sdk/       @spry/sdk       SpryRouter builders + SpryHook/V4Quoter/StateView clients
-│   └── spry-subgraph/  @spry/subgraph  typed Spry subgraph queries + fetch client (brief section 13)
+│   ├── spry-subgraph/  @spry/subgraph  typed Spry subgraph queries + fetch client
+│   └── ...             upstream workspace packages (uniswap, ui, api, utilities, ...)
 ├── tools/
-│   └── contract-diff/ read-only Foundry harness: generates the @spry/fee differential fixture
-├── package.json       workspace root (temporary bootstrap; see below)
-├── tsconfig.base.json
-└── vitest.config.ts
+│   └── contract-diff/  read-only Foundry harness: generates the @spry/fee differential fixture
+├── docs/               fork-landing runbook + integration plan
+└── package.json        upstream bun + nx workspace root
 ```
 
-`@spry/fee` is verified **bit-exact** against the real on-chain Solidity by a
-differential test (the `tools/contract-diff` harness compiles the sibling
-`spry-contracts` sources read-only and dumps a fixture; the JS port matches it
-with maxDiff 0 pips). Day-to-day `npm test` needs only the committed fixture,
-not Foundry.
+## Development
 
-Both packages are source-only TypeScript (no build step; the web app's bundler
-consumes the `.ts` directly, matching the upstream monorepo convention for
-internal packages). They typecheck under strict settings and are unit-tested.
+Prerequisites:
+
+- **Node 22.22.2** (`nvm install 22.22.2 && nvm use 22.22.2` - the preinstall
+  check enforces it)
+- **bun** (package manager and script runner)
 
 ```bash
-npm install        # links the workspaces, installs typescript + vitest
-npm run typecheck  # tsc --noEmit across both packages
-npm test           # vitest (47 tests)
+bun install        # install + link the workspaces
+bun web dev        # vite dev server at http://localhost:3000
 ```
 
-### Why a temporary root
+Quality gates (run after changes):
 
-The upstream interface is a monorepo (`apps/web`, shared `packages/*`, turbo +
-yarn workspaces). When it is forked in, its root config supersedes this one and
-our `packages/spry-*` slot alongside the upstream `packages/`. This root
-`package.json` / `tsconfig.base.json` exist only so the Spry packages build and
-test in isolation today; they are bootstrap scaffolding to be reconciled with
-the upstream root at that point.
+```bash
+# lint + format (oxc - NOT eslint/prettier)
+bunx oxlint <files>
+bunx oxfmt <files>
+
+# typecheck the shared package (reliable; always pass --skip-nx-cache)
+bunx nx typecheck:tsgo uniswap --skip-nx-cache
+
+# unit tests, per package
+cd packages/uniswap && bunx vitest run
+cd apps/web && bunx vitest run
+
+# the @spry/* packages have their own suites
+cd packages/spry-fee && bunx vitest run
+```
+
+Note: `nx typecheck web` does not reliably check `apps/web/src` (a pre-existing
+`functions/` project-reference issue makes it bail early), so web changes are
+verified by vitest, oxlint, and the build.
+
+## Deployment
+
+The app deploys as a **Cloudflare Worker**: the Vite build (via
+`@cloudflare/vite-plugin`) produces the static client assets plus a worker
+(`apps/web/functions/main.ts`) that serves them, injects meta tags, and sets
+frame headers. Worker names and per-environment variables live in
+[`apps/web/wrangler-vite-worker.jsonc`](apps/web/wrangler-vite-worker.jsonc)
+(production worker `app`, staging worker `app_staging`).
+
+```bash
+# 1) build (from the repo root; needs Node 22.22.2 + bun on PATH)
+bun web build:production         # or build:staging
+
+# 2) deploy with wrangler (4.x, already a devDependency)
+#    auth: `bunx wrangler login`, or set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
+cd apps/web
+bunx wrangler deploy --config build/app/wrangler.json
+```
+
+The build writes everything under `apps/web/build/`: `client/` (static assets)
+and a per-worker directory containing the compiled worker and a resolved
+`wrangler.json` (this is the config to pass to `wrangler deploy`). Attach your
+custom domain to the worker in the Cloudflare dashboard (or add a `routes`
+entry to the wrangler config).
+
+A static-only deploy also works (`DEPLOY_TARGET=vercel` exists for Vercel), but
+the Worker path is the supported one: it serves the SPA fallback, security
+headers, and meta-tag injection.
+
+### Environment variables
+
+All app configuration is **build-time** (Vite inlines `process.env.*` values;
+see [`packages/config/src/BaseConfig.ts`](packages/config/src/BaseConfig.ts)
+for the full schema). Values come from `apps/web/.env` (dev base), layered with
+`.env.production` / `.env.staging` per build mode. The checked-in values are
+inherited Uniswap **public dev keys** - fine for local dev, but see the launch
+checklist below before deploying to your own domain.
+
+Required:
+
+| Variable | Purpose |
+| --- | --- |
+| `APP_ID` | Must be `web`. |
+| `REACT_APP_WALLET_CONNECT_PROJECT_ID` | WalletConnect Cloud project ID. **Must be replaced before deploying**: the inherited ID is domain-allowlisted to Uniswap and will reject connections from your domain. Register at cloud.walletconnect.com and allowlist your domain. |
+
+Optional (the app degrades gracefully without them):
+
+| Variable | Purpose |
+| --- | --- |
+| `REACT_APP_STATSIG_API_KEY`, `REACT_APP_STATSIG_PROXY_URL` | Feature-flag service. Without it, flags fall back to their code defaults (current behavior). |
+| `PRIVY_APP_ID`, `PRIVY_CLIENT_ID` | Privy embedded wallet. Unset locally; the app falls back to the standard wallet modal. |
+| `REACT_APP_INFURA_KEY`, `REACT_APP_QUICKNODE_ENDPOINT_NAME`, `REACT_APP_QUICKNODE_ENDPOINT_TOKEN` | RPC for non-Spry chains only. **Base Sepolia does not use them** - it talks to `https://sepolia.base.org` directly (hardcoded in the chain info; the UniRPC proxy is disabled for 84532). |
+| `REACT_APP_ANALYTICS_ENABLED`, `REACT_APP_AMPLITUDE_PROXY_URL` | Amplitude analytics (proxied through the Uniswap gateway). |
+| `REACT_APP_VERSION_TAG` | Version label shown in diagnostics. |
+| `REACT_APP_AWS_API_ENDPOINT`, `REACT_APP_UNISWAP_GATEWAY_DNS`, `REACT_APP_TEMP_API_URL` | Inherited Uniswap gateway endpoints. They do not serve Base Sepolia (the app's local rails replace them); requests to them fail gracefully. |
+| `VITE_ENABLE_ENTRY_GATEWAY_PROXY` | Keep `false` in production (worker-side gateway proxying, staging-only). |
+
+Worker runtime variables (set per environment in
+`wrangler-vite-worker.jsonc`, not in `.env`):
+
+| Variable | Purpose |
+| --- | --- |
+| `ENTRY_GATEWAY_API_URL` | Upstream gateway URL the worker proxies for meta/config endpoints. |
+| `WEBSOCKET_URL` | Websocket backend URL. |
+
+Spry-specific configuration is **not** environment-driven: contract addresses,
+the subgraph URL, and the block window live in
+[`packages/spry-config`](packages/spry-config/README.md) (per chain, committed
+in source), and any new external host the browser must reach (RPC, subgraph)
+must be added to the CSP allowlist in
+[`apps/web/public/csp.json`](apps/web/public/csp.json) (`connect-src` is baked
+into a meta tag for both dev and the deployed worker).
+
+### Launch checklist
+
+1. Register a **WalletConnect Cloud project** for your domain and set
+   `REACT_APP_WALLET_CONNECT_PROJECT_ID` (the single hard requirement).
+2. If you add any private keys, move them to `.env.local` / CI secrets and
+   untrack `apps/web/.env` first - the checked-in `.env` files are public.
+3. Optionally provision your own Statsig key (feature flags) and analytics.
+4. Verify `packages/spry-config` has the right addresses for the target chain,
+   and that the RPC + subgraph hosts are in `csp.json`.
+5. `bun web build:production`, deploy with wrangler, attach the domain.
 
 ## Upstream v4 vs Spry-specific (the reviewability contract)
 
 To keep the diff against `Uniswap/interface` (`apps/web`) auditable, Spry code
 is isolated from upstream code:
 
-- **Spry-specific (new):** the `packages/spry-*` packages here, plus a small set
-  of Spry widgets and the swap-submit rewrite that will live in `apps/web` once
-  forked. These are additive and clearly namespaced.
-- **Upstream v4 (kept, lightly rewired):** swap, positions/LP, portfolio, and
-  ERC-20 token infrastructure (token lists, selector, balances, allowances +
-  Permit2, token safety, token detail pages), and the pools explore list.
-- **Removed:** limit orders, fiat buy/sell, NFT marketplace (v4 LP position NFTs
-  stay), v2/v3 and migration, governance/bridge/send, broad token explore, and
-  the entire trade-options / routing / UniswapX surface. Spry has a single fixed
-  execution path: `SpryRouter` -> `PoolManager.unlock` -> `SpryHook`.
-
-A per-area mapping of what changes will be maintained here as `apps/web` lands.
+- **Spry-specific (new):** the `packages/spry-*` packages, the local swap rails
+  (`spryLocalQuote`, `sprySwapTransaction`, `sprySwapApproval`), and the Spry
+  widgets (`SpryFeeWidget`, `SpryFeeInfo`). These are additive and clearly
+  namespaced; shared-code edits carry `SPRY:` comments.
+- **Upstream v4 (kept, lightly rewired):** swap, positions/LP, portfolio,
+  ERC-20 token infrastructure (selector, balances, allowances + Permit2, token
+  safety, token detail pages), and the pools explore list.
+- **Removed:** limit orders, fiat buy/sell, the trade-options / routing /
+  UniswapX surface, Solana/SVM support, and cross-chain bridging. Spry has a
+  single fixed execution path: `SpryRouter` -> `PoolManager.unlock` -> `SpryHook`.
 
 ## The packages
 
 - [`@spry/fee`](packages/spry-fee/README.md) - the tier table, the cached
-  on-chain `tierParams`, and a faithful JS four-zone fee curve. For charts and
-  client-side preview only; execution pricing always uses the `V4Quoter`.
+  on-chain `tierParams`, and a faithful JS four-zone fee curve (bit-exact vs
+  `SmartFeeLib.sol` by differential test). For charts and client-side preview
+  only; execution pricing always uses the `V4Quoter`.
 - [`@spry/config`](packages/spry-config/README.md) - per-chain canonical V4 and
   Spry addresses, the subgraph endpoint, the block window, and the Spry-pool
-  predicate. Pre-deployment: `SpryHook` / `SpryRouter` / `Quoter` / `subgraphUrl`
-  are placeholders the deployer fills.
+  predicate.
 - [`@spry/slippage`](packages/spry-slippage/README.md) - the reworked
-  max-slippage (brief section 7): `amountOutMin` / `amountInMax` that cover both
-  price slippage and the dynamic fee rising toward the tier cap within a window.
+  max-slippage: `amountOutMin` / `amountInMax` that cover both price slippage
+  and the dynamic fee rising toward the tier cap within a window.
 - [`@spry/sdk`](packages/spry-sdk/README.md) - `SpryRouter` swap calldata
-  builders (8 entry points + multicall/Permit2, with the section 6.1 guards), a
-  cached `SpryHook` views client (`BLOCK_WINDOW`, `poolWindow`, `tierParams`), a
-  `V4Quoter` client (authoritative pricing), and a `StateView` reader (pool
-  state to virtual reserves). Built on viem; ABIs vendored from `spry-contracts`.
+  builders (with path/adjacency guards), a cached `SpryHook` views client, a
+  `V4Quoter` client (authoritative pricing), and a `StateView` reader. Built on
+  viem; ABIs vendored from `spry-contracts`.
 - [`@spry/subgraph`](packages/spry-subgraph/README.md) - typed GraphQL queries
-  (brief section 13) and a thin fetch client for the Spry subgraph fields and
-  entities (pools, swaps, tiers, fee windows). For history / analytics only.
+  and a thin fetch client for the Spry subgraph (pools, swaps, tiers, fee
+  windows). For history / analytics only.
 
 ## Sibling repositories
 
 This app integrates with three repos checked out alongside it under `../`:
 
 - `spry-contracts` - `SpryHook`, `SpryRouter`, and the fee libraries; ABIs under
-  `abis/`. The `@spry/fee` tier params are transcribed verbatim from
-  `SpryHook.sol`, and `@spry/config` addresses are sourced from the subgraph's
-  `networks.json`. Pre-deployment: no real `SpryHook` / `SpryRouter` addresses
-  yet (CREATE2-mined at deploy).
-- `spry-subgraph` - the Spry fork of Uniswap's v4-subgraph. Every indexed pool
-  is a Spry pool, so subgraph-fed views need no hook filtering. The deployed
-  schema is the source of truth for GraphQL field names.
-- `token-list` - the ERC-20 token list the app will use.
+  `abis/`. Read-only from this repo.
+- `spry-subgraph` - the Spry fork of Uniswap's v4-subgraph (deployed on
+  Goldsky). Every indexed pool is a Spry pool.
+- `token-list` - the ERC-20 token list.
 
 ## Key invariants the UI relies on
 
@@ -115,38 +229,20 @@ This app integrates with three repos checked out alongside it under `../`:
   `BLOCK_WINDOW` once and cache.
 - Execution pricing is the `V4Quoter` only. The JS curve in `@spry/fee` is for
   charts and previews; never price a trade with it.
+- The same pair can exist in multiple tiers: tier (tick spacing) is part of the
+  pool ID, every tier-pool is a separate route, and the router quotes all of
+  them and executes the best.
 
 ## Roadmap
 
-Done (all fork-independent core, fully tested; Base Sepolia is deployed and
-live-verified): `@spry/fee` (tier table + curve, bit-exact vs the contract),
-`@spry/config` (addresses + Spry-pool predicate; Base Sepolia fully wired),
-`@spry/slippage` (the reworked slippage model, brief section 7), `@spry/sdk`
-(SpryRouter builders + SpryHook / V4Quoter / StateView clients), and
-`@spry/subgraph` (typed section-13 queries + client). The Base Sepolia subgraph
-(Goldsky) is healthy and serving data; results populate as Spry pools are created
-on-chain.
+Remaining increments:
 
-The section 15 integration plan is written, grounded in the real upstream tree:
-[docs/apps-web-integration.md](docs/apps-web-integration.md). Upstream is pinned
-at `web/5.148.6` (commit `417e7724`). Note: the current upstream stack is
-**bun + nx + Node 22.22.2 + Vite** (not the yarn+turbo the brief assumed), and
-`apps/web` imports 12 workspace packages.
+1. Tier picker on create/add-liquidity.
+2. Repoint Explore / pool analytics to `@spry/subgraph` (the gateway-fed views
+   are empty on Base Sepolia).
+3. Full branding/asset pass (favicon, landing page, remaining "Uniswap"
+   strings).
+4. Optional: split routing across tiers (the testnet pools are thin; a large
+   exact-output can exceed any single tier's in-range liquidity today).
 
-Next increments (the fork's install/build needs Node 22.22.2 + bun, so they
-happen in an environment that has those):
-
-1. Land the monorepo fork: `apps/web` + its workspace deps + root config + the
-   four `@spry/*` packages under `packages/`; `bun install` green; app boots.
-   Turnkey: [`scripts/land-fork.sh`](scripts/land-fork.sh) +
-   [docs/landing-the-fork.md](docs/landing-the-fork.md) (run in a Node 22.22.2 +
-   bun environment).
-2. Prune the removed surfaces (limit/buy/sell, send, NFT marketplace, v2/v3 +
-   migration, governance, routing/UniswapX) and their nav entries.
-3. Swap-submit rewrite: wire the Quoter, `@spry/slippage`, and `@spry/sdk`
-   builders into `useSwapCallback`; remove the routing surface.
-4. Tier picker on create/add-liquidity; Spry widgets (section 9).
-5. Wire `@spry/subgraph` into the app's data layer (pools/swaps/tiers/analytics).
-
-Visual / styling work is a separate later pass and is intentionally out of scope
-for these increments.
+Visual / styling work is a separate later pass.

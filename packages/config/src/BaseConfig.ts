@@ -46,7 +46,6 @@ export const BaseConfigValues = {
 
   // External Service URLs
   blockaidProxyUrl: process.env.BLOCKAID_PROXY_URL ?? process.env.REACT_APP_BLOCKAID_PROXY_URL,
-  jupiterProxyUrl: process.env.JUPITER_PROXY_URL ?? process.env.REACT_APP_JUPITER_PROXY_URL,
   quicknodeEndpointName: process.env.QUICKNODE_ENDPOINT_NAME ?? process.env.REACT_APP_QUICKNODE_ENDPOINT_NAME,
   quicknodeEndpointToken: process.env.QUICKNODE_ENDPOINT_TOKEN ?? process.env.REACT_APP_QUICKNODE_ENDPOINT_TOKEN,
 
@@ -105,7 +104,6 @@ export const BaseConfigSchema = z.object({
 
   // External Service URLs
   blockaidProxyUrl: optionalString.describe('URL for Blockaid proxy'),
-  jupiterProxyUrl: optionalString.describe('URL for Jupiter proxy'),
   quicknodeEndpointName: optionalString.describe('QuickNode endpoint name'),
   quicknodeEndpointToken: optionalString.describe('QuickNode endpoint token'),
 
