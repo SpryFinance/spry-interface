@@ -39,7 +39,7 @@ const mockSwapAndLimitContextValue = {
     outputCurrency: undefined,
   },
   setCurrencyState: vi.fn(),
-  currentTab: SwapTab.Limit,
+  currentTab: SwapTab.Swap,
   setCurrentTab: vi.fn(),
 }
 

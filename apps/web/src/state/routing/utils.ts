@@ -31,8 +31,6 @@ import {
   GetQuoteArgs,
   InterfaceTrade,
   isClassicQuoteResponse,
-  LimitOrderTrade,
-  OffchainOrderType,
   PoolType,
   PreviewTrade,
   PriorityOrderTrade,
@@ -561,23 +559,13 @@ export function isUniswapXTradeType(
 
 export function isUniswapXTrade(
   trade?: InterfaceTrade,
-): trade is DutchOrderTrade | V2DutchOrderTrade | V3DutchOrderTrade | LimitOrderTrade | PriorityOrderTrade {
+): trade is DutchOrderTrade | V2DutchOrderTrade | V3DutchOrderTrade | PriorityOrderTrade {
   return isUniswapXTradeType(trade?.fillType)
 }
 
-/* Returns true if trade is a SWAP on UniswapX, not a limit order */
+/* Returns true if trade is a UniswapX order. SPRY: limit orders are pruned, so every UniswapX trade is a swap. */
 export function isUniswapXSwapTrade(
   trade?: InterfaceTrade,
 ): trade is DutchOrderTrade | V2DutchOrderTrade | V3DutchOrderTrade | PriorityOrderTrade {
-  return (
-    isUniswapXTrade(trade) &&
-    (trade.offchainOrderType === OffchainOrderType.DUTCH_AUCTION ||
-      trade.offchainOrderType === OffchainOrderType.DUTCH_V2_AUCTION ||
-      trade.offchainOrderType === OffchainOrderType.DUTCH_V3_AUCTION ||
-      trade.offchainOrderType === OffchainOrderType.PRIORITY_ORDER)
-  )
-}
-
-export function isLimitTrade(trade?: InterfaceTrade): trade is LimitOrderTrade {
-  return isUniswapXTrade(trade) && trade.offchainOrderType === OffchainOrderType.LIMIT_ORDER
+  return isUniswapXTrade(trade)
 }

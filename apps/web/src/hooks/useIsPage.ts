@@ -30,10 +30,8 @@ function ensureCleanedPathname(pathname: string) {
 }
 
 export enum PageType {
-  BUY = '/buy',
   EXPLORE = '/explore',
   LANDING = '/',
-  LIMIT = '/limit',
   MIGRATE_V3 = '/migrate/v3',
   MIGRATE_V2 = '/migrate/v2',
   POSITIONS = '/positions',
@@ -42,7 +40,6 @@ export enum PageType {
   ADD_LIQUIDITY_NEW = '/positions/add/new',
   SEND = '/send',
   SWAP = '/swap',
-  SELL = '/sell',
   PORTFOLIO = '/portfolio',
 }
 
@@ -55,10 +52,8 @@ export enum MatchType {
 
 // Default mapping of PageType to MatchType
 const pageMatchDefaults: Record<PageType, MatchType> = {
-  [PageType.BUY]: MatchType.EXACT,
   [PageType.EXPLORE]: MatchType.INCLUDES,
   [PageType.LANDING]: MatchType.EXACT,
-  [PageType.LIMIT]: MatchType.ENDS_WITH,
   [PageType.MIGRATE_V3]: MatchType.INCLUDES,
   [PageType.MIGRATE_V2]: MatchType.INCLUDES,
   [PageType.POSITIONS]: MatchType.INCLUDES,
@@ -67,7 +62,6 @@ const pageMatchDefaults: Record<PageType, MatchType> = {
   [PageType.ADD_LIQUIDITY_NEW]: MatchType.INCLUDES,
   [PageType.SEND]: MatchType.ENDS_WITH,
   [PageType.SWAP]: MatchType.ENDS_WITH,
-  [PageType.SELL]: MatchType.ENDS_WITH,
   [PageType.PORTFOLIO]: MatchType.INCLUDES,
 }
 

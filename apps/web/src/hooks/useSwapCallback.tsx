@@ -3,20 +3,10 @@ import type { Percent } from '@uniswap/sdk-core'
 import { TradeType } from '@uniswap/sdk-core'
 import type { FlatFeeOptions } from '@uniswap/universal-router-sdk'
 import type { FeeOptions } from '@uniswap/v3-sdk'
-import { TradingApi } from '@universe/api'
 import { useCallback } from 'react'
-import { useDispatch } from 'react-redux'
 import { useSupportedChainId } from 'uniswap/src/features/chains/hooks/useSupportedChainId'
 import { isEVMChain } from 'uniswap/src/features/platforms/utils/chains'
-import { addTransaction } from 'uniswap/src/features/transactions/slice'
-import {
-  InterfaceTransactionDetails,
-  QueuedOrderStatus,
-  TransactionOriginType,
-  TransactionStatus,
-  TransactionType,
-  UniswapXOrderDetails,
-} from 'uniswap/src/features/transactions/types/transactionDetails'
+import { TransactionStatus, TransactionType } from 'uniswap/src/features/transactions/types/transactionDetails'
 import { currencyId } from 'uniswap/src/utils/currencyId'
 import { useAccount } from '~/hooks/useAccount'
 import type { PermitSignature } from '~/hooks/usePermitAllowance'
@@ -26,7 +16,7 @@ import { useUniversalRouterSwapCallback } from '~/hooks/useUniversalRouter'
 import { useMultichainContext } from '~/state/multichain/useMultichainContext'
 import type { InterfaceTrade } from '~/state/routing/types'
 import { TradeFillType } from '~/state/routing/types'
-import { isClassicTrade, isLimitTrade, isUniswapXTrade } from '~/state/routing/utils'
+import { isClassicTrade, isUniswapXTrade } from '~/state/routing/utils'
 import { useTransaction, useTransactionAdder } from '~/state/transactions/hooks'
 import type { TransactionInfo } from '~/state/transactions/types'
 
@@ -62,7 +52,6 @@ export function useSwapCallback({
   allowedSlippage: Percent // in bips
   permitSignature?: PermitSignature
 }) {
-  const dispatch = useDispatch()
   const addClassicTransaction = useTransactionAdder()
   const account = useAccount()
   const supportedConnectedChainId = useSupportedChainId(account.chainId)
@@ -124,27 +113,8 @@ export function useSwapCallback({
           }),
     }
 
-    // Limit orders need to be added manually since they don't go through the saga when initially submitted
     if (result.type === TradeFillType.Classic) {
       addClassicTransaction(result.response, swapInfo, result.deadline?.toNumber())
-    } else if (isLimitTrade(trade)) {
-      // Create transaction details for limit order
-      const limitOrderTransaction: UniswapXOrderDetails<InterfaceTransactionDetails> = {
-        id: result.response.orderHash,
-        chainId: swapChainId,
-        from: account.address!,
-        status: TransactionStatus.Pending,
-        addedTime: Date.now(),
-        transactionOriginType: TransactionOriginType.Internal,
-        typeInfo: swapInfo,
-        routing: TradingApi.Routing.DUTCH_LIMIT,
-        orderHash: result.response.orderHash,
-        queueStatus: QueuedOrderStatus.Submitted,
-        encodedOrder: result.response.encodedOrder,
-        expiry: result.response.deadline,
-      }
-
-      dispatch(addTransaction(limitOrderTransaction))
     }
 
     return result
@@ -153,7 +123,6 @@ export function useSwapCallback({
     account.isConnected,
     addClassicTransaction,
     allowedSlippage,
-    dispatch,
     selectChain,
     supportedConnectedChainId,
     swapCallback,

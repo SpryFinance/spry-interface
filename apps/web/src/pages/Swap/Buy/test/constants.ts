@@ -1,7 +1,5 @@
-import { RampDirection } from 'uniswap/src/features/fiatOnRamp/types'
-import { getFiatCurrencyComponents } from 'utilities/src/format/localeBased'
-import { ethCurrencyInfo } from '~/pages/Swap/Buy/BuyFormContext'
-
+// SPRY: the buy fiat-on-ramp page was pruned; only the shared provider-connection views
+// (used by ReceiveCryptoModal) remain in this folder. Their tests need just this fixture.
 export const mockServiceProvider = {
   serviceProvider: 'test-provider',
   name: 'Test Provider',
@@ -11,36 +9,4 @@ export const mockServiceProvider = {
     lightLogo: 'test-provider-logo-light',
   },
   paymentMethods: ['Credit Card'],
-}
-
-export const mockBuyFormContext = {
-  buyFormState: {
-    quoteCurrency: {
-      currencyInfo: ethCurrencyInfo,
-      meldCurrencyCode: 'ETH',
-    },
-    inputAmount: '100',
-    inputInFiat: true,
-    selectedCountry: {
-      countryCode: 'US',
-      displayName: 'United States',
-      state: 'NY',
-    },
-    countryModalOpen: false,
-    currencyModalOpen: false,
-    providerModalOpen: true,
-    rampDirection: RampDirection.ON_RAMP,
-  },
-  derivedBuyFormInfo: {
-    meldSupportedFiatCurrency: {
-      ...getFiatCurrencyComponents('en-US', 'USD'),
-      symbol: '$',
-      name: 'United States Dollar',
-      shortName: 'USD',
-      code: 'USD',
-    },
-    notAvailableInThisRegion: false,
-    fetchingQuotes: false,
-  },
-  setBuyFormState: vi.fn(),
 }

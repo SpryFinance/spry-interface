@@ -1,6 +1,5 @@
-import { BuyFormContext } from '~/pages/Swap/Buy/BuyFormContext'
 import { ProviderConnectedView } from '~/pages/Swap/Buy/ProviderConnectedView'
-import { mockBuyFormContext, mockServiceProvider } from '~/pages/Swap/Buy/test/constants'
+import { mockServiceProvider } from '~/pages/Swap/Buy/test/constants'
 import { fireEvent, render, screen } from '~/test-utils/render'
 
 describe('ProviderConnectedView', () => {
@@ -8,9 +7,7 @@ describe('ProviderConnectedView', () => {
     const closeModal = vi.fn()
 
     const { container } = render(
-      <BuyFormContext.Provider value={mockBuyFormContext}>
-        <ProviderConnectedView closeModal={closeModal} selectedServiceProvider={mockServiceProvider} />
-      </BuyFormContext.Provider>,
+      <ProviderConnectedView closeModal={closeModal} selectedServiceProvider={mockServiceProvider} />,
     )
 
     expect(container.firstChild).toMatchSnapshot()

@@ -15,17 +15,8 @@ import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
 import { FORCountry } from 'uniswap/src/features/fiatOnRamp/types'
 import { benignSafetyInfo } from 'uniswap/src/test/fixtures/wallet/currencies'
-import { LimitsExpiry } from 'uniswap/src/types/limits'
 import { UseAccountReturnType, type Register as WagmiRegister } from 'wagmi'
-import { expiryToDeadlineSeconds } from '~/features/Swap/state/limit/expiryToDeadlineSeconds'
-import {
-  ClassicTrade,
-  DutchOrderTrade,
-  LimitOrderTrade,
-  PreviewTrade,
-  QuoteMethod,
-  V2DutchOrderTrade,
-} from '~/state/routing/types'
+import { ClassicTrade, DutchOrderTrade, PreviewTrade, QuoteMethod, V2DutchOrderTrade } from '~/state/routing/types'
 
 export const TEST_TOKEN_1 = new Token(1, '0x0000000000000000000000000000000000000001', 18, 'ABC', 'Abc')
 export const TEST_TOKEN_1_INFO: CurrencyInfo = {
@@ -264,16 +255,6 @@ export const PREVIEW_EXACT_IN_TRADE = new PreviewTrade({
   inputAmount: toCurrencyAmount(TEST_TOKEN_1, 1000),
   outputAmount: toCurrencyAmount(TEST_TOKEN_2, 1000),
   tradeType: TradeType.EXACT_INPUT,
-})
-
-export const LIMIT_ORDER_TRADE = new LimitOrderTrade({
-  amountIn: CurrencyAmount.fromRawAmount(DAI, 100),
-  amountOut: CurrencyAmount.fromRawAmount(USDC_MAINNET, 100),
-  tradeType: TradeType.EXACT_INPUT,
-  wrapInfo: { needsWrap: false },
-  approveInfo: { needsApprove: false },
-  swapper: '0xSwapperAddress',
-  deadlineBufferSecs: expiryToDeadlineSeconds(LimitsExpiry.Week),
 })
 
 export const NATIVE_INFO: CurrencyInfo = {

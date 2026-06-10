@@ -12,7 +12,7 @@ const buildSwapUrl = createTestUrlBuilder({
 })
 
 const buildLimitUrl = createTestUrlBuilder({
-  basePath: '/limit',
+  basePath: '/swap',
 })
 
 test.describe(

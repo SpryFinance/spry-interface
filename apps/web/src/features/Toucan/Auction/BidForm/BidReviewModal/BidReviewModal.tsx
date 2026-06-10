@@ -18,6 +18,10 @@ import {
   ProgressIndicatorStep,
 } from '~/features/Toucan/Auction/BidForm/BidReviewModal/BidProgressIndicator'
 import { BidReviewHeader } from '~/features/Toucan/Auction/BidForm/BidReviewModal/BidReviewHeader'
+import {
+  ConfirmModalState,
+  PendingModalError,
+} from '~/features/Toucan/Auction/BidForm/BidReviewModal/confirmModalState'
 import { ExpandableDisclaimer } from '~/features/Toucan/Auction/BidForm/BidReviewModal/ExpandableDisclaimer'
 import { useBidConfirmModalState } from '~/features/Toucan/Auction/BidForm/BidReviewModal/useBidConfirmModalState'
 import { useBidPermit2Flow } from '~/features/Toucan/Auction/BidForm/BidReviewModal/useBidPermit2Flow'
@@ -36,8 +40,6 @@ import { getClearingPrice } from '~/features/Toucan/Auction/utils/clearingPrice'
 import { ToucanActionButton } from '~/features/Toucan/Shared/ToucanActionButton'
 import { useAccount } from '~/hooks/useAccount'
 import { AllowanceState } from '~/hooks/usePermit2Allowance'
-import { PendingModalError } from '~/pages/Swap/Limit/ConfirmSwapModal/Error'
-import { ConfirmModalState } from '~/pages/Swap/Limit/ConfirmSwapModal/state'
 import { swapErrorToUserReadableMessage } from '~/utils/swapErrorToUserReadableMessage'
 
 interface BidReviewModalProps {

@@ -81,7 +81,7 @@ exports[`ProviderConnectedView > should render the component and call callbacks 
           <a
             class="font_button _color-0focus-neutral3Hov3121676 _textDecorationColor-0focus-neutral3Hov3121676 _textDecorationLine-0focus-underline _textDecorationDistance-0focus-1px _color-_groupitem-focusVisible_neutral3Hov3121676 _textDecorationColor-_groupitem-focusVisible_neutral3Hov3121676 _textDecorationLine-_groupitem-focusVisible_underline _textDecorationDistance-_groupitem-focusVisible_1px _color-0hover-neutral3Hov3121676 _textUnderlinePosition-_platformweb_from-font _boxSizing-border-box _whiteSpace-pre-wrap _mt-0px _mr-0px _mb-0px _ml-0px _color-neutral3 _fontFamily-f-family _wordWrap-break-word _display-inline _textDecorationLine-none _fontSize-f-size-micr111 _fontWeight-f-weight-me3083741 _lineHeight-f-lineHeigh1263414315 _outlineStyle-none"
             data-disable-theme="true"
-            href="https://uniswap.org/terms-of-service"
+            href="https://spry.fi/terms-of-service"
             role="link"
             target="_blank"
           >
@@ -91,7 +91,7 @@ exports[`ProviderConnectedView > should render the component and call callbacks 
           <a
             class="font_button _color-0focus-neutral3Hov3121676 _textDecorationColor-0focus-neutral3Hov3121676 _textDecorationLine-0focus-underline _textDecorationDistance-0focus-1px _color-_groupitem-focusVisible_neutral3Hov3121676 _textDecorationColor-_groupitem-focusVisible_neutral3Hov3121676 _textDecorationLine-_groupitem-focusVisible_underline _textDecorationDistance-_groupitem-focusVisible_1px _color-0hover-neutral3Hov3121676 _textUnderlinePosition-_platformweb_from-font _boxSizing-border-box _whiteSpace-pre-wrap _mt-0px _mr-0px _mb-0px _ml-0px _color-neutral3 _fontFamily-f-family _wordWrap-break-word _display-inline _textDecorationLine-none _fontSize-f-size-micr111 _fontWeight-f-weight-me3083741 _lineHeight-f-lineHeigh1263414315 _outlineStyle-none"
             data-disable-theme="true"
-            href="https://uniswap.org/privacy-policy"
+            href="https://spry.fi/privacy-policy"
             role="link"
             target="_blank"
           >

@@ -1,3 +1,5 @@
+// SPRY: re-homed from the pruned pages/Swap/Limit/ConfirmSwapModal/ProgressIndicator/Step.
+// Toucan's BidProgressIndicator is now the only consumer of this confirm-step component.
 import { Fragment, ReactElement, useEffect, useState } from 'react'
 import { Flex, styled, Text } from 'ui/src'
 import { Check } from 'ui/src/components/icons/Check'
@@ -6,6 +8,20 @@ import { LogoLoadingSpinner } from '~/components/LogoLoadingSpinner'
 import { ExternalLink } from '~/theme/components/Links'
 
 export const ICON_SIZE = 24
+
+/** Keyframes for the active-step ripple. Re-homed with this component; inject once via <style> in the consumer. */
+export const STEP_RING_KEYFRAMES = `
+@keyframes confirmStepRingPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+`
 
 export interface StepDetails {
   // Left-justified icon representing the step and grayed out when step is not active
@@ -42,7 +58,7 @@ const Ring = styled(Flex, {
 
   '$platform-web': {
     transformOrigin: 'center',
-    animationName: 'limitConfirmStepRingPulse',
+    animationName: 'confirmStepRingPulse',
     animationDuration: '1.5s',
     animationTimingFunction: 'linear',
     animationIterationCount: 'infinite',

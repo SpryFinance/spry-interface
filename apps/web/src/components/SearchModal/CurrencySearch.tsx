@@ -64,6 +64,9 @@ export function CurrencySearch({
   )
 
   useEffect(() => {
+    // SPRY: only Swap and Send tabs remain, so the tab clause is always satisfied; it is kept
+    // (with the lint suppressed) so the guard still reads correctly if more tabs are added back.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
     if ((swapTab !== SwapTab.Swap && swapTab !== SwapTab.Send) || !isMultichainContext) {
       return
     }
@@ -87,7 +90,7 @@ export function CurrencySearch({
           chainId={resolvedChainId}
           chainIds={chainIds ?? chains}
           currencyField={currencyField}
-          flow={swapTab === SwapTab.Limit ? TokenSelectorFlow.Limit : flow}
+          flow={flow}
           isSurfaceReady={true}
           variation={
             variation ??

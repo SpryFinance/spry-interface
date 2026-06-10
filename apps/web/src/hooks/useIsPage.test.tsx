@@ -4,10 +4,8 @@ import { MatchType, PageType, useIsPage } from '~/hooks/useIsPage'
 
 describe('useIsPage', () => {
   it.each([
-    [PageType.BUY, '/buy'],
     [PageType.EXPLORE, '/explore/details'],
     [PageType.LANDING, '/'],
-    [PageType.LIMIT, '/limit'],
     [PageType.MIGRATE_V3, '/migrate/v3/info'],
     [PageType.CREATE_POSITION, '/positions/create'],
     [PageType.SEND, '/path/to/send'],

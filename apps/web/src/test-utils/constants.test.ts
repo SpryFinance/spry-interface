@@ -3,7 +3,6 @@ import {
   DAI_INFO,
   ETH_MAINNET,
   ETH_SEPOLIA,
-  LIMIT_ORDER_TRADE,
   NATIVE_INFO,
   PREVIEW_EXACT_IN_TRADE,
   TEST_ALLOWED_SLIPPAGE,
@@ -72,7 +71,6 @@ describe('test-utils/constants', () => {
 
   it('should load special trade types', () => {
     expect(PREVIEW_EXACT_IN_TRADE).toBeDefined()
-    expect(LIMIT_ORDER_TRADE).toBeDefined()
   })
 
   it('should load currency info constants', () => {

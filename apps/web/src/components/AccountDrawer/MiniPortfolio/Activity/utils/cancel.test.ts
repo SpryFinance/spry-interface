@@ -14,7 +14,6 @@ import { vi } from 'vitest'
 import { useCancelMultipleOrdersCallback } from '~/components/AccountDrawer/MiniPortfolio/Activity/utils/cancel'
 import { useAccount } from '~/hooks/useAccount'
 import { useEthersWeb3Provider } from '~/hooks/useEthersProvider'
-import { useFetchLimitOrders } from '~/hooks/useFetchLimitOrders'
 import { useSelectChain } from '~/hooks/useSelectChain'
 import { renderHook } from '~/test-utils/render'
 import { createMockUniswapXOrder } from '~/test-utils/transactions/fixtures'
@@ -22,7 +21,6 @@ import { createMockUniswapXOrder } from '~/test-utils/transactions/fixtures'
 vi.mock('~/hooks/useAccount')
 vi.mock('~/hooks/useEthersProvider')
 vi.mock('~/hooks/useSelectChain')
-vi.mock('~/hooks/useFetchLimitOrders')
 vi.mock('uniswap/src/features/transactions/cancel/validation')
 vi.mock('uniswap/src/features/transactions/utils/permit2')
 
@@ -60,9 +58,6 @@ describe('useCancelMultipleOrdersCallback', () => {
     ;(useEthersWeb3Provider as any).mockReturnValue(mockProvider)
     ;(useSelectChain as any).mockReturnValue(mockSelectChain)
     ;(createPermit2ContractForChain as any).mockReturnValue(mockPermit2)
-    ;(useFetchLimitOrders as any).mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue([]),
-    })
 
     // Set default mock behavior for the imported functions
     ;(extractCancellationData as any).mockImplementation((orders: any[]) =>

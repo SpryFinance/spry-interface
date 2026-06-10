@@ -7,9 +7,14 @@ import { StepStatus } from 'uniswap/src/components/ConfirmSwapModal/types'
 import { CurrencyLogo } from 'uniswap/src/components/CurrencyLogo/CurrencyLogo'
 import { uniswapUrls } from 'uniswap/src/constants/urls'
 import { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
+import { ConfirmModalState } from '~/features/Toucan/Auction/BidForm/BidReviewModal/confirmModalState'
+import {
+  ICON_SIZE,
+  Step,
+  STEP_RING_KEYFRAMES,
+  StepDetails,
+} from '~/features/Toucan/Auction/BidForm/BidReviewModal/Step'
 import { useColor } from '~/hooks/useColor'
-import { ICON_SIZE, Step, StepDetails } from '~/pages/Swap/Limit/ConfirmSwapModal/ProgressIndicator/Step'
-import { ConfirmModalState } from '~/pages/Swap/Limit/ConfirmSwapModal/state'
 import { Divider } from '~/theme/components/Dividers'
 
 export type ProgressIndicatorStep = Extract<
@@ -108,6 +113,7 @@ export function BidProgressIndicator({
 
   return (
     <Flex>
+      <style>{STEP_RING_KEYFRAMES}</style>
       <Flex px="$spacing16" py="$spacing8">
         <Divider />
       </Flex>

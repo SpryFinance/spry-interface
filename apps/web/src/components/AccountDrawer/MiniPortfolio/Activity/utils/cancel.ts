@@ -15,7 +15,6 @@ import { TransactionStatus, UniswapXOrderDetails } from 'uniswap/src/features/tr
 import { logger } from 'utilities/src/logger/logger'
 import { useAccount } from '~/hooks/useAccount'
 import { useEthersWeb3Provider } from '~/hooks/useEthersProvider'
-import { useFetchLimitOrders } from '~/hooks/useFetchLimitOrders'
 import { useSelectChain } from '~/hooks/useSelectChain'
 import store from '~/state'
 import { useAppDispatch } from '~/state/hooks'
@@ -72,7 +71,6 @@ export function useCancelMultipleOrdersCallback(
   const provider = useEthersWeb3Provider()
   const selectChain = useSelectChain()
   const dispatch = useAppDispatch()
-  const fetchLimitOrdersMutation = useFetchLimitOrders()
 
   // Validate orders can be cancelled
   const validation = useMemo(() => validateOrdersForCancellation(orders ?? []), [orders])
@@ -104,11 +102,8 @@ export function useCancelMultipleOrdersCallback(
       // Extract data from orders that already have encodedOrder
       const cancellationData = extractCancellationData(orders)
 
-      // Create the limit orders fetcher for dependency injection
-      const limitOrdersFetcher: LimitOrdersFetcher = async (orderHashes: string[]) => {
-        const result = await fetchLimitOrdersMutation.mutateAsync(orderHashes)
-        return result
-      }
+      // SPRY: limit orders are pruned, so there is no remote limit-order data to fetch.
+      const limitOrdersFetcher: LimitOrdersFetcher = async () => []
 
       const fetched = await fetchLimitOrdersEncodedOrderData(orders, limitOrdersFetcher)
       if (fetched.length > 0) {
@@ -170,14 +165,5 @@ export function useCancelMultipleOrdersCallback(
       }
       return undefined
     }
-  }, [
-    orders,
-    provider,
-    selectChain,
-    dispatch,
-    validation.error,
-    validation.chainId,
-    account.address,
-    fetchLimitOrdersMutation,
-  ])
+  }, [orders, provider, selectChain, dispatch, validation.error, validation.chainId, account.address])
 }

@@ -8,13 +8,10 @@ import { ChevronsOut } from 'ui/src/components/icons/ChevronsOut'
 import { ElementName, SwapEventName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
 import { useTrace } from 'utilities/src/telemetry/trace/TraceContext'
-import { LimitDisclaimer } from '~/components/LimitDisclaimer'
 import { SwapCallbackError, SwapShowAcceptChanges } from '~/features/Swap/styled'
-import { SwapLineItem, SwapLineItemType } from '~/features/Swap/SwapLineItem'
 import { Allowance, AllowanceState } from '~/hooks/usePermit2Allowance'
 import { SwapResult } from '~/hooks/useSwapCallback'
-import { InterfaceTrade, LimitOrderTrade, RouterPreference } from '~/state/routing/types'
-import { isLimitTrade } from '~/state/routing/utils'
+import { InterfaceTrade, RouterPreference } from '~/state/routing/types'
 import { useRouterPreference, useUserSlippageTolerance } from '~/state/user/hooks'
 import { ExternalLink } from '~/theme/components/Links'
 import { formatSwapButtonClickEventProperties } from '~/utils/loggingFormatters'
@@ -101,7 +98,7 @@ export function SwapDetails({
   const callToAction: CallToAction = useMemo(() => {
     if (allowance && allowance.state === AllowanceState.REQUIRED && allowance.needsSetupApproval) {
       return {
-        buttonText: isLimitTrade(trade) ? t('swap.approveAndSubmit') : t('swap.approveAndSwap'),
+        buttonText: t('swap.approveAndSwap'),
       }
     } else if (allowance && allowance.state === AllowanceState.REQUIRED && allowance.needsPermitSignature) {
       return {
@@ -109,21 +106,13 @@ export function SwapDetails({
       }
     } else {
       return {
-        buttonText: isLimitTrade(trade) ? t('swap.placeOrder') : t('swap.confirmSwap'),
+        buttonText: t('swap.confirmSwap'),
       }
     }
-  }, [allowance, t, trade])
+  }, [allowance, t])
 
   return (
     <>
-      <Flex gap="$gap8" px="$spacing12" pb="$spacing8">
-        {isLimitTrade(trade) ? (
-          <>
-            <Separator />
-            <LimitLineItems trade={trade} />
-          </>
-        ) : null}
-      </Flex>
       {showAcceptChanges ? (
         <SwapShowAcceptChanges data-testid="show-accept-changes">
           <Flex row width="100%" justifyContent="space-between" alignItems="center">
@@ -180,18 +169,6 @@ export function SwapDetails({
           {swapErrorMessage ? <SwapCallbackError error={swapErrorMessage} /> : null}
         </Flex>
       )}
-    </>
-  )
-}
-
-function LimitLineItems({ trade }: { trade: LimitOrderTrade }) {
-  return (
-    <>
-      <SwapLineItem trade={trade} type={SwapLineItemType.EXCHANGE_RATE} />
-      <SwapLineItem trade={trade} type={SwapLineItemType.EXPIRY} />
-      <SwapLineItem trade={trade} type={SwapLineItemType.SWAP_FEE} />
-      <SwapLineItem trade={trade} type={SwapLineItemType.NETWORK_COST} />
-      <LimitDisclaimer />
     </>
   )
 }

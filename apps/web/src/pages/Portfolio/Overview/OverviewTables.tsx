@@ -16,7 +16,6 @@ import {
 import { MiniActivityTable } from '~/pages/Portfolio/Overview/MiniActivityTable'
 import { MiniPoolsTable } from '~/pages/Portfolio/Overview/MiniPoolsTable/MiniPoolsTable'
 import { MiniTokensTable } from '~/pages/Portfolio/Overview/MiniTokensTable'
-import { OpenLimitsTable } from '~/pages/Portfolio/Overview/OpenLimitsTable'
 import { PortfolioEarnSection } from '~/pages/Portfolio/Overview/PortfolioEarnSection'
 
 interface PortfolioOverviewTablesProps {
@@ -36,9 +35,10 @@ export const PortfolioOverviewTables = memo(function PortfolioOverviewTables({
   const isEarnEnabled = useFeatureFlag(FeatureFlags.Earn)
   const { isTestnetModeEnabled } = useEnabledChains()
   const showMiniPoolsTable = !!evmAddress
-  const showOpenLimitsTable = !!evmAddress && (!chainId || chainId === UniverseChainId.Mainnet)
+  // SPRY: the open-limits table was pruned; this mainnet-EVM gate still drives the Earn section.
+  const isMainnetEvmPortfolio = !!evmAddress && (!chainId || chainId === UniverseChainId.Mainnet)
   const isConnectedUserPortfolio = isEvmConnected && !isExternalWallet
-  const showEarnSection = isEarnEnabled && !isTestnetModeEnabled && showOpenLimitsTable && isConnectedUserPortfolio
+  const showEarnSection = isEarnEnabled && !isTestnetModeEnabled && isMainnetEvmPortfolio && isConnectedUserPortfolio
 
   return (
     <Flex
@@ -57,7 +57,6 @@ export const PortfolioOverviewTables = memo(function PortfolioOverviewTables({
       </Flex>
       <Flex width={OVERVIEW_RIGHT_COLUMN_WIDTH} gap="$spacing48" $xl={{ width: '100%' }}>
         {showEarnSection && <PortfolioEarnSection account={evmAddress} />}
-        {showOpenLimitsTable && <OpenLimitsTable account={evmAddress} />}
         <MiniActivityTable maxActivities={MAX_ACTIVITY_ROWS} activityData={activityData} />
       </Flex>
     </Flex>

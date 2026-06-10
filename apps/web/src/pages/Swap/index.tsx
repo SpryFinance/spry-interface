@@ -11,7 +11,6 @@ import { zIndexes } from 'ui/src/theme'
 import { useUniswapContext } from 'uniswap/src/contexts/UniswapContext'
 import { useIsModeMismatch } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { RampDirection } from 'uniswap/src/features/fiatOnRamp/types'
 import { useGetPasskeyAuthStatus } from 'uniswap/src/features/passkey/hooks/useGetPasskeyAuthStatus'
 import { ShowGetStartedProvider } from 'uniswap/src/features/passkey/ShowGetStartedContext'
 import { WebFORNudgeProvider } from 'uniswap/src/features/providers/webForNudgeProvider'
@@ -43,7 +42,6 @@ import { PageWrapper } from '~/features/Swap/styled'
 import { SwapBottomCard } from '~/features/Swap/SwapBottomCard'
 import { useHasInjectedWallets } from '~/features/wallet/connection/hooks/useOrderedWalletConnectors'
 import { useAccount } from '~/hooks/useAccount'
-import { useDeferredComponent } from '~/hooks/useDeferredComponent'
 import { PageType, useIsPage } from '~/hooks/useIsPage'
 import { useModalState } from '~/hooks/useModalState'
 import { ReturnToAuctionBanner } from '~/pages/Swap/ReturnToAuctionBanner'
@@ -118,7 +116,6 @@ export function Swap({
   syncTabToUrl,
   swapRedirectCallback,
   tokenColor,
-  tdpCurrency,
 }: {
   initialInputChainId?: UniverseChainId
   onCurrencyChange?: (selected: CurrencyState) => void
@@ -133,8 +130,6 @@ export function Swap({
   swapRedirectCallback?: SwapRedirectFn
   tokenColor?: string
   passkeyAuthStatus?: PasskeyAuthStatus
-  /** When Swap is embedded in Token Details Page, pass the TDP token currency for Buy/Sell prefill */
-  tdpCurrency?: Currency
 }) {
   const { isSwapTokenSelectorOpen, swapOutputChainId } = useUniswapContext()
 
@@ -188,7 +183,6 @@ export function Swap({
                     onCurrencyChange={onCurrencyChange}
                     prefilledState={prefilledState}
                     tokenColor={tokenColor}
-                    tdpCurrency={tdpCurrency}
                   />
                 </Flex>
               </SwapFormStoreContextProvider>
@@ -204,59 +198,36 @@ const SWAP_TABS = [SwapTab.Swap]
 
 const TAB_TYPE_TO_LABEL = {
   [SwapTab.Swap]: (t: AppTFunction) => t('swap.form.header'),
-  [SwapTab.Limit]: (t: AppTFunction) => t('swap.limit'),
   [SwapTab.Send]: (t: AppTFunction) => t('send.title'),
-  [SwapTab.Buy]: (t: AppTFunction) => t('common.buy.label'),
-  [SwapTab.Sell]: (t: AppTFunction) => t('common.sell.label'),
 }
 
 const PATHNAME_TO_TAB: { [key: string]: SwapTab } = {
   '/swap': SwapTab.Swap,
-  '/limit': SwapTab.Limit,
-  '/buy': SwapTab.Buy,
-  '/sell': SwapTab.Sell,
 }
 
 function UniversalSwapFlow({
   hideHeader = false,
   hideFooter = false,
-  disableTokenInputs = false,
   syncTabToUrl = true,
   prefilledState,
   onCurrencyChange,
   swapRedirectCallback,
   tokenColor,
-  tdpCurrency,
 }: {
   hideHeader?: boolean
   hideFooter?: boolean
   syncTabToUrl?: boolean
-  disableTokenInputs?: boolean
   prefilledState?: SwapFormState
   onCurrencyChange?: (selected: CurrencyState, isBridgePair?: boolean) => void
   swapRedirectCallback?: SwapRedirectFn
   tokenColor?: string
-  /** When Swap is embedded in TDP, the TDP token currency for Buy/Sell prefill */
-  tdpCurrency?: Currency
 }) {
   const { currentTab, setCurrentTab } = useSwapAndLimitContext()
-  const tdpCurrencyAsset = currencyToAsset(tdpCurrency)
 
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const swapHandlers = useSwapHandlers()
-
-  const LimitFormWrapper = useDeferredComponent(() =>
-    import('~/pages/Swap/Limit/LimitForm').then((module) => ({
-      default: module.LimitFormWrapper,
-    })),
-  )
-  const BuyForm = useDeferredComponent(() =>
-    import('~/pages/Swap/Buy/BuyForm').then((module) => ({
-      default: module.BuyForm,
-    })),
-  )
 
   const { openModal: openSendFormModal } = useModalState(ModalName.Send)
 
@@ -340,21 +311,6 @@ function UniversalSwapFlow({
           </SwapDependenciesStoreContextProvider>
           <SwapBottomCard />
         </Flex>
-      )}
-      {currentTab === SwapTab.Limit && LimitFormWrapper && <LimitFormWrapper onCurrencyChange={onCurrencyChange} />}
-      {currentTab === SwapTab.Buy && BuyForm && (
-        <BuyForm
-          rampDirection={RampDirection.ON_RAMP}
-          disabled={disableTokenInputs}
-          initialCurrency={tdpCurrencyAsset ?? prefilledState?.output}
-        />
-      )}
-      {currentTab === SwapTab.Sell && BuyForm && (
-        <BuyForm
-          rampDirection={RampDirection.OFF_RAMP}
-          disabled={disableTokenInputs}
-          initialCurrency={tdpCurrencyAsset ?? prefilledState?.output}
-        />
       )}
     </Flex>
   )

@@ -37,7 +37,6 @@ import {
 import { useCancelMultipleOrdersCallback } from '~/components/AccountDrawer/MiniPortfolio/Activity/utils/cancel'
 import { PortfolioLogo } from '~/components/AccountDrawer/MiniPortfolio/PortfolioLogo'
 import { AmountHeader } from '~/components/AmountHeader'
-import { LimitDisclaimer } from '~/components/LimitDisclaimer'
 import { useCurrency } from '~/hooks/Tokens'
 import { useUniswapXOrderByOrderHash } from '~/state/transactions/hooks'
 import { Divider } from '~/theme/components/Dividers'
@@ -295,8 +294,6 @@ export function OrderContent({ order, onCancel }: { order: UniswapXOrderDetails;
             </Text>
           </Flex>
         </InsufficientFundsCopyContainer>
-      ) : order.routing === TradingApi.Routing.DUTCH_LIMIT ? (
-        <LimitDisclaimer />
       ) : null}
     </Flex>
   )

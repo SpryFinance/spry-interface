@@ -8,11 +8,7 @@ const tabs = [
   {
     label: 'Trade',
     path: '/swap',
-    dropdown: [
-      { label: 'Swap', path: '/swap' },
-      { label: 'Limit', path: '/limit' },
-      { label: 'Buy', path: '/buy' },
-    ],
+    dropdown: [{ label: 'Swap', path: '/swap' }],
   },
   {
     label: 'Explore',

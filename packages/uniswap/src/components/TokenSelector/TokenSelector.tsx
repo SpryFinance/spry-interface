@@ -5,7 +5,6 @@ import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { ComponentProps, memo, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, ModalCloseIcon, Text, useMedia, useScrollbarStyles, useSporeColors } from 'ui/src'
-import { InfoCircleFilled } from 'ui/src/components/icons/InfoCircleFilled'
 import { spacing, zIndexes } from 'ui/src/theme'
 import PasteButton from 'uniswap/src/components/buttons/PasteButton'
 import { SelectorBaseListSkeleton } from 'uniswap/src/components/lists/SelectorBaseList'
@@ -209,19 +208,6 @@ export function TokenSelectorContent({
             onChangeText={onChangeText}
             onFocus={onFocus}
           />
-          {flow === TokenSelectorFlow.Limit && (
-            <Flex
-              row
-              backgroundColor="$surface2"
-              borderRadius="$rounded12"
-              gap="$spacing12"
-              mx="$spacing8"
-              p="$spacing12"
-            >
-              <InfoCircleFilled color="$neutral2" size="$icon.20" />
-              <Text variant="body3">{t('limits.form.disclaimer.mainnet.short')}</Text>
-            </Flex>
-          )}
 
           <Flex grow>
             {isSurfaceReady ? (

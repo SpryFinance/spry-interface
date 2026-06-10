@@ -1,13 +1,9 @@
 import { TradingApi } from '@universe/api'
-import { useEffect, useMemo } from 'react'
-import { useDispatch } from 'react-redux'
-import { useMergeLocalAndRemoteTransactions } from 'uniswap/src/features/activity/hooks/useMergeLocalAndRemoteTransactions'
-import { useOpenLimitOrders as useOpenLimitOrdersREST } from 'uniswap/src/features/activity/hooks/useOpenLimitOrders'
+import { useMemo } from 'react'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { isL2ChainId } from 'uniswap/src/features/chains/utils'
 import { CancellationGasFeeDetails } from 'uniswap/src/features/gas/hooks'
 import { useCancellationGasFeeInfo } from 'uniswap/src/features/gas/hooks/useCancellationGasFeeInfo'
-import { addTransaction } from 'uniswap/src/features/transactions/slice'
 import { isUniswapX } from 'uniswap/src/features/transactions/swap/utils/routing'
 import {
   TransactionDetails,
@@ -15,38 +11,8 @@ import {
   TransactionType,
   UniswapXOrderDetails,
 } from 'uniswap/src/features/transactions/types/transactionDetails'
-import { isLimitOrder, isUniswapXOrderPending } from 'uniswap/src/features/transactions/utils/uniswapX.utils'
 import { zeroAddress } from '~/chains'
 import { usePendingTransactions, usePendingUniswapXOrders } from '~/state/transactions/hooks'
-import { isExistingTransaction } from '~/state/transactions/utils'
-
-export function useOpenLimitOrders(account: string): { openLimitOrders: UniswapXOrderDetails[]; loading: boolean } {
-  const dispatch = useDispatch()
-  const { data: limitOrders, loading } = useOpenLimitOrdersREST({ evmAddress: account })
-
-  // Sync remote limit orders to local state if they don't exist in state yet
-  useEffect(() => {
-    if (!limitOrders || limitOrders.length === 0) {
-      return
-    }
-
-    limitOrders.forEach((order) => {
-      if (
-        isUniswapXOrderPending(order) &&
-        !isExistingTransaction({ from: order.from, chainId: order.chainId, id: order.id })
-      ) {
-        dispatch(addTransaction(order))
-      }
-    })
-  }, [dispatch, limitOrders])
-
-  const merged = useMergeLocalAndRemoteTransactions({ evmAddress: account, remoteTransactions: limitOrders })
-  const openLimitOrders = useMemo(
-    () => (merged ?? []).filter((tx): tx is UniswapXOrderDetails => isLimitOrder(tx) && isUniswapXOrderPending(tx)),
-    [merged],
-  )
-  return { openLimitOrders, loading }
-}
 
 export function usePendingActivity() {
   const allPendingTransactions = usePendingTransactions()

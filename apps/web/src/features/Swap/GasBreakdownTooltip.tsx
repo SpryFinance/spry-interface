@@ -11,7 +11,7 @@ import { useLocalizationContext } from 'uniswap/src/features/language/Localizati
 import { NumberType } from 'utilities/src/format/types'
 import { UniswapXRouterLabel, UniswapXGradient } from '~/features/Swap/components/RouterLabel/UniswapXRouterLabel'
 import { InterfaceTrade } from '~/state/routing/types'
-import { isLimitTrade, isPreviewTrade, isUniswapXTrade } from '~/state/routing/utils'
+import { isPreviewTrade, isUniswapXTrade } from '~/state/routing/utils'
 import { Divider } from '~/theme/components/Dividers'
 import { ExternalLink } from '~/theme/components/Links'
 
@@ -56,9 +56,7 @@ export function GasBreakdownTooltip({ trade }: GasBreakdownTooltipProps) {
 
   const swapEstimate = !isUniswapX ? trade.gasUseEstimateUSD : undefined
   const approvalEstimate = trade.approveInfo.needsApprove ? trade.approveInfo.approveGasEstimateUSD : undefined
-  // Limit orders still require wrapping ETH to WETH (unlike regular UniswapX swaps which now support native ETH)
-  const wrapEstimate = isLimitTrade(trade) && trade.wrapInfo.needsWrap ? trade.wrapInfo.wrapGasEstimateUSD : undefined
-  const showEstimateDetails = Boolean(wrapEstimate || approvalEstimate)
+  const showEstimateDetails = Boolean(approvalEstimate)
 
   const description = isUniswapX ? <UniswapXDescription /> : <NetworkCostDescription native={native} />
 
@@ -69,7 +67,6 @@ export function GasBreakdownTooltip({ trade }: GasBreakdownTooltipProps) {
   return (
     <Flex gap="$gap12" p="$spacing4">
       <Flex gap="$gap8">
-        <GasCostItem title={t('swap.wrap.token', { sym: native.symbol })} amount={wrapEstimate} />
         <GasCostItem title={t('swap.allow.oneTime', { sym: inputCurrency.symbol })} amount={approvalEstimate} />
         <GasCostItem title={t('common.swap')} amount={swapEstimate} />
         {isUniswapX && <GasCostItem title={t('common.swap')} itemValue={<GaslessSwapLabel />} />}

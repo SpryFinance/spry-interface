@@ -1,7 +1,6 @@
 import { memo } from 'react'
 import { Flex, styled, useMedia } from 'ui/src'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
-import { BuyActionTile } from '~/components/ActionTiles/BuyActionTile'
 import { CopyAddressActionTile } from '~/components/ActionTiles/CopyAddressActionTile'
 import { MoreActionTile } from '~/components/ActionTiles/MoreActionTile'
 import { ReceiveActionTile } from '~/components/ActionTiles/ReceiveActionTile'
@@ -70,9 +69,6 @@ export const OverviewActionTiles = memo(function OverviewActionTiles() {
       </ActionTileWrapper>
       <ActionTileWrapper singleRow={isSingleRow}>
         <ReceiveActionTile padding="$spacing16" dataTestId={TestID.PortfolioActionTileReceive} />
-      </ActionTileWrapper>
-      <ActionTileWrapper singleRow={isSingleRow}>
-        <BuyActionTile padding="$spacing16" />
       </ActionTileWrapper>
       <ActionTileWrapper singleRow={isSingleRow}>
         <MoreActionTile padding="$spacing16" />
