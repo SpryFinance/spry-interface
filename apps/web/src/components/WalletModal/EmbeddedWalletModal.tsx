@@ -10,21 +10,17 @@ import { BackArrow } from 'ui/src/components/icons/BackArrow'
 import { Envelope } from 'ui/src/components/icons/Envelope'
 import { EnvelopeHeart } from 'ui/src/components/icons/EnvelopeHeart'
 import { GoogleLogoGradient } from 'ui/src/components/icons/GoogleLogoGradient'
-import { Passkey } from 'ui/src/components/icons/Passkey'
 import { Person } from 'ui/src/components/icons/Person'
 import { iconSizes } from 'ui/src/theme'
 import { uniswapUrls } from 'uniswap/src/constants/urls'
 import { ElementName, ModalName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
-import { TestID } from 'uniswap/src/test/fixtures/testIDs'
 import { logger } from 'utilities/src/logger/logger'
 import { useEvent } from 'utilities/src/react/hooks'
-import { useAccountDrawer } from '~/components/AccountDrawer/MiniPortfolio/hooks'
 import { OptionRow } from '~/components/Passkey/BackupLoginComponents'
 import { RECOVER_OAUTH_PENDING_KEY } from '~/components/Passkey/useOAuthRedirectRouter'
 import { WalletModalLayout } from '~/components/WalletModal/WalletModalLayout'
 import { WalletOptionsGrid } from '~/components/WalletModal/WalletOptionsGrid'
-import { useModalState } from '~/hooks/useModalState'
 import { useSignInWithPasskey } from '~/hooks/useSignInWithPasskey'
 import { setOpenModal } from '~/state/application/reducer'
 
@@ -36,26 +32,14 @@ export const passkeySignInPendingAtom = atom(false)
 
 export function EmbeddedWalletConnectionsModal(): JSX.Element {
   const { t } = useTranslation()
-  const accountDrawer = useAccountDrawer()
   const dispatch = useDispatch()
-  const { openModal: openGetTheApp } = useModalState(ModalName.GetTheApp)
   const [showLoginView, setShowLoginView] = useAtom(showEmbeddedLoginViewAtom)
-
-  const handleCreateAccount = useEvent(() => {
-    accountDrawer.close()
-    openGetTheApp()
-  })
 
   const { signInWithPasskeyAsync, isPending: isPasskeyPending } = useSignInWithPasskey()
   const isExternalPasskeyPending = useAtomValue(passkeySignInPendingAtom)
   const isPasskeyLoading = isPasskeyPending || isExternalPasskeyPending
 
   const handlePasskeyLogin = useEvent(() => signInWithPasskeyAsync())
-
-  const handleLogIn = useEvent(() => {
-    setShowLoginView(true)
-    signInWithPasskeyAsync()
-  })
 
   const handleBackToConnect = useEvent(() => setShowLoginView(false))
 
@@ -214,41 +198,9 @@ export function EmbeddedWalletConnectionsModal(): JSX.Element {
           </Flex>
         }
       >
-        <WalletOptionsGrid showMobileConnector={true} showOtherWallets={true} />
-        <Flex row alignItems="center" justifyContent="center" width="100%" gap="$gap16" py="$spacing4" px="$spacing12">
-          <Separator />
-          <Text variant="body4" color="$neutral3">
-            {t('common.or')}
-          </Text>
-          <Separator />
-        </Flex>
-        <Flex gap="$gap12">
-          <Trace logPress element={ElementName.CreateAccount}>
-            <Flex row alignSelf="stretch">
-              <Button variant="branded" size="medium" testID={TestID.CreateAccount} onPress={handleCreateAccount}>
-                {t('nav.createAccount.button')}
-              </Button>
-            </Flex>
-          </Trace>
-          <Trace logPress element={ElementName.SignIn}>
-            <TouchableArea
-              group
-              animation={null}
-              alignSelf="center"
-              variant="unstyled"
-              hoverable={false}
-              testID={TestID.LogIn}
-              onPress={handleLogIn}
-            >
-              <Flex row gap="$gap4" alignItems="center">
-                <Passkey size="$icon.20" color="$accent1" $group-hover={{ color: '$accent1Hovered' }} />
-                <Text variant="buttonLabel2" color="$accent1" $group-hover={{ color: '$accent1Hovered' }}>
-                  {t('nav.logIn.button')}
-                </Text>
-              </Flex>
-            </TouchableArea>
-          </Trace>
-        </Flex>
+        {/* SPRY: the Uniswap wallet is moved into "Other wallets" (showMobileConnector
+            false), and the embedded "or / Create account / Log in" block is removed. */}
+        <WalletOptionsGrid showMobileConnector={false} showOtherWallets={true} />
       </WalletModalLayout>
     </Trace>
   )

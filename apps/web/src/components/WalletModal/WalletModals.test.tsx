@@ -1,8 +1,8 @@
 import { useLoginWithOAuth } from '@privy-io/react-auth'
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
-import { TestID } from 'uniswap/src/test/fixtures/testIDs'
+import { Provider } from 'jotai'
 import { RECOVER_OAUTH_PENDING_KEY } from '~/components/Passkey/useOAuthRedirectRouter'
-import { EmbeddedWalletConnectionsModal } from '~/components/WalletModal/EmbeddedWalletModal'
+import { EmbeddedWalletConnectionsModal, showEmbeddedLoginViewAtom } from '~/components/WalletModal/EmbeddedWalletModal'
 import { OtherWalletsModal } from '~/components/WalletModal/OtherWalletsModal'
 import { StandardWalletModal } from '~/components/WalletModal/StandardWalletModal'
 import { useOrderedWallets } from '~/features/wallet/connection/hooks/useOrderedWalletConnectors'
@@ -68,9 +68,15 @@ describe('EmbeddedWalletConnectionsModal', () => {
     expect(asFragment()).toMatchSnapshot()
   })
 
-  it('shows login method selection when Log In is clicked', () => {
-    const { getByTestId, getByText } = render(<EmbeddedWalletConnectionsModal />)
-    fireEvent.click(getByTestId(TestID.LogIn))
+  // SPRY: the in-modal "Log in" button is removed; the login view is reached only
+  // via the shared showEmbeddedLoginViewAtom (set by RecentlyConnectedModal), so
+  // these tests hydrate that atom instead of clicking a button.
+  it('shows login method selection when the login view is active', () => {
+    const { getByText } = render(
+      <Provider initialValues={[[showEmbeddedLoginViewAtom, true]]}>
+        <EmbeddedWalletConnectionsModal />
+      </Provider>,
+    )
 
     // Should show the login view with passkey and recovery options
     expect(getByText('Continue with passkey')).toBeDefined()
@@ -86,8 +92,11 @@ describe('EmbeddedWalletConnectionsModal', () => {
     })
 
     function goToLoginView() {
-      render(<EmbeddedWalletConnectionsModal />)
-      fireEvent.click(screen.getByText('Log in'))
+      render(
+        <Provider initialValues={[[showEmbeddedLoginViewAtom, true]]}>
+          <EmbeddedWalletConnectionsModal />
+        </Provider>,
+      )
     }
 
     it('Google button calls initOAuth and sets sessionStorage', () => {
