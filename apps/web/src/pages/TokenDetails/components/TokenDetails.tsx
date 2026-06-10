@@ -21,7 +21,6 @@ import { TokenDetailsEarnSection } from '~/pages/TokenDetails/components/earn/To
 import { useTokenDetailsEarnData } from '~/pages/TokenDetails/components/earn/useTokenDetailsEarnData'
 import { TDPBreadcrumb } from '~/pages/TokenDetails/components/header/TDPBreadcrumb'
 import { TokenDetailsHeader } from '~/pages/TokenDetails/components/header/TokenDetailsHeader'
-import { BridgedAssetSection } from '~/pages/TokenDetails/components/info/BridgedAssetSection'
 import { StatsSection } from '~/pages/TokenDetails/components/info/StatsSection'
 import { TokenDescription } from '~/pages/TokenDetails/components/info/TokenDescription'
 import { TokenPerformance } from '~/pages/TokenDetails/components/performance/TokenPerformance'
@@ -89,14 +88,9 @@ export function TokenDetailsContent({ isCompact }: { isCompact: boolean }) {
           <ChartSection />
           {showEarn && <TokenDetailsEarnBanner earnData={earnData} />}
 
-          {!showBalanceInfo && (
+          {!showBalanceInfo && !!pageChainBalance && (
             <Flex gap="$gap24">
-              {!!pageChainBalance && <BalanceSummary />}
-              <BridgedAssetSection
-                tokenQueryData={tokenQueryData}
-                currencyInfo={currencyInfo}
-                isBridgedAsset={isBridgedAsset}
-              />
+              <BalanceSummary />
             </Flex>
           )}
 
@@ -123,13 +117,6 @@ export function TokenDetailsContent({ isCompact }: { isCompact: boolean }) {
           <Flex display={showRightTokenInfo ? 'flex' : 'none'} gap="$gap24" mt="$gap24">
             {showTokenInfo && <BalanceSummary />}
             {showEarn && <TokenDetailsEarnSection earnData={earnData} />}
-            {showTokenInfo && (
-              <BridgedAssetSection
-                tokenQueryData={tokenQueryData}
-                currencyInfo={currencyInfo}
-                isBridgedAsset={isBridgedAsset}
-              />
-            )}
           </Flex>
 
           <TokenPerformance />

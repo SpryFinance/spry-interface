@@ -16,7 +16,6 @@ import { isUniverseChainId } from 'uniswap/src/features/chains/utils'
 import { getCurrencyAmount, ValueType } from 'uniswap/src/features/tokens/getCurrencyAmount'
 import type { Trade } from 'uniswap/src/features/transactions/swap/types/trade'
 import {
-  BridgeTrade,
   ChainedActionTrade,
   ClassicTrade,
   PriorityOrderTrade,
@@ -105,9 +104,8 @@ export function transformTradingApiResponseToTrade(params: TradingApiResponseToT
         return new UniswapXV3Trade({ quote: data, currencyIn, currencyOut, tradeType })
       }
     }
-    case TradingApi.Routing.BRIDGE: {
-      return new BridgeTrade({ quote: data, currencyIn, currencyOut, tradeType })
-    }
+    // SPRY: cross-chain bridging is pruned; a BRIDGE quote falls through to the
+    // null default, so no BridgeTrade can ever be constructed.
     case TradingApi.Routing.WRAP: {
       return new WrapTrade({ quote: data, currencyIn, currencyOut, tradeType })
     }

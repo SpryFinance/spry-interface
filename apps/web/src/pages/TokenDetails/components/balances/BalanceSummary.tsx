@@ -17,7 +17,6 @@ import { useTrace } from 'utilities/src/telemetry/trace/TraceContext'
 import { getTokenDetailsURL } from '~/appGraphql/data/util'
 import { MouseoverTooltip, TooltipSize } from '~/components/Tooltip'
 import { Balance } from '~/pages/TokenDetails/components/balances/Balance'
-import { BridgedAssetWithdrawButton } from '~/pages/TokenDetails/components/balances/BridgedAssetWithdrawButton'
 import { useTDPSelectedMultichainChain } from '~/pages/TokenDetails/context/useTDPSelectedMultichainChain'
 import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
 
@@ -71,7 +70,6 @@ export function BalanceSummary(): JSX.Element | null {
           />
         )}
       </Flex>
-      <BridgedAssetWithdrawButton />
     </Flex>
   )
 }

@@ -1,21 +1,8 @@
 import { FetchError, isRateLimitFetchError, TradingApi } from '@universe/api'
 import { TFunction } from 'i18next'
 import { Warning, WarningAction, WarningLabel, WarningSeverity } from 'uniswap/src/components/modals/WarningModal/types'
-import { DerivedSwapInfo } from 'uniswap/src/features/transactions/swap/types/derivedSwapInfo'
 
-export function getSwapWarningFromError({
-  error,
-  t,
-  derivedSwapInfo,
-}: {
-  error: Error
-  t: TFunction
-  derivedSwapInfo: DerivedSwapInfo
-}): Warning {
-  // Trade object is null for quote not found case
-  const isBridgeTrade =
-    derivedSwapInfo.currencies.input?.currency.chainId !== derivedSwapInfo.currencies.output?.currency.chainId
-
+export function getSwapWarningFromError({ error, t }: { error: Error; t: TFunction }): Warning {
   if (error instanceof FetchError) {
     // Special case: rate limit errors are not parsed by errorCode
     if (isRateLimitFetchError(error)) {
@@ -40,16 +27,9 @@ export function getSwapWarningFromError({
         }
       }
 
+      // SPRY: cross-chain bridging is pruned (single-chain app), so the
+      // bridge-specific no-quotes variant is gone.
       case TradingApi.Err404.errorCode.RESOURCE_NOT_FOUND: {
-        if (isBridgeTrade) {
-          return {
-            type: WarningLabel.NoQuotesFound,
-            severity: WarningSeverity.Low,
-            action: WarningAction.DisableReview,
-            title: t('swap.warning.noQuotesFound.title'),
-            message: t('swap.warning.noQuotesFound.bridging.message'),
-          }
-        }
         return {
           type: WarningLabel.NoRoutesError,
           severity: WarningSeverity.Low,

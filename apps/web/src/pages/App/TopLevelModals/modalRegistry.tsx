@@ -70,12 +70,6 @@ const BridgedAssetModal = createLazy(() =>
   })),
 )
 
-const WormholeModal = createLazy(() =>
-  import('uniswap/src/components/BridgedAsset/WormholeModal').then((module) => ({
-    default: module.WormholeModal,
-  })),
-)
-
 const ReportTokenModal = createLazy(() =>
   import('uniswap/src/components/reporting/ReportTokenIssueModal').then((module) => ({
     default: module.ReportTokenIssueModal,
@@ -237,10 +231,6 @@ export const modalRegistry: ModalRegistry = {
   [ModalName.BridgedAsset]: {
     component: BridgedAssetModal,
     shouldMount: (state) => state.application.openModal?.name === ModalName.BridgedAsset,
-  },
-  [ModalName.Wormhole]: {
-    component: WormholeModal,
-    shouldMount: (state) => state.application.openModal?.name === ModalName.Wormhole,
   },
   [ModalName.ReportTokenIssue]: {
     component: ReportTokenModal,

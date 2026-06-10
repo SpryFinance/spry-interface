@@ -14,7 +14,6 @@ import { useAllTransactionSettings } from 'uniswap/src/features/transactions/com
 import { useV4SwapEnabled } from 'uniswap/src/features/transactions/swap/hooks/useV4SwapEnabled'
 import type { ApprovalTxInfo } from 'uniswap/src/features/transactions/swap/review/hooks/useTokenApprovalInfo'
 import { useTokenApprovalInfo } from 'uniswap/src/features/transactions/swap/review/hooks/useTokenApprovalInfo'
-import { createBridgeSwapTxAndGasInfoService } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/bridge/bridgeSwapTxAndGasInfoService'
 import { createChainedActionSwapTxAndGasInfoService } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/chained/chainedActionTxSwapAndGasInfoService'
 import { createClassicSwapTxAndGasInfoService } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/classic/classicSwapTxAndGasInfoService'
 import { FALLBACK_SWAP_REQUEST_POLL_INTERVAL_MS } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/constants'
@@ -119,16 +118,6 @@ export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
     return decorateWithEVMLogging(classicService)
   }, [swapConfig, transactionSettings, instructionService, hasOverrides, decorateWithEVMLogging, account])
 
-  const bridgeSwapTxInfoService = useMemo(() => {
-    const bridgeService = createBridgeSwapTxAndGasInfoService({
-      ...swapConfig,
-      transactionSettings,
-      instructionService,
-      hasOverrides,
-    })
-    return decorateWithEVMLogging(bridgeService)
-  }, [swapConfig, transactionSettings, instructionService, hasOverrides, decorateWithEVMLogging])
-
   const uniswapXSwapTxInfoService = useMemo(() => {
     return createUniswapXSwapTxAndGasInfoService()
   }, [])
@@ -152,7 +141,9 @@ export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
   const services = useMemo(() => {
     return {
       [TradingApi.Routing.CLASSIC]: classicSwapTxInfoService,
-      [TradingApi.Routing.BRIDGE]: bridgeSwapTxInfoService,
+      // SPRY: cross-chain bridging is pruned; the generated Routing enum keeps
+      // the BRIDGE member, so the exhaustive map points it at the no-op service.
+      [TradingApi.Routing.BRIDGE]: createNoopService(),
       [TradingApi.Routing.PRIORITY]: uniswapXSwapTxInfoService,
       [TradingApi.Routing.DUTCH_V2]: uniswapXSwapTxInfoService,
       [TradingApi.Routing.DUTCH_V3]: uniswapXSwapTxInfoService,
@@ -165,13 +156,7 @@ export function useSwapTxAndGasInfoService(): SwapTxAndGasInfoService {
       // JUPITER member, so the exhaustive map points it at the no-op service.
       [TradingApi.Routing.JUPITER]: createNoopService(),
     } satisfies RoutingServicesMap
-  }, [
-    classicSwapTxInfoService,
-    bridgeSwapTxInfoService,
-    uniswapXSwapTxInfoService,
-    chainedSwapTxInfoService,
-    wrapTxInfoService,
-  ])
+  }, [classicSwapTxInfoService, uniswapXSwapTxInfoService, chainedSwapTxInfoService, wrapTxInfoService])
 
   return useMemo(() => {
     return createSwapTxAndGasInfoService({ services })

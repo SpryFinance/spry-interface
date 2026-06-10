@@ -2,7 +2,6 @@ import { isBetaEnv, isDevEnv } from '@universe/environment'
 import { useAtomValue } from 'jotai/utils'
 import { useTranslation } from 'react-i18next'
 import { BridgedAssetModalAtom } from 'uniswap/src/components/BridgedAsset/BridgedAssetModal'
-import { WormholeModalAtom } from 'uniswap/src/components/BridgedAsset/WormholeModal'
 import { ReportTokenDataModalPropsAtom } from 'uniswap/src/components/reporting/ReportTokenDataModal'
 import { ReportTokenIssueModalPropsAtom } from 'uniswap/src/components/reporting/ReportTokenIssueModal'
 import { useActiveAddresses } from 'uniswap/src/features/accounts/store/hooks'
@@ -25,7 +24,6 @@ export function TopLevelModals() {
   const { evmAddress, svmAddress } = useActiveAddresses()
   const blockedAddress = useAccountRiskCheck({ evmAddress, svmAddress })
   const bridgedAssetModalProps = useAtomValue(BridgedAssetModalAtom)
-  const wormholeModalProps = useAtomValue(WormholeModalAtom)
 
   const reportTokenIssueProps = useAtomValue(ReportTokenIssueModalPropsAtom)
   const reportTokenDataProps = useAtomValue(ReportTokenDataModalPropsAtom)
@@ -94,8 +92,6 @@ export function TopLevelModals() {
       <ModalRenderer modalName={ModalName.ReceiveCryptoModal} />
       <ModalRenderer modalName={ModalName.Send} />
       <ModalRenderer modalName={ModalName.BridgedAsset} componentProps={bridgedAssetModalProps} />
-      <ModalRenderer modalName={ModalName.Wormhole} componentProps={wormholeModalProps} />
-      <ModalRenderer modalName={ModalName.PendingWalletConnection} />
       <ModalRenderer
         modalName={ModalName.ReportTokenIssue}
         componentProps={{ ...reportTokenIssueProps, onReportSuccess }}

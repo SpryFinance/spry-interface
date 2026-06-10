@@ -62,7 +62,7 @@ export function getSwapWarnings({
   }
 
   if (trade.error) {
-    warnings.push(getSwapWarningFromError({ error: trade.error, t, derivedSwapInfo }))
+    warnings.push(getSwapWarningFromError({ error: trade.error, t }))
   }
 
   // swap form is missing input, output fields
