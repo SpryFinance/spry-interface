@@ -184,15 +184,15 @@ describe('PortfolioPools', () => {
 
     expect(screen.getByText('No positions')).toBeInTheDocument()
     expect(screen.getByText(/liquidity positions/)).toBeInTheDocument()
-    const explorePoolsLink = screen.getByRole('link', { name: 'Explore pools' })
     const newPositionLink = screen.getByRole('link', { name: 'New position' })
 
-    expect(explorePoolsLink).toHaveAttribute('href', '/explore/pools')
+    // SPRY: "Explore pools" is a coming-soon button for the testnet phase - present but unreachable
+    // (not a link), with a "Soon" badge.
+    expect(screen.getByText('Explore pools')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Explore pools' })).not.toBeInTheDocument()
+    expect(screen.getByText('Soon')).toBeInTheDocument()
+
     expect(newPositionLink).toHaveAttribute('href', '/positions/create?entryPoint=%2Fportfolio%2Fpools')
-    expect(explorePoolsLink.parentElement).toHaveAttribute(
-      'data-element-name',
-      ElementName.PositionsEmptyStateExplorePools,
-    )
     expect(newPositionLink.parentElement).toHaveAttribute(
       'data-element-name',
       ElementName.PositionsEmptyStateNewPosition,
@@ -464,7 +464,9 @@ describe('PortfolioPools', () => {
       render(<PortfolioPools />)
 
       expect(screen.getByText('No positions')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'Explore pools' })).toBeInTheDocument()
+      // SPRY: "Explore pools" is a coming-soon button (present, not a link) for the testnet phase.
+      expect(screen.getByText('Explore pools')).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Explore pools' })).not.toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'New position' })).not.toBeInTheDocument()
       // Sanity: the connected-only V2 import nudge is not shown in the empty-state branch anyway,
       // but verify the populated-list branch also hides it via the existing isExternalWallet guard.

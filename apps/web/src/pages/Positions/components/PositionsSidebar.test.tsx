@@ -9,16 +9,12 @@ vi.mock('~/pages/Positions/TopPools', () => ({
 }))
 
 describe('PositionsSidebar', () => {
-  it('always renders TopPools with the provided chainFilter', () => {
+  // SPRY: "Top pools by TVL" is commented out for the testnet phase (gateway-only data). Restore the
+  // two assertions below (and the render in PositionsSidebar.tsx) when TopPools comes back for mainnet.
+  it('does not render TopPools (hidden for the testnet phase)', () => {
     render(<PositionsSidebar chainFilter={UniverseChainId.Mainnet} isConnected={false} />)
 
-    expect(screen.getByTestId('top-pools-mock')).toHaveTextContent(`chain-${UniverseChainId.Mainnet}`)
-  })
-
-  it('renders TopPools with all-chains marker when chainFilter is null', () => {
-    render(<PositionsSidebar chainFilter={null} isConnected={false} />)
-
-    expect(screen.getByTestId('top-pools-mock')).toHaveTextContent('all-chains')
+    expect(screen.queryByTestId('top-pools-mock')).not.toBeInTheDocument()
   })
 
   it('hides the learn-more block when isConnected is false', () => {

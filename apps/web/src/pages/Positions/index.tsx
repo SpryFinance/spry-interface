@@ -14,7 +14,10 @@ import { PositionsListSection } from '~/features/Liquidity/PositionsListSection'
 import { SpryTiersCard } from '~/features/Liquidity/SpryTiersCard'
 import { useAccount } from '~/hooks/useAccount'
 import { ClosedPositionsCTA } from '~/pages/Positions/components/ClosedPositionsCTA'
-import { PositionsSidebar } from '~/pages/Positions/components/PositionsSidebar'
+// SPRY: the "Learn about liquidity provision" sidebar is hidden for the testnet phase (its only content
+// after the TopPools hide); the Spry fee-tier explainer card now carries that educational role. Restore
+// the import + the <PositionsSidebar> render below to bring the sidebar back.
+// import { PositionsSidebar } from '~/pages/Positions/components/PositionsSidebar'
 import { usePositionFilters } from '~/pages/Positions/hooks/usePositionFilters'
 import { useCreatePositionHref } from '~/utils/createPositionRoute'
 
@@ -55,7 +58,9 @@ export function Pool() {
     <Trace logImpression page={InterfacePageName.Positions}>
       <Flex
         row
-        justifyContent="space-between"
+        // SPRY: centered while the right-hand sidebar is hidden for testnet. Restore "space-between" when
+        // the <PositionsSidebar> render below comes back.
+        justifyContent="center"
         $xl={{ flexDirection: 'column', gap: '$gap16' }}
         width="100%"
         gap={20}
@@ -106,7 +111,7 @@ export function Pool() {
           )}
           <ClosedPositionsCTA show={!statusFilter.includes(PositionStatus.CLOSED) && !!account.address} />
         </Flex>
-        <PositionsSidebar chainFilter={chainFilter} isConnected={isConnected} />
+        {/* SPRY: "Learn about liquidity provision" sidebar hidden for testnet. Restore: <PositionsSidebar chainFilter={chainFilter} isConnected={isConnected} /> (+ the import above). */}
       </Flex>
     </Trace>
   )

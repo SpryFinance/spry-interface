@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Button, Flex } from 'ui/src'
+import { Button, Flex, Text } from 'ui/src'
 import { ElementName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
 import {
@@ -25,23 +25,36 @@ export function EmptyPositionsView({
       withBorder={withBorder}
       action={
         <Flex row gap="$gap8" $md={{ flexDirection: 'column', width: '100%' }} width={BUTTON_AREA_WIDTH}>
-          <Trace logPress element={ElementName.PositionsEmptyStateExplorePools}>
+          {/* SPRY: "Explore pools" is a coming-soon button for the testnet phase (grayed + unreachable, no link),
+              matching the disabled Explore/Portfolio navs. Restore the Trace + tag="a"/href and drop the badge to re-enable. */}
+          <Flex position="relative" $md={{ width: '100%' }}>
             <Button
               $md={{
                 py: '$spacing16',
+                width: '100%',
               }}
               variant="default"
               size="small"
               emphasis="secondary"
-              tag="a"
-              href="/explore/pools"
-              $platform-web={{
-                textDecoration: 'none',
-              }}
+              isDisabled
+              cursor="default"
             >
               {t('pools.explore')}
             </Button>
-          </Trace>
+            <Flex
+              position="absolute"
+              top={-6}
+              right={-6}
+              backgroundColor="$statusWarning"
+              borderRadius="$rounded4"
+              px="$spacing4"
+              py="$spacing1"
+            >
+              <Text variant="body4" fontSize={8} lineHeight={10} fontWeight="600" color="$surface1">
+                Soon
+              </Text>
+            </Flex>
+          </Flex>
           {showNewPositionAction && (
             <Trace logPress element={ElementName.PositionsEmptyStateNewPosition}>
               <Button
