@@ -6,18 +6,19 @@ import PROVIDE_LIQUIDITY from '~/assets/images/provideLiquidity.png'
 import V4_HOOK from '~/assets/images/v4Hooks.png'
 import { LearnMoreTile } from '~/features/Liquidity/components/LearnMoreTiles'
 import { ExternalArrowLink } from '~/features/Liquidity/ExternalArrowLink'
-import { TopPools } from '~/pages/Positions/TopPools'
+// SPRY: "Top pools by TVL" hidden for the testnet phase. Restore this import + the render below to bring it back.
+// import { TopPools } from '~/pages/Positions/TopPools'
 
 interface PositionsSidebarProps {
   chainFilter: UniverseChainId | null
   isConnected: boolean
 }
 
-export function PositionsSidebar({ chainFilter, isConnected }: PositionsSidebarProps) {
+export function PositionsSidebar({ isConnected }: PositionsSidebarProps) {
   const { t } = useTranslation()
   return (
     <Flex gap="$gap32">
-      <TopPools chainId={chainFilter} />
+      {/* SPRY: "Top pools by TVL" hidden for the testnet phase. Restore: <TopPools chainId={chainFilter} /> (+ the import + the chainFilter prop). */}
       {isConnected && (
         <Flex gap="$gap20" mb="$spacing24">
           <Text variant="subheading1">{t('liquidity.learnMoreLabel')}</Text>
