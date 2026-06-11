@@ -188,7 +188,7 @@ describe('PortfolioPools', () => {
     const newPositionLink = screen.getByRole('link', { name: 'New position' })
 
     expect(explorePoolsLink).toHaveAttribute('href', '/explore/pools')
-    expect(newPositionLink).toHaveAttribute('href', '/positions/create/v4?entryPoint=%2Fportfolio%2Fpools')
+    expect(newPositionLink).toHaveAttribute('href', '/positions/create?entryPoint=%2Fportfolio%2Fpools')
     expect(explorePoolsLink.parentElement).toHaveAttribute(
       'data-element-name',
       ElementName.PositionsEmptyStateExplorePools,
@@ -344,7 +344,7 @@ describe('PortfolioPools', () => {
     expect(PositionsHeader).not.toHaveBeenCalled()
     expect(screen.getByRole('link', { name: 'New position' })).toHaveAttribute(
       'href',
-      '/positions/create/v4?entryPoint=%2Fportfolio%2Fpools%3Fchain%3Dbase',
+      '/positions/create?entryPoint=%2Fportfolio%2Fpools%3Fchain%3Dbase',
     )
   })
 

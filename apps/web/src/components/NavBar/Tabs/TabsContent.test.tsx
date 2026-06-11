@@ -34,7 +34,7 @@ describe('useTabsContent', () => {
   })
 
   it('should keep Pool active on create-position pages without a Portfolio entry point', () => {
-    window.history.pushState({}, '', '/positions/create/v4')
+    window.history.pushState({}, '', '/positions/create')
 
     expect(getTabState(ElementName.NavbarPoolTab)).toBe(true)
     expect(getTabState(ElementName.NavbarPortfolioTab)).toBe(false)
@@ -44,7 +44,7 @@ describe('useTabsContent', () => {
     window.history.pushState(
       {},
       '',
-      `/positions/create/v4?${new URLSearchParams({ entryPoint: '/portfolio/pools' }).toString()}`,
+      `/positions/create?${new URLSearchParams({ entryPoint: '/portfolio/pools' }).toString()}`,
     )
 
     expect(getTabState(ElementName.NavbarPoolTab)).toBe(false)
@@ -52,7 +52,7 @@ describe('useTabsContent', () => {
   })
 
   it('should make Portfolio active from a location state Portfolio Pools entry point', () => {
-    window.history.pushState({ usr: { entryPoint: '/portfolio/pools' } }, '', '/positions/create/v4')
+    window.history.pushState({ usr: { entryPoint: '/portfolio/pools' } }, '', '/positions/create')
 
     expect(getTabState(ElementName.NavbarPoolTab)).toBe(false)
     expect(getTabState(ElementName.NavbarPortfolioTab)).toBe(true)
@@ -62,7 +62,7 @@ describe('useTabsContent', () => {
     window.history.pushState(
       {},
       '',
-      `/positions/create/v4?${new URLSearchParams({ entryPoint: '//evil.com/portfolio/pools' }).toString()}`,
+      `/positions/create?${new URLSearchParams({ entryPoint: '//evil.com/portfolio/pools' }).toString()}`,
     )
 
     expect(getTabState(ElementName.NavbarPoolTab)).toBe(true)
@@ -73,7 +73,7 @@ describe('useTabsContent', () => {
     window.history.pushState(
       {},
       '',
-      `/positions/create/v4?${new URLSearchParams({ entryPoint: '/portfolio/not-an-address/pools' }).toString()}`,
+      `/positions/create?${new URLSearchParams({ entryPoint: '/portfolio/not-an-address/pools' }).toString()}`,
     )
 
     expect(getTabState(ElementName.NavbarPoolTab)).toBe(true)

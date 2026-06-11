@@ -42,7 +42,7 @@ export function DisconnectedWalletView() {
             size="small"
             emphasis="secondary"
             tag="a"
-            href="/positions/create/v4"
+            href="/positions/create"
             $platform-web={{
               textDecoration: 'none',
             }}

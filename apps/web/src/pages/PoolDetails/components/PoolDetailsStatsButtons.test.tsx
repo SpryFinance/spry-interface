@@ -158,7 +158,7 @@ describe('PoolDetailsStatsButton', () => {
 
     await userEvent.click(screen.getByTestId(TestID.PoolDetailsAddLiquidityButton))
     expect(globalThis.window.location.href).toContain(
-      '/positions/create/v3?currencyA=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&currencyB=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&chain=ethereum',
+      '/positions/create?currencyA=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&currencyB=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&chain=ethereum',
     )
   })
 
@@ -166,7 +166,7 @@ describe('PoolDetailsStatsButton', () => {
     render(<PoolDetailsStatsButtons {...mockPropsTokensReversed} feeTier={6200} tickSpacing={11} isDynamic={true} />)
     await userEvent.click(screen.getByTestId(TestID.PoolDetailsAddLiquidityButton))
     expect(globalThis.window.location.href).toContain(
-      '/positions/create/v3?currencyA=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&currencyB=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&chain=ethereum&fee=%7B%22feeAmount%22%3A6200%2C%22tickSpacing%22%3A11%2C%22isDynamic%22%3Atrue%7D',
+      '/positions/create?currencyA=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&currencyB=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&chain=ethereum&fee=%7B%22feeAmount%22%3A6200%2C%22tickSpacing%22%3A11%2C%22isDynamic%22%3Atrue%7D',
     )
   })
 })

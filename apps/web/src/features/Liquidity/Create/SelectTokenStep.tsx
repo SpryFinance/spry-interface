@@ -44,7 +44,6 @@ import { AdvancedButton } from '~/features/Liquidity/Create/AdvancedButton'
 import { CreatingPoolInfo, PoolAlreadyCreatedInfo } from '~/features/Liquidity/Create/CreatingPoolInfo'
 import { useLiquidityUrlState } from '~/features/Liquidity/Create/hooks/useLiquidityUrlState'
 import { PoolParsingError } from '~/features/Liquidity/Create/PoolParsingError'
-import { DEFAULT_POSITION_STATE } from '~/features/Liquidity/Create/types'
 import { FeeTierSelector } from '~/features/Liquidity/FeeTierSelector'
 import { HookModal } from '~/features/Liquidity/HookModal'
 import { useAllFeeTierPoolData } from '~/features/Liquidity/hooks/useAllFeeTierPoolData'
@@ -645,7 +644,6 @@ function SelectStepError({
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { setPositionState } = useCreateLiquidityContext()
 
   if (isUnsupportedTokenSelected) {
     return (
@@ -684,19 +682,12 @@ function SelectStepError({
   }
 
   if (fotToken) {
+    // SPRY: v4-only - no v2 fallback for fee-on-transfer tokens, so just warn (no switch-to-v2 action).
     return (
       <ErrorCallout
         errorMessage={true}
         title={t('token.safety.warning.fotLow.title')}
         description={t('position.fot.warning', { token: fotToken.currency.symbol })}
-        action={t('position.fot.warning.cta')}
-        onPress={() => {
-          navigate('/positions/create/v2')
-          setPositionState({
-            ...DEFAULT_POSITION_STATE,
-            protocolVersion: ProtocolVersion.V2,
-          })
-        }}
       />
     )
   }

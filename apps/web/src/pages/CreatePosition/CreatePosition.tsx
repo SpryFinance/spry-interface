@@ -140,11 +140,8 @@ const Toolbar = () => {
 
   const handleVersionChange = useCallback(
     (version: ProtocolVersion) => {
-      const versionUrl = getProtocolVersionLabel(version)
-      if (versionUrl) {
-        // Ensure useLiquidityUrlState is synced
-        setTimeout(() => navigate(`/positions/create/${versionUrl}`), 1)
-      }
+      // SPRY: v4-only, so there is no versioned create route - stay on /positions/create.
+      setTimeout(() => navigate('/positions/create'), 1)
 
       setPositionState({
         ...DEFAULT_POSITION_STATE,

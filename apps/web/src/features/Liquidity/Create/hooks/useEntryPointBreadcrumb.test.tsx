@@ -9,7 +9,7 @@ function wrapper({ children }: PropsWithChildren): JSX.Element {
 
 describe('useEntryPointBreadcrumb', () => {
   beforeEach(() => {
-    window.history.pushState({}, '', '/positions/create/v4')
+    window.history.pushState({}, '', '/positions/create')
   })
 
   it('should default to the positions breadcrumb when no entry point is present', () => {
@@ -24,7 +24,7 @@ describe('useEntryPointBreadcrumb', () => {
 
   it('should use the Portfolio breadcrumb for a Portfolio Pools entry point query param', () => {
     const entryPoint = '/portfolio/pools?chain=base'
-    window.history.pushState({}, '', `/positions/create/v4?${new URLSearchParams({ entryPoint }).toString()}`)
+    window.history.pushState({}, '', `/positions/create?${new URLSearchParams({ entryPoint }).toString()}`)
 
     const { result } = renderHook(() => useEntryPointBreadcrumb(), { wrapper })
 
@@ -37,7 +37,7 @@ describe('useEntryPointBreadcrumb', () => {
 
   it('should use the Portfolio breadcrumb for an external wallet Portfolio Pools entry point', () => {
     const entryPoint = '/portfolio/0x1234567890123456789012345678901234567890/pools'
-    window.history.pushState({}, '', `/positions/create/v4?${new URLSearchParams({ entryPoint }).toString()}`)
+    window.history.pushState({}, '', `/positions/create?${new URLSearchParams({ entryPoint }).toString()}`)
 
     const { result } = renderHook(() => useEntryPointBreadcrumb(), { wrapper })
 
@@ -49,7 +49,7 @@ describe('useEntryPointBreadcrumb', () => {
   })
 
   it('should use location state as a fallback when no query entry point exists', () => {
-    window.history.pushState({ usr: { entryPoint: '/portfolio/pools' } }, '', '/positions/create/v4')
+    window.history.pushState({ usr: { entryPoint: '/portfolio/pools' } }, '', '/positions/create')
 
     const { result } = renderHook(() => useEntryPointBreadcrumb(), { wrapper })
 
@@ -64,7 +64,7 @@ describe('useEntryPointBreadcrumb', () => {
     window.history.pushState(
       {},
       '',
-      `/positions/create/v4?${new URLSearchParams({ entryPoint: '//evil.com/portfolio/pools' }).toString()}`,
+      `/positions/create?${new URLSearchParams({ entryPoint: '//evil.com/portfolio/pools' }).toString()}`,
     )
 
     const { result } = renderHook(() => useEntryPointBreadcrumb(), { wrapper })
@@ -80,7 +80,7 @@ describe('useEntryPointBreadcrumb', () => {
     window.history.pushState(
       {},
       '',
-      `/positions/create/v4?${new URLSearchParams({ entryPoint: '/explore/pools/../../foo' }).toString()}`,
+      `/positions/create?${new URLSearchParams({ entryPoint: '/explore/pools/../../foo' }).toString()}`,
     )
 
     const { result } = renderHook(() => useEntryPointBreadcrumb(), { wrapper })
@@ -96,7 +96,7 @@ describe('useEntryPointBreadcrumb', () => {
     window.history.pushState(
       {},
       '',
-      `/positions/create/v4?${new URLSearchParams({ entryPoint: '/portfolio/../pools' }).toString()}`,
+      `/positions/create?${new URLSearchParams({ entryPoint: '/portfolio/../pools' }).toString()}`,
     )
 
     const { result } = renderHook(() => useEntryPointBreadcrumb(), { wrapper })
@@ -112,7 +112,7 @@ describe('useEntryPointBreadcrumb', () => {
     window.history.pushState(
       {},
       '',
-      `/positions/create/v4?${new URLSearchParams({ entryPoint: '/portfolio/not-an-address/pools' }).toString()}`,
+      `/positions/create?${new URLSearchParams({ entryPoint: '/portfolio/not-an-address/pools' }).toString()}`,
     )
 
     const { result } = renderHook(() => useEntryPointBreadcrumb(), { wrapper })

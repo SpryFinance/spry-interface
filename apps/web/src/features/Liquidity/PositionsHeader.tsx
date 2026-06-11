@@ -14,7 +14,7 @@ import { lpStatusConfig } from 'uniswap/src/features/positions/lpStatusConfig'
 import { Dropdown } from '~/components/Dropdowns/Dropdown'
 import { LP_POSITION_STATUS_FILTER_OPTIONS } from '~/features/Liquidity/constants'
 import { getProtocolStatusLabel } from '~/features/Liquidity/utils/protocolVersion'
-import { buildCreatePositionHref, type CreatePositionProtocolVersion } from '~/utils/createPositionRoute'
+import { buildCreatePositionHref } from '~/utils/createPositionRoute'
 
 const StyledDropdownButton = {
   borderRadius: '$rounded12',
@@ -66,24 +66,20 @@ export function PositionsHeader({
   const shouldLeftAlignCreateButton = shouldStackControls
 
   const getCreatePositionHref = useCallback(
-    (protocolVersion: CreatePositionProtocolVersion = 'v4') =>
+    () =>
       buildCreatePositionHref({
         entryPoint: createPositionEntryPoint,
         isAddLiquidityRevampEnabled: isAddLiquidityRevamp,
-        protocolVersion,
       }),
     [createPositionEntryPoint, isAddLiquidityRevamp],
   )
 
-  const navigateToCreatePosition = useCallback(
-    (protocolVersion?: CreatePositionProtocolVersion) => {
-      const result = navigate(getCreatePositionHref(protocolVersion))
-      if (result) {
-        result.catch(() => undefined)
-      }
-    },
-    [getCreatePositionHref, navigate],
-  )
+  const navigateToCreatePosition = useCallback(() => {
+    const result = navigate(getCreatePositionHref())
+    if (result) {
+      result.catch(() => undefined)
+    }
+  }, [getCreatePositionHref, navigate])
 
   const statusFilterOptions = useMemo(() => {
     return LP_POSITION_STATUS_FILTER_OPTIONS.map((status) => {

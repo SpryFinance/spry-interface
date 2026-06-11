@@ -181,7 +181,8 @@ export function PoolDetailsStatsButtons({
         if (hookAddress) {
           queryParams.set('hook', hookAddress)
         }
-        const url = `/positions/create/${protocolVersion?.toLowerCase()}?${queryParams.toString()}`
+        // SPRY: v4-only, no /positions/create/:version variant.
+        const url = `/positions/create?${queryParams.toString()}`
         navigate(url, {
           state: { from: location.pathname },
         })
