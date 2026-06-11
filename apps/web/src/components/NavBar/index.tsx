@@ -1,10 +1,13 @@
-import { FeatureFlags, useFeatureFlag } from '@universe/gating'
-import { Flex, styled, Nav, useMedia } from 'ui/src'
+import { Flex, styled, Nav } from 'ui/src'
 import { INTERFACE_NAV_HEIGHT, zIndexes } from 'ui/src/theme'
 import { useConnectionStatus } from 'uniswap/src/features/accounts/store/hooks'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { CompanyMenu } from '~/components/NavBar/CompanyMenu'
-import { NewUserCTAButton } from '~/components/NavBar/DownloadApp/NewUserCTAButton'
+// SPRY: the Uniswap "Get the app" wallet-download CTA is hidden (restore these imports + the usage below).
+// import { FeatureFlags, useFeatureFlag } from '@universe/gating'
+// import { useMedia } from 'ui/src'
+// import { NewUserCTAButton } from '~/components/NavBar/DownloadApp/NewUserCTAButton'
+// import { PageType, useIsPage } from '~/hooks/useIsPage'
 import { PreferenceMenu } from '~/components/NavBar/PreferencesMenu'
 import { useTabsVisible } from '~/components/NavBar/ScreenSizes'
 // SPRY: search box temporarily hidden across the nav (restore these imports + the usages below to re-enable).
@@ -13,7 +16,6 @@ import { useTabsVisible } from '~/components/NavBar/ScreenSizes'
 import { Tabs } from '~/components/NavBar/Tabs/Tabs'
 import { TestnetModeTooltip } from '~/components/NavBar/TestnetMode/TestnetModeTooltip'
 import { Web3Status } from '~/components/Web3Status'
-import { PageType, useIsPage } from '~/hooks/useIsPage'
 
 const NavItemsRow = styled(Flex, {
   position: 'unset',
@@ -29,16 +31,16 @@ const NavItemsRow = styled(Flex, {
 })
 
 export function Navbar() {
-  const isLandingPage = useIsPage(PageType.LANDING)
-
-  const media = useMedia()
-  const isSmallScreen = media.md
+  // SPRY: only used by the hidden "Get the app" CTA below.
+  // const isLandingPage = useIsPage(PageType.LANDING)
+  // const media = useMedia()
+  // const isSmallScreen = media.md
+  // const isEmbeddedWalletEnabled = useFeatureFlag(FeatureFlags.EmbeddedWallet)
   const areTabsVisible = useTabsVisible()
   // const isSearchBarVisible = useIsSearchBarVisible() // SPRY: search box temporarily hidden
   const { isConnected } = useConnectionStatus()
 
   const { isTestnetModeEnabled } = useEnabledChains()
-  const isEmbeddedWalletEnabled = useFeatureFlag(FeatureFlags.EmbeddedWallet)
 
   return (
     <Nav
@@ -69,7 +71,9 @@ export function Navbar() {
 
         <NavItemsRow justifyContent="flex-end">
           {/* SPRY: search box temporarily hidden. Restore: {!isSearchBarVisible && <SearchBar />} */}
-          {!isEmbeddedWalletEnabled && isLandingPage && !isSmallScreen && <NewUserCTAButton />}
+          {/* SPRY: the Uniswap "Get the app" wallet-download CTA is hidden ('/' serves Swap during testnet, so
+              PageType.LANDING matched the live root route). Restore with the Landing page at mainnet:
+              {!isEmbeddedWalletEnabled && isLandingPage && !isSmallScreen && <NewUserCTAButton />} (+ the imports above). */}
           {!isConnected && <PreferenceMenu />}
           {isTestnetModeEnabled && <TestnetModeTooltip />}
           <Web3Status />

@@ -1,18 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Accordion, AnimateTransition, Flex, Square, Text } from 'ui/src'
+import { Accordion, Flex, Square, Text } from 'ui/src'
 import { RotatableChevron } from 'ui/src/components/icons/RotatableChevron'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
-import { HelpModal } from '~/components/HelpModal/HelpModal'
 import { MenuLink } from '~/components/NavBar/CompanyMenu/MenuDropdown'
-import { LegalAndPrivacyMenu } from '~/components/NavBar/LegalAndPrivacyMenu'
 import { NavDropdown } from '~/components/NavBar/NavDropdown'
-import { getSettingsViewIndex } from '~/components/NavBar/PreferencesMenu'
-import { CurrencySettings } from '~/components/NavBar/PreferencesMenu/Currency'
-import { LanguageSettings } from '~/components/NavBar/PreferencesMenu/Language'
-import { PreferencesView } from '~/components/NavBar/PreferencesMenu/shared'
 import { useTabsContent } from '~/components/NavBar/Tabs/TabsContent'
-import { Socials } from '~/pages/Landing/sections/Footer'
 
 function MenuSection({
   title,
@@ -48,84 +40,37 @@ function MenuSection({
   )
 }
 
+// SPRY: the drawer is app navigation only for the testnet phase, mirroring the desktop chrome (no
+// company mega-menu, floating help unmounted via modalRegistry). Removed here: the HelpModal "?"
+// (it linked to Uniswap support/docs), Socials, LegalAndPrivacyMenu (ToS/privacy stay reachable from
+// the wallet-connect modal and the Landing footer), and the dead language/currency settings views
+// (their trigger section was already pruned). Restore those imports + renders to bring any back.
 export function MobileMenuDrawer({ isOpen, closeMenu }: { isOpen: boolean; closeMenu: () => void }) {
-  const [openSections, setOpenSections] = useState<string[]>()
-  const [settingsView, setSettingsView] = useState<PreferencesView>(PreferencesView.SETTINGS)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const changeView = useCallback(
-    (view: PreferencesView) => {
-      setSettingsView(view)
-      if (dropdownRef.current) {
-        dropdownRef.current.scroll({
-          top: 0,
-        })
-      }
-    },
-    [setSettingsView, dropdownRef],
-  )
-  const onExitPreferencesMenu = useCallback(() => changeView(PreferencesView.SETTINGS), [changeView])
   const { t } = useTranslation()
   const tabsContent = useTabsContent()
 
-  // Collapse sections on close
-  useEffect(() => {
-    if (!isOpen) {
-      setTimeout(() => setOpenSections([]), 300)
-    }
-  }, [isOpen])
-
   return (
-    <NavDropdown
-      dropdownRef={dropdownRef}
-      isOpen={isOpen}
-      dataTestId={TestID.CompanyMenuMobileDrawer}
-      borderColor="$surface3"
-    >
+    <NavDropdown isOpen={isOpen} dataTestId={TestID.CompanyMenuMobileDrawer} borderColor="$surface3">
       <Flex pt="$spacing12" pb="$spacing32" px="$spacing24">
-        <AnimateTransition
-          currentIndex={getSettingsViewIndex(settingsView)}
-          animationType={settingsView === PreferencesView.SETTINGS ? 'forward' : 'backward'}
-        >
-          <Accordion
-            overflow="hidden"
-            width="100%"
-            type="multiple"
-            value={openSections}
-            onValueChange={setOpenSections}
-          >
-            {/* SPRY: only the app navigation, legal, and socials remain. The Uniswap
-                product / protocol / company marketing sections are removed. */}
-            <Flex gap="$spacing20">
-              <MenuSection title={t('common.app')} collapsible={false}>
-                {tabsContent.map((tab, index) => (
-                  <MenuLink
-                    key={`${tab.title}_${index}}`}
-                    label={tab.title}
-                    href={tab.href}
-                    internal
-                    closeMenu={closeMenu}
-                    icon={tab.icon}
-                    textVariant="body2"
-                    elementName={tab.elementName}
-                    comingSoon={tab.comingSoon}
-                  />
-                ))}
-              </MenuSection>
-              <Flex paddingBottom="$padding8">
-                <LegalAndPrivacyMenu closeMenu={closeMenu} />
-              </Flex>
-              <Flex row width="100%" justifyContent="space-between" alignItems="flex-end">
-                <HelpModal showOnXL />
-                <Flex gap="$spacing16">
-                  <Socials iconSize="20px" />
-                </Flex>
-              </Flex>
-            </Flex>
-          </Accordion>
-
-          <LanguageSettings onExitMenu={onExitPreferencesMenu} />
-          <CurrencySettings onExitMenu={onExitPreferencesMenu} />
-        </AnimateTransition>
+        <Accordion overflow="hidden" width="100%" type="multiple">
+          <Flex gap="$spacing20">
+            <MenuSection title={t('common.app')} collapsible={false}>
+              {tabsContent.map((tab, index) => (
+                <MenuLink
+                  key={`${tab.title}_${index}}`}
+                  label={tab.title}
+                  href={tab.href}
+                  internal
+                  closeMenu={closeMenu}
+                  icon={tab.icon}
+                  textVariant="body2"
+                  elementName={tab.elementName}
+                  comingSoon={tab.comingSoon}
+                />
+              ))}
+            </MenuSection>
+          </Flex>
+        </Accordion>
       </Flex>
     </NavDropdown>
   )

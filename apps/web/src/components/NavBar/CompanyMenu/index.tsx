@@ -8,7 +8,7 @@ import Trace from 'uniswap/src/features/telemetry/Trace'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
 import { NavIcon } from '~/components/Logo/NavIcon'
 import { MobileMenuDrawer } from '~/components/NavBar/CompanyMenu/MobileMenuDrawer'
-import { useIsMobileDrawer } from '~/components/NavBar/ScreenSizes'
+import { useTabsVisible } from '~/components/NavBar/ScreenSizes'
 
 const ArrowDownWrapper = styled(Text, {
   color: '$neutral2',
@@ -23,7 +23,7 @@ const ArrowDownWrapper = styled(Text, {
 export function CompanyMenu() {
   const popoverRef = useRef<Popover>(null)
   const media = useMedia()
-  const isMobileDrawer = useIsMobileDrawer()
+  const areTabsVisible = useTabsVisible()
   const isLargeScreen = !media.xxl
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(false)
@@ -52,10 +52,12 @@ export function CompanyMenu() {
     </Trace>
   )
 
-  // SPRY: drop the Uniswap "company" mega-menu. On desktop the brand mark is just a
-  // home link. On mobile we keep the popover, because its drawer is the primary
-  // mobile navigation (the app tabs live there), not a marketing menu.
-  if (!isMobileDrawer) {
+  // SPRY: drop the Uniswap "company" mega-menu. When the nav tabs are visible (> md) the brand
+  // mark is just a home link. Whenever the tabs are hidden (mobile AND the small-tablet band up to
+  // md) we keep the popover, because its drawer is the primary navigation there, not a marketing
+  // menu. Gating on tab visibility (not useIsMobileDrawer/sm) is what covers the 451-640px band,
+  // which would otherwise have no nav at all.
+  if (areTabsVisible) {
     return brandLogo
   }
 
