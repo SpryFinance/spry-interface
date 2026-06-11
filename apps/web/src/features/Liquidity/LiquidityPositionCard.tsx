@@ -1,14 +1,11 @@
 import { ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
-import { FeatureFlags, useFeatureFlag } from '@universe/gating'
+import type { CurrencyAmount, Currency } from '@uniswap/sdk-core'
 import { memo, useMemo, useState } from 'react'
 import { Flex, Shine, useIsTouchDevice, useMedia } from 'ui/src'
 import { zIndexes } from 'ui/src/theme'
-import { PollingInterval } from 'uniswap/src/constants/misc'
+import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { PositionInfo } from 'uniswap/src/features/positions/types'
-import { useCurrencyInfo } from 'uniswap/src/features/tokens/useCurrencyInfo'
-import { useUSDCValue } from 'uniswap/src/features/transactions/hooks/useUSDCPriceWrapper'
-import { buildCurrencyId, currencyAddress } from 'uniswap/src/utils/currencyId'
 import { NumberType } from 'utilities/src/format/types'
 import {
   CHART_HEIGHT,
@@ -16,7 +13,6 @@ import {
   LiquidityPositionRangeChartLoader,
 } from '~/features/Liquidity/charts/LiquidityPositionRangeChart/LiquidityPositionRangeChart'
 import { WrappedLiquidityPositionSparkline } from '~/features/Liquidity/charts/LiquidityPositionSparkline'
-import { useLpIncentivesFormattedEarnings } from '~/features/Liquidity/hooks/useLpIncentivesFormattedEarnings'
 import { LiquidityPositionDropdownMenu } from '~/features/Liquidity/LiquidityPositionDropdownMenu'
 import {
   LiquidityPositionFeeStats,
@@ -24,6 +20,8 @@ import {
   MinMaxRange,
 } from '~/features/Liquidity/LiquidityPositionFeeStats'
 import { LiquidityPositionInfo, LiquidityPositionInfoLoader } from '~/features/Liquidity/LiquidityPositionInfo'
+import { SpryFeeSparkline } from '~/features/Liquidity/spry/SpryFeeSparkline'
+import { getSpryPositionMeta } from '~/features/Liquidity/spry/useSpryWalletPositions'
 import { getBaseAndQuoteCurrencies } from '~/features/Liquidity/utils/currency'
 import { useHoverProps } from '~/hooks/useHoverProps'
 
@@ -58,7 +56,6 @@ export function LiquidityPositionCardLoader() {
 export const LiquidityPositionCard = memo(function LiquidityPositionCard({
   liquidityPosition,
   showVisibilityOption,
-  showMigrateButton = false,
   disabled = false,
   isVisible = true,
   readOnly = false,
@@ -70,10 +67,9 @@ export const LiquidityPositionCard = memo(function LiquidityPositionCard({
   isVisible?: boolean
   readOnly?: boolean
 }) {
-  const { convertFiatAmountFormatted } = useLocalizationContext()
+  const { formatCurrencyAmount, formatPercent } = useLocalizationContext()
   const isTouchDevice = useIsTouchDevice()
   const [priceInverted, setPriceInverted] = useState(false)
-  const isLPIncentivesEnabled = useFeatureFlag(FeatureFlags.LpIncentives)
 
   const [hover, hoverProps] = useHoverProps()
   const media = useMedia()
@@ -81,10 +77,6 @@ export const LiquidityPositionCard = memo(function LiquidityPositionCard({
 
   const { fee0Amount, fee1Amount } = liquidityPosition
   const sdkPosition = liquidityPosition.version !== ProtocolVersion.V2 ? liquidityPosition.position : undefined
-  const fiatFeeValue0 = useUSDCValue(fee0Amount, PollingInterval.Slow)
-  const fiatFeeValue1 = useUSDCValue(fee1Amount, PollingInterval.Slow)
-  const fiatValue0 = useUSDCValue(liquidityPosition.currency0Amount, PollingInterval.Slow)
-  const fiatValue1 = useUSDCValue(liquidityPosition.currency1Amount, PollingInterval.Slow)
   const priceOrdering = useMemo(() => {
     if (!sdkPosition) {
       return {}
@@ -109,28 +101,25 @@ export const LiquidityPositionCard = memo(function LiquidityPositionCard({
     priceInverted,
   )
 
-  const formattedUsdValue =
-    fiatValue0 && fiatValue1
-      ? convertFiatAmountFormatted(fiatValue0.add(fiatValue1).toExact(), NumberType.FiatTokenPrice)
-      : undefined
+  // SPRY: no USD pricing on testnet, so Position and Fees are pair-denominated (fees carry a "+"
+  // per side), APR reads "New pair" on testnet chains, and the price range gives way to the pool's
+  // fee-curve zone history (Spry positions are always full-range).
+  const spryMeta = getSpryPositionMeta(liquidityPosition)
+  const isTestnetChain = getChainInfo(liquidityPosition.chainId).testnet
 
-  const { totalFormattedEarnings, hasRewards, formattedFeesValue } = useLpIncentivesFormattedEarnings({
-    liquidityPosition,
-    fiatFeeValue0,
-    fiatFeeValue1,
-  })
+  const pairAmount = (amount: CurrencyAmount<Currency>, prefix = ''): string =>
+    `${prefix}${formatCurrencyAmount({ value: amount, type: NumberType.TokenNonTx })} ${amount.currency.symbol}`
 
-  const currency0Id =
-    liquidityPosition.version === ProtocolVersion.V4
-      ? buildCurrencyId(liquidityPosition.chainId, currencyAddress(liquidityPosition.currency0Amount.currency))
-      : undefined
-  const currency1Id =
-    liquidityPosition.version === ProtocolVersion.V4
-      ? buildCurrencyId(liquidityPosition.chainId, currencyAddress(liquidityPosition.currency1Amount.currency))
-      : undefined
-
-  const currency0Info = useCurrencyInfo(currency0Id)
-  const currency1Info = useCurrencyInfo(currency1Id)
+  const formattedValue = `${pairAmount(liquidityPosition.currency0Amount)} / ${pairAmount(liquidityPosition.currency1Amount)}`
+  // one line per pair side, zero sides skipped entirely
+  const feeLines = [fee0Amount, fee1Amount]
+    .filter((amount): amount is CurrencyAmount<Currency> => !!amount && amount.quotient.toString() !== '0')
+    .map((amount) => pairAmount(amount, '+'))
+  const formattedApr = isTestnetChain
+    ? 'New pair'
+    : liquidityPosition.apr
+      ? formatPercent(liquidityPosition.apr)
+      : '-'
 
   const priceOrderingForChart = useMemo(() => {
     if (!sdkPosition || !liquidityPosition.liquidity || !liquidityPosition.tickLower || !liquidityPosition.tickUpper) {
@@ -172,56 +161,51 @@ export const LiquidityPositionCard = memo(function LiquidityPositionCard({
           overflow="hidden"
           $md={{ row: false, alignItems: 'flex-start', gap: '$gap20' }}
         >
-          <LiquidityPositionInfo
-            positionInfo={liquidityPosition}
-            isMiniVersion={isSmallScreen}
-            showMigrateButton={showMigrateButton}
-          />
-          <WrappedLiquidityPositionSparkline
-            version={liquidityPosition.version}
-            chainId={liquidityPosition.chainId}
-            priceInverted={priceInverted}
-            positionStatus={liquidityPosition.status}
-            poolAddressOrId={liquidityPosition.poolId}
-            priceOrdering={priceOrderingForChart}
-          />
-          <Flex $md={{ display: 'block' }} display="none" width="100%">
-            <MinMaxRange
-              priceOrdering={priceOrdering}
-              tickLower={liquidityPosition.tickLower}
-              tickUpper={liquidityPosition.tickUpper}
-              tickSpacing={liquidityPosition.tickSpacing}
-              pricesInverted={priceInverted}
-              setPricesInverted={setPriceInverted}
+          <LiquidityPositionInfo positionInfo={liquidityPosition} isMiniVersion={isSmallScreen} />
+          {spryMeta ? (
+            // SPRY: the gateway price history behind the stock sparkline is empty on testnet, so
+            // Spry pools plot their dynamic fee across recent swaps instead.
+            <SpryFeeSparkline
+              poolId={liquidityPosition.poolId}
+              chainId={liquidityPosition.chainId}
+              tier={spryMeta.tier}
+              positionStatus={liquidityPosition.status}
             />
-          </Flex>
+          ) : (
+            <WrappedLiquidityPositionSparkline
+              version={liquidityPosition.version}
+              chainId={liquidityPosition.chainId}
+              priceInverted={priceInverted}
+              positionStatus={liquidityPosition.status}
+              poolAddressOrId={liquidityPosition.poolId}
+              priceOrdering={priceOrderingForChart}
+            />
+          )}
+          {!spryMeta && (
+            <Flex $md={{ display: 'block' }} display="none" width="100%">
+              <MinMaxRange
+                priceOrdering={priceOrdering}
+                tickLower={liquidityPosition.tickLower}
+                tickUpper={liquidityPosition.tickUpper}
+                tickSpacing={liquidityPosition.tickSpacing}
+                pricesInverted={priceInverted}
+                setPricesInverted={setPriceInverted}
+              />
+            </Flex>
+          )}
         </Flex>
         <LiquidityPositionFeeStats
-          formattedUsdValue={formattedUsdValue}
-          formattedUsdFees={formattedFeesValue}
-          formattedLpIncentiveEarnings={totalFormattedEarnings}
-          hasRewards={hasRewards}
+          formattedValue={formattedValue}
+          feeLines={feeLines}
+          formattedApr={formattedApr}
+          hideRangeColumn={!!spryMeta}
           priceOrdering={priceOrdering}
           tickSpacing={liquidityPosition.tickSpacing}
           tickLower={liquidityPosition.tickLower}
           tickUpper={liquidityPosition.tickUpper}
-          version={liquidityPosition.version}
-          currency0Info={currency0Info}
-          currency1Info={currency1Info}
-          apr={liquidityPosition.apr}
           cardHovered={hover && !disabled}
           pricesInverted={priceInverted}
           setPricesInverted={setPriceInverted}
-          lpIncentiveRewardApr={
-            isLPIncentivesEnabled && liquidityPosition.version === ProtocolVersion.V4
-              ? liquidityPosition.boostedApr
-              : undefined
-          }
-          totalApr={
-            isLPIncentivesEnabled && liquidityPosition.version === ProtocolVersion.V4
-              ? liquidityPosition.totalApr
-              : undefined
-          }
         />
         {!isTouchDevice && !disabled && (
           <Flex position="absolute" top="$spacing16" right="$spacing16" zIndex={zIndexes.mask}>

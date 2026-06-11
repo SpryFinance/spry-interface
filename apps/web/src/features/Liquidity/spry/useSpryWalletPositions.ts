@@ -27,7 +27,7 @@
 // absent (no price oracle on testnet): totalValueUsd/apr stay undefined.
 
 import { getSpryConfig } from '@spry/config'
-import { DYNAMIC_FEE_FLAG } from '@spry/fee'
+import { DYNAMIC_FEE_FLAG, type PoolTier } from '@spry/fee'
 import {
   createSpryGraphClient,
   fetchModifiesByOrigin,
@@ -68,6 +68,25 @@ const Q128 = 1n << 128n
 /** Solidity unchecked subtraction (fee growth deltas wrap mod 2^256). */
 function wrappingSub(a: bigint, b: bigint): bigint {
   return (a - b) & MASK_256
+}
+
+/**
+ * Spry-specific position display data the standard PositionInfo cannot carry:
+ * the pool's tier and its fee-curve zone history (counts of swaps that landed
+ * in the alert/danger zones).
+ */
+export interface SpryPositionMeta {
+  tier: PoolTier
+  alertCount: number
+  dangerCount: number
+}
+
+/** A V4PositionInfo enriched with Spry display data. */
+export type SpryV4PositionInfo = V4PositionInfo & { spry: SpryPositionMeta }
+
+/** The Spry meta attached by useSpryWalletPositions, if this position came from it. */
+export function getSpryPositionMeta(position: { poolId: string }): SpryPositionMeta | undefined {
+  return (position as Partial<SpryV4PositionInfo>).spry
 }
 
 function isZeroAddress(address: string): boolean {
@@ -120,7 +139,7 @@ interface Candidate {
 }
 
 /** The pipeline behind {@link useSpryWalletPositions}; exported for tests and console verification. */
-export async function fetchSpryPositions(owner: Address): Promise<V4PositionInfo[]> {
+export async function fetchSpryPositions(owner: Address): Promise<SpryV4PositionInfo[]> {
   const chainId = SPRY_POSITIONS_CHAIN_ID
   const config = getSpryConfig(chainId)
   if (!config?.subgraphUrl) {
@@ -274,7 +293,7 @@ export async function fetchSpryPositions(owner: Address): Promise<V4PositionInfo
   })
 
   // 6. assemble V4PositionInfo objects (mirrors parseRestPosition's v4 branch)
-  const out: V4PositionInfo[] = []
+  const out: SpryV4PositionInfo[] = []
   spryCandidates.forEach((candidate, i) => {
     const pool = poolById.get(candidate.poolId)
     const slot0 = slot0ByPool.get(candidate.poolId)
@@ -350,6 +369,11 @@ export async function fetchSpryPositions(owner: Address): Promise<V4PositionInfo
       fee0Amount: CurrencyAmount.fromRawAmount(currency0, uncollected0.toString()),
       fee1Amount: CurrencyAmount.fromRawAmount(currency1, uncollected1.toString()),
       isHidden: false,
+      spry: {
+        tier: pool.tier,
+        alertCount: Number(pool.alertCount),
+        dangerCount: Number(pool.dangerCount),
+      },
     })
   })
 

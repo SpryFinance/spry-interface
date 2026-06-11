@@ -97,7 +97,8 @@ export const MODIFIES_BY_ORIGIN_QUERY = `
 
 /**
  * Pool identity + live-ish state for a set of poolIds, with full token
- * metadata. Doubles as the Spry filter: only Spry pools are indexed, so a
+ * metadata and the pool's fee-curve zone history (counts of swaps that landed
+ * in each zone). Doubles as the Spry filter: only Spry pools are indexed, so a
  * missing id means "not a Spry pool".
  */
 export const POOLS_BY_IDS_QUERY = `
@@ -111,6 +112,10 @@ export const POOLS_BY_IDS_QUERY = `
       liquidity
       hooks
       tier
+      safeCount
+      alertCount
+      dangerCount
+      capCount
       token0 { id symbol name decimals }
       token1 { id symbol name decimals }
     }

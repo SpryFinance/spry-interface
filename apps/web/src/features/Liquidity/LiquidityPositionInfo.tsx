@@ -1,24 +1,23 @@
 import { PositionStatus, ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
 import { Anchor, Circle, Flex, Text, useMedia } from 'ui/src'
-import { ArrowRight } from 'ui/src/components/icons/ArrowRight'
 import { StatusIndicatorCircle } from 'ui/src/components/icons/StatusIndicatorCircle'
 import { NetworkLogo } from 'uniswap/src/components/CurrencyLogo/NetworkLogo'
 import { SplitLogo } from 'uniswap/src/components/CurrencyLogo/SplitLogo'
 import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
-import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { LiquidityPositionStatusIndicator } from 'uniswap/src/features/positions/LiquidityPositionStatusIndicator'
 import { PositionInfo } from 'uniswap/src/features/positions/types'
 import { useCurrencyInfos } from 'uniswap/src/features/tokens/useCurrencyInfo'
 import { currencyId } from 'uniswap/src/utils/currencyId'
 import { getPoolDetailsURL } from 'uniswap/src/utils/linking'
-import { LiquidityPositionInfoBadges } from '~/features/Liquidity/LiquidityPositionInfoBadges'
+import { MouseoverTooltip } from '~/components/Tooltip'
 import { TextLoader } from '~/features/Liquidity/Loader'
 import { LpIncentivesAprDisplay } from '~/features/Liquidity/LPIncentives/LpIncentivesAprDisplay'
+import { getSpryPositionMeta } from '~/features/Liquidity/spry/useSpryWalletPositions'
+import { SpryTierBadge } from '~/features/Liquidity/spry/SpryTierBadge'
+import { getProtocolStatusLabel } from '~/features/Liquidity/utils/protocolVersion'
 import { ClickableTamaguiStyle } from '~/theme/components/styles'
-import { isV4UnsupportedChain } from '~/utils/networkSupportsV4'
 
 function LiquidityPositionStatusIndicatorLoader() {
   return (
@@ -33,7 +32,6 @@ interface LiquidityPositionInfoProps {
   positionInfo: PositionInfo
   currencyLogoSize?: number
   hideStatusIndicator?: boolean
-  showMigrateButton?: boolean
   isMiniVersion?: boolean
   linkToPool?: boolean
   includeLpIncentives?: boolean
@@ -55,50 +53,72 @@ export function LiquidityPositionInfoLoader({ hideStatus }: { hideStatus?: boole
   )
 }
 
+/** "In Pool" green, "Closed" muted (mirrors the status-indicator palette). */
+function statusColor(status: PositionStatus): '$statusSuccess' | '$neutral2' {
+  return status === PositionStatus.CLOSED ? '$neutral2' : '$statusSuccess'
+}
+
+/**
+ * SPRY: compact fee-curve zone history - swaps that pushed the dynamic fee into
+ * the alert / danger zones, zone-colored, details on hover. Sits directly under
+ * the "In Pool"/"Closed" label.
+ */
+function SpryZoneCounts({ alertCount, dangerCount }: { alertCount: number; dangerCount: number }) {
+  return (
+    <MouseoverTooltip
+      text={`Swaps that pushed this pool's dynamic fee into the Alert zone: ${alertCount}, into the Danger zone: ${dangerCount}. The fee climbs through these zones with volatility and imbalance, then eases back toward the tier's base.`}
+      placement="top"
+    >
+      <Flex row gap="$spacing6" alignItems="center" cursor="help">
+        <Text variant="body3" color="$statusWarning">
+          {alertCount}
+        </Text>
+        <Text variant="body3" color="$statusCritical">
+          {dangerCount}
+        </Text>
+      </Flex>
+    </MouseoverTooltip>
+  )
+}
+
+function PairNameText({ positionInfo, linkToPool }: { positionInfo: PositionInfo; linkToPool: boolean }) {
+  const pair = `${positionInfo.currency0Amount.currency.symbol} / ${positionInfo.currency1Amount.currency.symbol}`
+  if (linkToPool) {
+    return (
+      <Anchor href={getPoolDetailsURL(positionInfo.poolId, positionInfo.chainId)} textDecorationLine="none">
+        <Text variant="subheading1" {...ClickableTamaguiStyle}>
+          {pair}
+        </Text>
+      </Anchor>
+    )
+  }
+  return <Text variant="subheading1">{pair}</Text>
+}
+
 export function LiquidityPositionInfo({
   positionInfo,
   currencyLogoSize = 44,
   hideStatusIndicator = false,
-  showMigrateButton = false,
   isMiniVersion = false,
   linkToPool = false,
   includeLpIncentives = false,
   includeNetwork = false,
 }: LiquidityPositionInfoProps) {
-  const { currency0Amount, currency1Amount, status, feeTier, v4hook, version, chainId } = positionInfo
-  const navigate = useNavigate()
+  const { currency0Amount, currency1Amount, status, chainId } = positionInfo
   const chainInfo = getChainInfo(positionInfo.chainId)
   const media = useMedia()
   const { t } = useTranslation()
-  const { formatPercent: _ } = useLocalizationContext()
   const lpIncentiveRewardApr =
     positionInfo.version === ProtocolVersion.V4 && Boolean(positionInfo.boostedApr)
       ? positionInfo.boostedApr
       : undefined
 
-  const migrateButtonConfig = useMemo(() => {
-    if (!showMigrateButton) {
-      return undefined
-    }
-
-    if (positionInfo.version === ProtocolVersion.V3 && !isV4UnsupportedChain(positionInfo.chainId)) {
-      return {
-        fullLabel: t('pool.migrateToV4'),
-        shortLabel: t('common.migrate'),
-        path: `/migrate/v3/${chainInfo.urlParam}/${positionInfo.tokenId}`,
-      }
-    }
-
-    if (positionInfo.version === ProtocolVersion.V2 && positionInfo.status !== PositionStatus.CLOSED) {
-      return {
-        fullLabel: t('pool.migrateToV3'),
-        shortLabel: t('common.migrate'),
-        path: `/migrate/v2/${positionInfo.liquidityToken.address}`,
-      }
-    }
-
-    return undefined
-  }, [positionInfo, showMigrateButton, chainInfo.urlParam, t])
+  // SPRY: the v4 / hook-address / Dynamic chips (LiquidityPositionInfoBadges) are removed - every Spry
+  // position is v4 + SpryHook + dynamic, so the chips said nothing. The pair name carries the status
+  // label instead, and the tier badge below replaces the in/out-of-range indicator (positions are
+  // full-range, so "range" status is meaningless; the tier is what differentiates pools).
+  const spryMeta = getSpryPositionMeta(positionInfo)
+  const statusLabel = getProtocolStatusLabel(status, t)
 
   const [currency0Info, currency1Info] = useCurrencyInfos([
     currencyId(currency0Amount.currency),
@@ -116,45 +136,39 @@ export function LiquidityPositionInfo({
         chainId={includeNetworkInLogo ? chainId : null}
       />
       <Flex gap={isMiniVersion ? '$none' : '$spacing2'}>
+        {/* SPRY: two aligned columns - (pair name over tier badge) beside (status over zone counts) -
+            so the zone numbers sit exactly under the "In Pool"/"Closed" label. */}
         <Flex
           flexDirection={isMiniVersion ? 'column' : 'row'}
           gap={isMiniVersion ? '$none' : '$gap12'}
           $md={{ gap: isMiniVersion ? '$none' : '$gap12' }}
-          alignItems={isMiniVersion ? 'flex-start' : 'center'}
+          alignItems="flex-start"
         >
-          <Flex>
-            {linkToPool ? (
-              <Anchor href={getPoolDetailsURL(positionInfo.poolId, positionInfo.chainId)} textDecorationLine="none">
-                <Text variant="subheading1" {...ClickableTamaguiStyle}>
-                  {currency0Amount.currency.symbol} / {currency1Amount.currency.symbol}
-                </Text>
-              </Anchor>
-            ) : (
-              <Text variant="subheading1">
-                {currency0Amount.currency.symbol} / {currency1Amount.currency.symbol}
+          <Flex gap="$spacing2">
+            <PairNameText positionInfo={positionInfo} linkToPool={linkToPool} />
+            {!isMiniVersion &&
+              !hideStatusIndicator &&
+              (spryMeta ? (
+                <SpryTierBadge tier={spryMeta.tier} />
+              ) : (
+                <Flex row gap="$spacing6" alignItems="center">
+                  <LiquidityPositionStatusIndicator status={status} />
+                </Flex>
+              ))}
+          </Flex>
+          <Flex gap="$spacing2" justifyContent="space-between" alignSelf="stretch" py="$spacing2">
+            {statusLabel && (
+              <Text variant="body3" color={statusColor(status)}>
+                {statusLabel}
               </Text>
             )}
-          </Flex>
-          <Flex row gap={2} alignItems="center" flexWrap="wrap">
-            <LiquidityPositionInfoBadges
-              size="small"
-              version={version}
-              v4hook={v4hook}
-              feeTier={feeTier}
-              cta={
-                migrateButtonConfig
-                  ? {
-                      label: media.lg ? migrateButtonConfig.shortLabel : migrateButtonConfig.fullLabel,
-                      iconAfter: <ArrowRight color="current" />,
-                      onPress: () => navigate(migrateButtonConfig.path),
-                    }
-                  : undefined
-              }
-            />
+            {!isMiniVersion && !hideStatusIndicator && spryMeta && (
+              <SpryZoneCounts alertCount={spryMeta.alertCount} dangerCount={spryMeta.dangerCount} />
+            )}
           </Flex>
         </Flex>
 
-        {!isMiniVersion && (
+        {!isMiniVersion && (includeNetwork || (includeLpIncentives && lpIncentiveRewardApr)) && (
           <Flex row gap="$gap12">
             {includeNetwork && (
               <Flex row gap="$spacing6" alignItems="center" $lg={{ display: 'none' }}>
@@ -162,11 +176,6 @@ export function LiquidityPositionInfo({
                 <Text variant="body3" color="$neutral2">
                   {chainInfo.name}
                 </Text>
-              </Flex>
-            )}
-            {!hideStatusIndicator && (
-              <Flex row gap="$spacing6" alignItems="center">
-                <LiquidityPositionStatusIndicator status={status} />
               </Flex>
             )}
             {includeLpIncentives && lpIncentiveRewardApr && (

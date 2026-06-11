@@ -86,6 +86,11 @@ export interface PositionPoolRow {
   liquidity: string;
   hooks: string;
   tier: PoolTier;
+  /** Counts of swaps whose fee landed in each curve zone (from SpryFee events). */
+  safeCount: string;
+  alertCount: string;
+  dangerCount: string;
+  capCount: string;
   token0: TokenMetaRef;
   token1: TokenMetaRef;
 }

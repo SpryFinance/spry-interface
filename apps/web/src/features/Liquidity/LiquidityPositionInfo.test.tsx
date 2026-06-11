@@ -19,7 +19,10 @@ describe('LiquidityPositionInfo', () => {
       v4hook: undefined,
       owner: '0x50EC05ADe8280758E2077fcBC08D878D4aef79C3',
     }
+    // SPRY: the status label ("In Pool") renders next to the pair name; the legacy status indicator
+    // ("In range") still renders as the fallback when the position has no Spry tier meta.
     const { getByText } = render(<LiquidityPositionInfo positionInfo={positionInfo} />)
+    expect(getByText('In Pool')).toBeInTheDocument()
     expect(getByText('In range')).toBeInTheDocument()
   })
 
@@ -35,8 +38,10 @@ describe('LiquidityPositionInfo', () => {
       v4hook: undefined,
       owner: '0x50EC05ADe8280758E2077fcBC08D878D4aef79C3',
     }
-    const { getByText } = render(<LiquidityPositionInfo positionInfo={positionInfo} />)
-    expect(getByText('Out of range')).toBeInTheDocument()
+    // SPRY: the label now renders twice without tier meta - next to the pair name and in the
+    // fallback status indicator.
+    const { getAllByText } = render(<LiquidityPositionInfo positionInfo={positionInfo} />)
+    expect(getAllByText('Out of range').length).toBeGreaterThan(0)
   })
 
   it('should render closed', () => {
@@ -51,7 +56,8 @@ describe('LiquidityPositionInfo', () => {
       v4hook: undefined,
       owner: '0x50EC05ADe8280758E2077fcBC08D878D4aef79C3',
     }
-    const { getByText } = render(<LiquidityPositionInfo positionInfo={positionInfo} />)
-    expect(getByText('Closed')).toBeInTheDocument()
+    // SPRY: same duplication as above - pair-adjacent label + fallback indicator.
+    const { getAllByText } = render(<LiquidityPositionInfo positionInfo={positionInfo} />)
+    expect(getAllByText('Closed').length).toBeGreaterThan(0)
   })
 })

@@ -15,9 +15,12 @@ import {
 import { priceToNumber } from '~/features/Liquidity/charts/LiquidityPositionRangeChart/utils'
 import { usePoolPriceChartData } from '~/features/Liquidity/charts/usePoolPriceChartData'
 
-const SPARKLINE_PADDING = 2
+export const SPARKLINE_PADDING = 2
 
-function getLineColor(positionStatus: PositionStatus | undefined, colors: ReturnType<typeof useSporeColors>): string {
+export function getLineColor(
+  positionStatus: PositionStatus | undefined,
+  colors: ReturnType<typeof useSporeColors>,
+): string {
   switch (positionStatus) {
     case PositionStatus.OUT_OF_RANGE:
       return colors.statusCritical.val
@@ -29,7 +32,7 @@ function getLineColor(positionStatus: PositionStatus | undefined, colors: Return
   }
 }
 
-function buildSparklinePath(
+export function buildSparklinePath(
   values: number[],
   opts: { width: number; height: number; minVal: number; maxVal: number },
 ): string {

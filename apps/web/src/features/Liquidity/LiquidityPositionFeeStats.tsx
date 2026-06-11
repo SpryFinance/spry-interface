@@ -1,33 +1,29 @@
-import { ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
 import { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, styled, Text, useMedia } from 'ui/src'
 import { ArrowDownArrowUp } from 'ui/src/components/icons/ArrowDownArrowUp'
-import { InfoCircleFilled } from 'ui/src/components/icons/InfoCircleFilled'
-import { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
-import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { PriceOrdering } from 'uniswap/src/features/positions/types'
-import { MouseoverTooltip, TooltipSize } from '~/components/Tooltip'
+import { MouseoverTooltip } from '~/components/Tooltip'
 import { CHART_WIDTH } from '~/features/Liquidity/charts/LiquidityPositionRangeChart/LiquidityPositionRangeChart'
 import { useGetRangeDisplay } from '~/features/Liquidity/hooks/useGetRangeDisplay/useGetRangeDisplay'
 import { TextLoader } from '~/features/Liquidity/Loader'
-import { LPIncentiveFeeStatTooltip } from '~/features/Liquidity/LPIncentives/LPIncentiveFeeStatTooltip'
-import { LPIncentiveRewardsBadge } from '~/features/Liquidity/LPIncentives/LPIncentiveRewardsBadge'
 import { ClickableTamaguiStyle } from '~/theme/components/styles'
 
+// SPRY: the stats row is pair-denominated (no USD pricing on testnet) - Position and Fees show the
+// two token amounts, APR shows "New pair" on testnets. The price-range column is dropped for Spry
+// positions (always full-range; the zone history lives in the card header instead), so the three
+// stats spread across the full row. The old USD/LP-incentive plumbing was removed with it.
+
 interface LiquidityPositionFeeStatsProps extends LiquidityPositionMinMaxRangeProps {
-  version: ProtocolVersion
   cardHovered: boolean
-  currency0Info: Maybe<CurrencyInfo>
-  currency1Info: Maybe<CurrencyInfo>
-  formattedUsdValue?: string
-  formattedUsdFees?: string
-  formattedLpIncentiveEarnings?: string
-  totalApr?: number
-  feeApr?: string
-  apr?: number
-  lpIncentiveRewardApr?: number
-  hasRewards?: boolean
+  /** Pair-denominated position size, e.g. "41.2K sptA / 2.4K sptB". */
+  formattedValue?: string
+  /** Accrued fees, one line per nonzero side, e.g. ["+22.2 sptA", "+0.25 sptB"]. */
+  feeLines?: string[]
+  /** Final APR display string ("New pair" on testnets). */
+  formattedApr: string
+  /** Hides the min/max price-range column (Spry positions are always full-range). */
+  hideRangeColumn?: boolean
 }
 
 const PrimaryText = styled(Text, {
@@ -69,8 +65,8 @@ function FeeStat({ children }: { children: React.ReactNode }) {
 function FeeStatLoader() {
   return (
     <Flex gap="$gap4">
-      <TextLoader variant="body2" width={60} />
       <TextLoader variant="body3" width={40} />
+      <TextLoader variant="body2" width={60} />
     </Flex>
   )
 }
@@ -86,26 +82,19 @@ export function LiquidityPositionFeeStatsLoader() {
 }
 
 export function LiquidityPositionFeeStats({
-  formattedUsdValue,
-  formattedUsdFees,
-  formattedLpIncentiveEarnings,
+  formattedValue,
+  feeLines,
+  formattedApr,
+  hideRangeColumn = false,
   priceOrdering,
   tickLower,
   tickUpper,
   tickSpacing,
-  version,
-  apr,
-  currency0Info,
-  currency1Info,
   cardHovered,
   pricesInverted,
   setPricesInverted,
-  lpIncentiveRewardApr,
-  totalApr,
-  hasRewards,
 }: LiquidityPositionFeeStatsProps) {
   const { t } = useTranslation()
-  const earningsOrFees = hasRewards ? formattedLpIncentiveEarnings : (formattedUsdFees ?? '-')
 
   return (
     <Flex
@@ -118,60 +107,49 @@ export function LiquidityPositionFeeStats({
       borderBottomRightRadius="$rounded20"
       backgroundColor={cardHovered ? '$surface2Hovered' : '$surface2'}
     >
+      {/* SPRY: labels sit ABOVE their values; accrued fees stack one pair side per line. */}
       <Flex row gap="$gap20" grow $sm={{ row: false }}>
         <WrapChildrenForMediaSize>
           <FeeStat>
-            {formattedUsdValue ? (
-              <PrimaryText>{formattedUsdValue}</PrimaryText>
+            <SecondaryText>{t('pool.position')}</SecondaryText>
+            {formattedValue ? (
+              <PrimaryText>{formattedValue}</PrimaryText>
             ) : (
               <MouseoverTooltip text={t('position.valueUnavailable')} placement="top">
                 <PrimaryText>-</PrimaryText>
               </MouseoverTooltip>
             )}
-            <SecondaryText>{t('pool.position')}</SecondaryText>
           </FeeStat>
           <FeeStat>
-            {version === ProtocolVersion.V2 ? (
-              <Flex row gap="$gap4" alignItems="center">
-                <Text variant="body2" color="$neutral2">
-                  {t('common.unavailable')}
-                </Text>
-                <MouseoverTooltip text={t('fee.unavailable')} placement="auto">
-                  <Flex justifyContent="center">
-                    <InfoCircleFilled color="$neutral2" size="$icon.16" />
-                  </Flex>
-                </MouseoverTooltip>
-              </Flex>
-            ) : (
-              <PrimaryText>{earningsOrFees}</PrimaryText>
-            )}
             <SecondaryText variant="body3" color="$neutral2">
-              {hasRewards ? t('pool.earnings') : t('common.fees')}
+              {t('common.fees')}
             </SecondaryText>
+            {feeLines && feeLines.length > 0 ? (
+              feeLines.map((line) => <PrimaryText key={line}>{line}</PrimaryText>)
+            ) : (
+              <PrimaryText>-</PrimaryText>
+            )}
           </FeeStat>
         </WrapChildrenForMediaSize>
-        {lpIncentiveRewardApr ? (
-          <LPIncentiveFeeStat
-            currency0Info={currency0Info}
-            currency1Info={currency1Info}
-            poolApr={apr}
-            lpIncentiveRewardApr={lpIncentiveRewardApr}
-            totalApr={totalApr}
+        <FeeStat>
+          <SecondaryText variant="body3" color="$neutral2">
+            {t('pool.apr')}
+          </SecondaryText>
+          <PrimaryText>{formattedApr}</PrimaryText>
+        </FeeStat>
+      </Flex>
+      {!hideRangeColumn && (
+        <Flex $md={{ display: 'none' }}>
+          <MinMaxRange
+            priceOrdering={priceOrdering}
+            tickLower={tickLower}
+            tickUpper={tickUpper}
+            tickSpacing={tickSpacing}
+            pricesInverted={pricesInverted}
+            setPricesInverted={setPricesInverted}
           />
-        ) : (
-          <APRFeeStat apr={apr} />
-        )}
-      </Flex>
-      <Flex $md={{ display: 'none' }}>
-        <MinMaxRange
-          priceOrdering={priceOrdering}
-          tickLower={tickLower}
-          tickUpper={tickUpper}
-          tickSpacing={tickSpacing}
-          pricesInverted={pricesInverted}
-          setPricesInverted={setPricesInverted}
-        />
-      </Flex>
+        </Flex>
+      )}
     </Flex>
   )
 }
@@ -256,68 +234,6 @@ export function MinMaxRange({
           <SecondaryText>{t('common.fullRange')}</SecondaryText>
         </Flex>
       )}
-    </Flex>
-  )
-}
-
-function APRFeeStat({ apr }: { apr?: number }) {
-  const { formatPercent } = useLocalizationContext()
-  const { t } = useTranslation()
-
-  return (
-    <FeeStat>
-      <PrimaryText>{apr ? formatPercent(apr) : '-'}</PrimaryText>
-      <SecondaryText variant="body3" color="$neutral2">
-        {t('pool.apr')}
-      </SecondaryText>
-    </FeeStat>
-  )
-}
-
-function LPIncentiveFeeStat({
-  currency0Info,
-  currency1Info,
-  lpIncentiveRewardApr,
-  poolApr,
-  totalApr,
-}: {
-  currency0Info: Maybe<CurrencyInfo>
-  currency1Info: Maybe<CurrencyInfo>
-  lpIncentiveRewardApr: number
-  poolApr?: number
-  totalApr?: number
-}) {
-  const { formatPercent } = useLocalizationContext()
-  const { t } = useTranslation()
-
-  return (
-    <Flex flex={1.3} flexBasis={0} $sm={{ flexBasis: 'auto' }}>
-      <MouseoverTooltip
-        padding={0}
-        text={
-          <LPIncentiveFeeStatTooltip
-            currency0Info={currency0Info}
-            currency1Info={currency1Info}
-            poolApr={poolApr}
-            lpIncentiveRewardApr={lpIncentiveRewardApr}
-            totalApr={totalApr}
-          />
-        }
-        size={TooltipSize.Small}
-        placement="top"
-      >
-        <>
-          <Flex row gap="$spacing6" alignItems="center">
-            <Text variant="body2" color="$neutral1">
-              {poolApr ? formatPercent(poolApr) : '-'}
-            </Text>
-            <LPIncentiveRewardsBadge formattedRewardApr={formatPercent(lpIncentiveRewardApr)} />
-          </Flex>
-          <SecondaryText variant="body3" color="$neutral2">
-            {t('pool.totalAPR')}
-          </SecondaryText>
-        </>
-      </MouseoverTooltip>
     </Flex>
   )
 }
