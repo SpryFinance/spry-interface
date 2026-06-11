@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Cargando más posiciones…",
   "liquidityPool.positions.page.title": "Administra la liquidez del fondo {{quoteSymbol}}/{{baseSymbol}} en Uniswap",
   "liquidityPool.positions.page.version.description": "Ve tus posiciones de liquidez {{version}} activas. Agrega posiciones nuevas.",
-  "liquidityPool.positions.page.version.title": "Administra la liquidez del fondo {{version}} en Uniswap",
+  "liquidityPool.positions.page.version.title": "Administra la liquidez del fondo {{version}} en Spry",
   "migrate.migrating": "Migrando",
   "migrate.refund": "Tu posición completa no se puede migrar al rango seleccionado. El saldo restante estimado se reembolsará a tu billetera.",
   "migrate.refund.title": "Se te reembolsará el importe",

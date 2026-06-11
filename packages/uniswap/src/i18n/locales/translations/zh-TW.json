@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "正在載入更多部位……",
   "liquidityPool.positions.page.title": "管理 Uniswap 上的 {{quoteSymbol}}/{{baseSymbol}} 資產池的流動資產",
   "liquidityPool.positions.page.version.description": "檢視你的主動 {{version}} 流動資產部位。新增部位。",
-  "liquidityPool.positions.page.version.title": "在 Uniswap 上管理資產池的流動資產{{version}}",
+  "liquidityPool.positions.page.version.title": "在 Spry 上管理資產池的流動資產{{version}}",
   "migrate.migrating": "正在遷移",
   "migrate.refund": "您的完整倉位無法遷移至選定範圍。此預估剩餘餘額將退還至您的錢包。",
   "migrate.refund.title": "您將收到退款",

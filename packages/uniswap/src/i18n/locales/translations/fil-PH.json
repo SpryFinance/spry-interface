@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Naglo-load ng higit pang posisyon...",
   "liquidityPool.positions.page.title": "Pamahalaan ang liquidity ng pool ma {{quoteSymbol}}/{{baseSymbol}} sa Uniswap",
   "liquidityPool.positions.page.version.description": "Tingnan ang mga posisyon ng aktibong liquidity mo na {{version}}. Magdagdag ng mga bagong posisyon.",
-  "liquidityPool.positions.page.version.title": "Pamahalaan ang liquidity ng pool na {{version}} sa Uniswap",
+  "liquidityPool.positions.page.version.title": "Pamahalaan ang liquidity ng pool na {{version}} sa Spry",
   "migrate.migrating": "Nagma-migrate",
   "migrate.refund": "Ang iyong buong posisyon ay hindi puwedeng i-migrate sa napiling hanay. Ire-refund sa iyong wallet itong tinatayang natitirang balanse.",
   "migrate.refund.title": "Ire-refund sa iyo",

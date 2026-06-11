@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Memuat posisi lainnya ...",
   "liquidityPool.positions.page.title": "Kelola likuiditas pool {{quoteSymbol}}/{{baseSymbol}} di Uniswap",
   "liquidityPool.positions.page.version.description": "Lihat posisi likuiditas {{version}} aktifmu. Tambahkan posisi baru.",
-  "liquidityPool.positions.page.version.title": "Kelola likuiditas pool{{version}} di Uniswap",
+  "liquidityPool.positions.page.version.title": "Kelola likuiditas pool{{version}} di Spry",
   "migrate.migrating": "Bermigrasi",
   "migrate.refund": "Seluruh posisimu tidak dapat dimigrasikan ke rentang yang dipilih. Estimasi saldo yang tersisa ini akan dikembalikan ke dompetmu.",
   "migrate.refund.title": "Kamu akan menerima pengembalian dana",

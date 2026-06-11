@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Daha fazla pozisyon yükleniyor...",
   "liquidityPool.positions.page.title": "Uniswap'ta {{quoteSymbol}}/{{baseSymbol}} havuz likiditesini yönet",
   "liquidityPool.positions.page.version.description": "Aktif {{version}} likidite pozisyonlarını görüntüle. Yeni pozisyonlar ekle.",
-  "liquidityPool.positions.page.version.title": "Uniswap'ta havuz likiditesini {{version}} yönet",
+  "liquidityPool.positions.page.version.title": "Spry'ta havuz likiditesini {{version}} yönet",
   "migrate.migrating": "Taşınıyor",
   "migrate.refund": "Tam pozisyonun seçilen aralığa taşınamıyor. Bu kalan tahmini bakiye, cüzdanına iade edilecek.",
   "migrate.refund.title": "İade alacaksın",

@@ -1265,7 +1265,7 @@
   "liquidityPool.positions.loadingMore": "Loading more positions...",
   "liquidityPool.positions.page.title": "Manage {{quoteSymbol}}/{{baseSymbol}} pool liquidity on Uniswap",
   "liquidityPool.positions.page.version.description": "View your active {{version}} liquidity positions. Add new positions.",
-  "liquidityPool.positions.page.version.title": "Manage pool liquidity{{version}} on Uniswap",
+  "liquidityPool.positions.page.version.title": "Manage pool liquidity{{version}} on Spry",
   "migrate.migrating": "Migrating",
   "migrate.refund": "Your full position cannot be migrated to the selected range. This estimated remaining balance will be refunded to your wallet.",
   "migrate.refund.title": "You’ll be refunded",

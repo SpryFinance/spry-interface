@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Meer posities laden...",
   "liquidityPool.positions.page.title": "Beheer {{quoteSymbol}}/{{baseSymbol}} poolliquiditeit op Uniswap",
   "liquidityPool.positions.page.version.description": "Bekijk je actieve liquiditeitsposities van {{version}}. Voeg nieuwe posities toe.",
-  "liquidityPool.positions.page.version.title": "Beheer de liquiditeit van de pool in {{version}} op Uniswap",
+  "liquidityPool.positions.page.version.title": "Beheer de liquiditeit van de pool in {{version}} op Spry",
   "migrate.migrating": "Migreren",
   "migrate.refund": "Je volledige positie kan niet worden gemigreerd naar het geselecteerde bereik. Het geschatte resterende saldo wordt teruggestort naar je wallet.",
   "migrate.refund.title": "Je krijgt een terugbetaling",

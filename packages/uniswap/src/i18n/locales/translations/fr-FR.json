@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Chargement de plus de positions…",
   "liquidityPool.positions.page.title": "Gérer la liquidité du pool en {{quoteSymbol}}/{{baseSymbol}} sur Uniswap",
   "liquidityPool.positions.page.version.description": "Consultez vos positions de liquidité actives sur {{version}}. Ajoutez de nouvelles positions.",
-  "liquidityPool.positions.page.version.title": "Gérer la liquidité du pool de {{version}} sur Uniswap",
+  "liquidityPool.positions.page.version.title": "Gérer la liquidité du pool de {{version}} sur Spry",
   "migrate.migrating": "Migration en cours",
   "migrate.refund": "Impossible de faire migrer la totalité de votre position dans le canal sélectionné. Ce solde restant estimé sera recrédité sur votre wallet.",
   "migrate.refund.title": "Vous recevrez un remboursement",

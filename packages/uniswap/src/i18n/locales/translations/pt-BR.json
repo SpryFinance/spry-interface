@@ -1020,7 +1020,7 @@
   "liquidityPool.positions.closed.title": "Closed positions",
   "liquidityPool.positions.page.title": "Gerenciar liquidez do pool {{quoteSymbol}}/{{baseSymbol}} na Uniswap",
   "liquidityPool.positions.page.version.description": "Visualize suas posições de liquidez {{version}} ativas. Adicione novas posições.",
-  "liquidityPool.positions.page.version.title": "Gerenciar liquidez do pool {{version}} na Uniswap",
+  "liquidityPool.positions.page.version.title": "Gerenciar liquidez do pool {{version}} na Spry",
   "liquidityPool.positions.price": "{{amountWithSymbol}} por {{outputToken}}",
   "liquidityPool.positions.price.formatted": "<amountWithSymbol /> por <outputToken />",
   "migrate.allowed": "Permitido",

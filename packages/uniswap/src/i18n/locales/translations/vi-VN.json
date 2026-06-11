@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Đang tải thêm vị thế...",
   "liquidityPool.positions.page.title": "Quản lý thanh khoản pool {{quoteSymbol}}/{{baseSymbol}} trên Uniswap",
   "liquidityPool.positions.page.version.description": "Xem vị thế thanh khoản {{version}} đang hoạt động của bạn. Thêm vị thế mới.",
-  "liquidityPool.positions.page.version.title": "Quản lý thanh khoản pool {{version}} trên Uniswap",
+  "liquidityPool.positions.page.version.title": "Quản lý thanh khoản pool {{version}} trên Spry",
   "migrate.migrating": "Đang di chuyển",
   "migrate.refund": "Bạn không thể di chuyển vị thế toàn dải giá của bạn tới khoảng giá đã chọn. Số dư còn lại theo ước tính này sẽ được hoàn về ví của bạn.",
   "migrate.refund.title": "Bạn sẽ được hoàn lại",

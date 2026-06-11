@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "Загрузка других позиций…",
   "liquidityPool.positions.page.title": "Управление ликвидностью пула {{quoteSymbol}}/{{baseSymbol}} на Uniswap",
   "liquidityPool.positions.page.version.description": "Просмотрите свои активные позиции ликвидности {{version}}. Добавьте новые позиции.",
-  "liquidityPool.positions.page.version.title": "Управление ликвидностью пула {{version}} на Uniswap",
+  "liquidityPool.positions.page.version.title": "Управление ликвидностью пула {{version}} на Spry",
   "migrate.migrating": "Перенос",
   "migrate.refund": "Позицию невозможно полностью перенести в выбранный диапазон. Предполагаемый остаток будет зачислен обратно на баланс вашего кошелька.",
   "migrate.refund.title": "Вы получите возврат средств",

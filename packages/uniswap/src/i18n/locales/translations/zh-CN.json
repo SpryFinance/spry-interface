@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "正在加载更多头寸……",
   "liquidityPool.positions.page.title": "管理 Uniswap 上的 {{quoteSymbol}}/{{baseSymbol}} 资金池流动性",
   "liquidityPool.positions.page.version.description": "查看你的活跃 {{version}} 流动性头寸。添加新头寸。",
-  "liquidityPool.positions.page.version.title": "在 Uniswap 上管理资金池流动性 {{version}}",
+  "liquidityPool.positions.page.version.title": "在 Spry 上管理资金池流动性 {{version}}",
   "migrate.migrating": "正在迁移",
   "migrate.refund": "你的所有持仓无法迁移至所选区间。预计剩余余额将退还至你的钱包。",
   "migrate.refund.title": "你将获得退款",
