@@ -1,23 +1,17 @@
 import { PositionStatus } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
-import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { useCallback, useState } from 'react'
 import { Flex } from 'ui/src'
 import type { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { InterfacePageName, UniswapEventName } from 'uniswap/src/features/telemetry/constants'
-import { sendAnalyticsEvent } from 'uniswap/src/features/telemetry/send'
+import { InterfacePageName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
-import tokenLogo from '~/assets/images/token-logo.png'
 import { DisconnectedWalletView } from '~/features/Liquidity/components/emptyStates/DisconnectedWalletView'
 import { EmptyPositionsView } from '~/features/Liquidity/components/emptyStates/EmptyPositionsView'
 import { ErrorPositionsView } from '~/features/Liquidity/components/emptyStates/ErrorPositionsView'
-import { useLpIncentives } from '~/features/Liquidity/hooks/useLpIncentives'
 import { useWalletPositionsWeb } from '~/features/Liquidity/hooks/useWalletPositionsWeb'
 import { LiquidityPositionCardLoader } from '~/features/Liquidity/LiquidityPositionCard'
-import { useLpIncentiveRewardsUsdValue } from '~/features/Liquidity/LPIncentives/hooks/useLpIncentiveRewardsUsdValue'
-import { LpIncentiveClaimModal } from '~/features/Liquidity/LPIncentives/LpIncentiveClaimModal'
-import { LpIncentiveRewardsCard } from '~/features/Liquidity/LPIncentives/LpIncentiveRewardsCard'
 import { PositionsHeader } from '~/features/Liquidity/PositionsHeader'
 import { PositionsListSection } from '~/features/Liquidity/PositionsListSection'
+import { SpryTiersCard } from '~/features/Liquidity/SpryTiersCard'
 import { useAccount } from '~/hooks/useAccount'
 import { ClosedPositionsCTA } from '~/pages/Positions/components/ClosedPositionsCTA'
 import { PositionsSidebar } from '~/pages/Positions/components/PositionsSidebar'
@@ -28,29 +22,10 @@ export function Pool() {
   const account = useAccount()
   const { address, isConnected } = account
 
-  const isLPIncentivesEnabled = useFeatureFlag(FeatureFlags.LpIncentives) && isConnected
   const newPositionHref = useCreatePositionHref()
 
   const { chainFilter, setChainFilter, versionFilter, toggleVersion, statusFilter, toggleStatus } = usePositionFilters()
   const [showHiddenPositions, setShowHiddenPositions] = useState(false)
-
-  const {
-    isPendingTransaction,
-    isModalOpen,
-    tokenRewards,
-    openModal,
-    closeModal,
-    setTokenRewards,
-    onTransactionSuccess,
-    hasCollectedRewards,
-  } = useLpIncentives()
-
-  const { formattedUsdValue: formattedRewardsUsdValue } = useLpIncentiveRewardsUsdValue(tokenRewards)
-
-  const handleCollectRewards = useCallback(() => {
-    sendAnalyticsEvent(UniswapEventName.LpIncentiveCollectRewardsButtonClicked)
-    openModal()
-  }, [openModal])
 
   const handleChainChange = useCallback(
     (selectedChain: UniverseChainId | null) => {
@@ -58,13 +33,6 @@ export function Pool() {
     },
     [setChainFilter],
   )
-
-  const handleClaimSuccess = useCallback(() => {
-    sendAnalyticsEvent(UniswapEventName.LpIncentiveCollectRewardsSuccess, {
-      token_rewards: tokenRewards,
-    })
-    onTransactionSuccess()
-  }, [tokenRewards, onTransactionSuccess])
 
   const {
     visiblePositions,
@@ -96,15 +64,9 @@ export function Pool() {
         $lg={{ px: '$spacing20' }}
       >
         <Flex grow shrink gap="$spacing24" maxWidth={740} $xl={{ maxWidth: '100%' }}>
-          {isLPIncentivesEnabled && (
-            <LpIncentiveRewardsCard
-              walletAddress={account.address}
-              onCollectRewards={handleCollectRewards}
-              setTokenRewards={setTokenRewards}
-              initialHasCollectedRewards={hasCollectedRewards}
-            />
-          )}
-          <Flex row justifyContent="space-between" alignItems="center" mt={isLPIncentivesEnabled ? '$spacing28' : 0}>
+          {/* SPRY: Uniswap's LP-incentives (UNI rewards) card is replaced by the Spry fee-tier explainer (no reward token yet). */}
+          <SpryTiersCard />
+          <Flex row justifyContent="space-between" alignItems="center">
             <PositionsHeader
               showFilters={account.isConnected}
               selectedChain={chainFilter}
@@ -146,17 +108,6 @@ export function Pool() {
         </Flex>
         <PositionsSidebar chainFilter={chainFilter} isConnected={isConnected} />
       </Flex>
-      {isLPIncentivesEnabled && (
-        <LpIncentiveClaimModal
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          onSuccess={handleClaimSuccess}
-          tokenRewards={tokenRewards}
-          isPendingTransaction={isPendingTransaction}
-          iconUrl={tokenLogo}
-          formattedRewardsUsdValue={formattedRewardsUsdValue}
-        />
-      )}
     </Trace>
   )
 }
