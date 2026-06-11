@@ -59,7 +59,28 @@ export function MenuLink({
   textVariant = 'body3',
   icon,
   elementName,
+  comingSoon,
 }: MenuItem & { textVariant?: TextVariantTokens }) {
+  // SPRY: a coming-soon nav item renders grayed out and unreachable (no link) with a "Soon" badge, the
+  // mobile counterpart of the desktop nav tabs. Sourced from the tab's `comingSoon` flag in TabsContent.tsx.
+  if (comingSoon) {
+    return (
+      <Flex row alignItems="center" gap="$gap8" cursor="default" pt="$spacing4">
+        <Flex row alignItems="center" gap="$gap8" opacity={0.5}>
+          {icon}
+          <Text variant={textVariant} {...LinkTextStyle} hoverStyle={undefined}>
+            {label}
+          </Text>
+        </Flex>
+        <Flex backgroundColor="$statusWarning" borderRadius="$rounded4" px="$spacing4" py="$spacing1">
+          <Text variant="body4" fontSize={8} lineHeight={10} fontWeight="600" color="$surface1">
+            Soon
+          </Text>
+        </Flex>
+      </Flex>
+    )
+  }
+
   const content = internal ? (
     <Link to={href} onClick={closeMenu} style={LinkStyle}>
       <MobileTouchableArea {...TouchableAreaProps}>
@@ -101,6 +122,7 @@ function Section({ title, items, closeMenu }: MenuSection) {
           overflow={item.overflow}
           closeMenu={closeMenu}
           elementName={item.elementName}
+          comingSoon={item.comingSoon}
         />
       ))}
     </Flex>
@@ -161,6 +183,7 @@ export function MenuDropdown({ close }: { close?: () => void }) {
         internal: true,
         overflow: false,
         elementName: tab.elementName,
+        comingSoon: tab.comingSoon,
       }
     })
   }, [tabs])

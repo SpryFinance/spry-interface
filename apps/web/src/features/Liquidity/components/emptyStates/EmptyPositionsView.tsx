@@ -24,13 +24,20 @@ export function EmptyPositionsView({
       description={t('positions.noPositions.description')}
       withBorder={withBorder}
       action={
-        <Flex row gap="$gap8" $md={{ flexDirection: 'column', width: '100%' }} width={BUTTON_AREA_WIDTH}>
+        <Flex
+          row
+          gap="$gap8"
+          justifyContent="center"
+          $md={{ flexDirection: 'column', width: '100%' }}
+          width={BUTTON_AREA_WIDTH}
+        >
           {/* SPRY: "Explore pools" is a coming-soon button for the testnet phase (grayed + unreachable, no link),
               matching the disabled Explore/Portfolio navs. Restore the Trace + tag="a"/href and drop the badge to re-enable.
-              The wrapper replicates the Button `fill` variant (alignSelf stretch + flex 1 + flexBasis 0) so it splits the
-              row evenly with the New Position button beside it, instead of taking its content width and truncating it. */}
-          <Flex position="relative" alignSelf="stretch" flex={1} flexBasis={0} $md={{ width: '100%' }}>
+              Both buttons size to their label (fill={false}) and the row centers them, so New Position is a touch more
+              compact than a stretched half-width button (full width still on mobile via the $md width). */}
+          <Flex position="relative" $md={{ width: '100%' }}>
             <Button
+              fill={false}
               $md={{
                 py: '$spacing16',
                 width: '100%',
@@ -60,8 +67,10 @@ export function EmptyPositionsView({
           {showNewPositionAction && (
             <Trace logPress element={ElementName.PositionsEmptyStateNewPosition}>
               <Button
+                fill={false}
                 $md={{
                   py: '$spacing16',
+                  width: '100%',
                 }}
                 variant="default"
                 size="small"

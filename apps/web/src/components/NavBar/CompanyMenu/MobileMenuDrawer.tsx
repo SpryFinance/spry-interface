@@ -107,6 +107,7 @@ export function MobileMenuDrawer({ isOpen, closeMenu }: { isOpen: boolean; close
                     icon={tab.icon}
                     textVariant="body2"
                     elementName={tab.elementName}
+                    comingSoon={tab.comingSoon}
                   />
                 ))}
               </MenuSection>

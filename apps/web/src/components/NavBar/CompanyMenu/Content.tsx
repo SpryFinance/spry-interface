@@ -16,6 +16,9 @@ export interface MenuItem {
   icon?: React.ReactNode
   body?: string
   elementName: ElementName
+  // SPRY: renders the item grayed out and unreachable with a "Soon" badge in the mobile menu / drawer,
+  // mirroring the desktop nav tabs (see Tabs.tsx). Sourced from the tab's `comingSoon` flag in TabsContent.tsx.
+  comingSoon?: boolean
 }
 
 export interface MenuSection {
