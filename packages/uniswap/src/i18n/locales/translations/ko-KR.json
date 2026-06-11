@@ -1261,7 +1261,7 @@
   "liquidityPool.positions.loadingMore": "더 많은 포지션 로드 중...",
   "liquidityPool.positions.page.title": "Uniswap에서 {{quoteSymbol}}/{{baseSymbol}} 풀 유동성 관리",
   "liquidityPool.positions.page.version.description": "활성 {{version}} 유동성 포지션을 확인하세요. 새 포지션을 추가하세요.",
-  "liquidityPool.positions.page.version.title": "Uniswap에서 풀 유동성{{version}} 관리",
+  "liquidityPool.positions.page.version.title": "Spry에서 풀 유동성{{version}} 관리",
   "migrate.migrating": "마이그레이션 중",
   "migrate.refund": "선택한 범위로 전체 포지션을 그대로 마이그레이션할 수 없습니다. 이러한 추정 잔액은 지갑으로 환불됩니다.",
   "migrate.refund.title": "환불됩니다",
