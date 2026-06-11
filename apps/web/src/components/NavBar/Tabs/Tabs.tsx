@@ -88,8 +88,8 @@ const Tab = ({
         </TabText>
         <Flex
           position="absolute"
-          top={-6}
-          right={-14}
+          top={-4}
+          right={-2}
           backgroundColor="$statusWarning"
           borderRadius="$rounded4"
           px="$spacing2"
