@@ -26,8 +26,10 @@ export function EmptyPositionsView({
       action={
         <Flex row gap="$gap8" $md={{ flexDirection: 'column', width: '100%' }} width={BUTTON_AREA_WIDTH}>
           {/* SPRY: "Explore pools" is a coming-soon button for the testnet phase (grayed + unreachable, no link),
-              matching the disabled Explore/Portfolio navs. Restore the Trace + tag="a"/href and drop the badge to re-enable. */}
-          <Flex position="relative" $md={{ width: '100%' }}>
+              matching the disabled Explore/Portfolio navs. Restore the Trace + tag="a"/href and drop the badge to re-enable.
+              The wrapper replicates the Button `fill` variant (alignSelf stretch + flex 1 + flexBasis 0) so it splits the
+              row evenly with the New Position button beside it, instead of taking its content width and truncating it. */}
+          <Flex position="relative" alignSelf="stretch" flex={1} flexBasis={0} $md={{ width: '100%' }}>
             <Button
               $md={{
                 py: '$spacing16',

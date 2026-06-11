@@ -11,12 +11,14 @@ import { useWalletPositionsWeb } from '~/features/Liquidity/hooks/useWalletPosit
 import { LiquidityPositionCardLoader } from '~/features/Liquidity/LiquidityPositionCard'
 import { PositionsHeader } from '~/features/Liquidity/PositionsHeader'
 import { PositionsListSection } from '~/features/Liquidity/PositionsListSection'
+import { SpryTierCurveChart } from '~/features/Liquidity/SpryTierCurveChart'
 import { SpryTiersCard } from '~/features/Liquidity/SpryTiersCard'
 import { useAccount } from '~/hooks/useAccount'
 import { ClosedPositionsCTA } from '~/pages/Positions/components/ClosedPositionsCTA'
-// SPRY: the "Learn about liquidity provision" sidebar is hidden for the testnet phase (its only content
-// after the TopPools hide); the Spry fee-tier explainer card now carries that educational role. Restore
-// the import + the <PositionsSidebar> render below to bring the sidebar back.
+// SPRY: the "Learn about liquidity provision" sidebar is replaced for the testnet phase by the
+// SpryTierCurveChart (a comparison of the five tier fee curves), shown beside the fee-tier card on
+// desktop and stacked below on narrow screens. Restore the import + <PositionsSidebar> render below to
+// bring the original sidebar back.
 // import { PositionsSidebar } from '~/pages/Positions/components/PositionsSidebar'
 import { usePositionFilters } from '~/pages/Positions/hooks/usePositionFilters'
 import { useCreatePositionHref } from '~/utils/createPositionRoute'
@@ -58,9 +60,9 @@ export function Pool() {
     <Trace logImpression page={InterfacePageName.Positions}>
       <Flex
         row
-        // SPRY: centered while the right-hand sidebar is hidden for testnet. Restore "space-between" when
-        // the <PositionsSidebar> render below comes back.
-        justifyContent="center"
+        justifyContent="space-between"
+        // SPRY: top-align so the fee-curve chart in the right column lines up with the fee-tier card.
+        alignItems="flex-start"
         $xl={{ flexDirection: 'column', gap: '$gap16' }}
         width="100%"
         gap={20}
@@ -111,7 +113,11 @@ export function Pool() {
           )}
           <ClosedPositionsCTA show={!statusFilter.includes(PositionStatus.CLOSED) && !!account.address} />
         </Flex>
-        {/* SPRY: "Learn about liquidity provision" sidebar hidden for testnet. Restore: <PositionsSidebar chainFilter={chainFilter} isConnected={isConnected} /> (+ the import above). */}
+        {/* SPRY: fee-curve comparison replaces the "Learn about liquidity provision" sidebar. Restore:
+            <PositionsSidebar chainFilter={chainFilter} isConnected={isConnected} /> (+ the import above). */}
+        <Flex width={360} $xl={{ width: '100%' }}>
+          <SpryTierCurveChart />
+        </Flex>
       </Flex>
     </Trace>
   )

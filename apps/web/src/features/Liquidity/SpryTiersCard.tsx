@@ -1,30 +1,30 @@
 import { formatFeePercent, TIER_BY_INDEX } from '@spry/fee'
-import type { ColorTokens } from 'ui/src'
 import { Flex, Text, useIsDarkMode } from 'ui/src'
 import { InfoCircleFilled } from 'ui/src/components/icons/InfoCircleFilled'
 import { InfoTooltip } from 'uniswap/src/components/tooltip/InfoTooltip'
 import dottedBackgroundDark from '~/assets/images/dotted-grid-dark.png'
 import dottedBackground from '~/assets/images/dotted-grid.png'
 
-// SPRY: a green -> red ramp conveying the rising volatility / fee band across the five tiers.
-const TIER_ACCENTS: ColorTokens[] = [
-  '$statusSuccess',
-  '$statusSuccess',
-  '$accent1',
-  '$statusWarning',
-  '$statusCritical',
-]
+/**
+ * SPRY: distinct per-tier colors (Stable green, Like-asset teal, Blue-chip blue, Volatile amber,
+ * Exotic red), indexed by on-chain tier. Shared with {@link SpryTierCurveChart} so a tier reads as the
+ * same color in this list's dot and in the fee-curve chart beside it.
+ */
+export const TIER_COLORS = ['#1FC77C', '#16BDC4', '#4C82FB', '#F5A623', '#FB4A5A']
 
-// Shared horizontal scale for the fee-range bars: 0% to 10% (pips, where 10_000 pips = 1%).
-const MAX_FEE_PIPS = 100_000
-// Fixed side columns keep every bar (and the axis below) aligned on a common scale.
-const LABEL_COL_WIDTH = 168
-const FEE_COL_WIDTH = 128
+function TierDot({ color }: { color: string }): JSX.Element {
+  return (
+    <svg width={10} height={10} viewBox="0 0 10 10" style={{ flexShrink: 0 }}>
+      <circle cx={5} cy={5} r={5} fill={color} />
+    </svg>
+  )
+}
 
 /**
- * SPRY: replaces Uniswap's LP-incentives (UNI rewards) card on the positions page. Spry has no
- * reward token; instead this explains the Spry dynamic-fee tier model in text and as a small
- * fee-range chart (each tier's band plotted on a shared 0% to 10% scale), with per-tier hover info.
+ * SPRY: replaces Uniswap's LP-incentives (UNI rewards) card on the positions page. Spry has no reward
+ * token; instead this explains the dynamic-fee tier model and lists the five tiers with their
+ * base-to-cap fee bands and per-tier hover detail. The companion {@link SpryTierCurveChart} plots
+ * these same tiers as fee curves in the sidebar.
  */
 export function SpryTiersCard() {
   const isDarkMode = useIsDarkMode()
@@ -69,17 +69,16 @@ export function SpryTiersCard() {
 
       <Flex gap="$spacing8" zIndex={1}>
         {TIER_BY_INDEX.map((tier, index) => {
-          const accent = TIER_ACCENTS[index] ?? '$accent1'
+          const color = TIER_COLORS[index] ?? '#888888'
           const base = formatFeePercent(tier.baseFeePips)
           const cap = formatFeePercent(tier.capFeePips)
-          const leftPct = (tier.baseFeePips / MAX_FEE_PIPS) * 100
-          const widthPct = Math.max(((tier.capFeePips - tier.baseFeePips) / MAX_FEE_PIPS) * 100, 1.5)
 
           return (
             <Flex
               key={tier.tier}
               row
               alignItems="center"
+              justifyContent="space-between"
               gap="$spacing12"
               py="$spacing8"
               px="$spacing12"
@@ -87,8 +86,8 @@ export function SpryTiersCard() {
               backgroundColor="$surface2"
               hoverStyle={{ backgroundColor: '$surface3' }}
             >
-              <Flex row alignItems="center" gap="$spacing12" width={LABEL_COL_WIDTH} shrink={false}>
-                <Flex width="$spacing8" height="$spacing8" borderRadius="$roundedFull" backgroundColor={accent} />
+              <Flex row alignItems="center" gap="$spacing12" shrink>
+                <TierDot color={color} />
                 <Flex shrink>
                   <Text variant="body3" color="$neutral1">
                     {tier.label}
@@ -99,35 +98,7 @@ export function SpryTiersCard() {
                 </Flex>
               </Flex>
 
-              {/* Fee-range bar: the tier's band drawn on the shared 0% to 10% scale. */}
-              <Flex
-                grow
-                shrink
-                position="relative"
-                height={6}
-                borderRadius="$roundedFull"
-                backgroundColor="$surface3"
-                $md={{ display: 'none' }}
-              >
-                <Flex
-                  position="absolute"
-                  top={0}
-                  bottom={0}
-                  left={`${leftPct}%`}
-                  width={`${widthPct}%`}
-                  borderRadius="$roundedFull"
-                  backgroundColor={accent}
-                />
-              </Flex>
-
-              <Flex
-                row
-                alignItems="center"
-                gap="$spacing6"
-                width={FEE_COL_WIDTH}
-                justifyContent="flex-end"
-                shrink={false}
-              >
+              <Flex row alignItems="center" gap="$spacing6" shrink={false}>
                 <Text variant="body3" color="$neutral2" textAlign="right">
                   {base} to {cap}
                 </Text>
@@ -145,23 +116,6 @@ export function SpryTiersCard() {
             </Flex>
           )
         })}
-
-        {/* Shared 0% to 10% scale for the bars above. */}
-        <Flex row alignItems="center" gap="$spacing12" px="$spacing12" $md={{ display: 'none' }}>
-          <Flex width={LABEL_COL_WIDTH} shrink={false} />
-          <Flex grow row justifyContent="space-between">
-            <Text variant="body4" color="$neutral3">
-              0%
-            </Text>
-            <Text variant="body4" color="$neutral3">
-              5%
-            </Text>
-            <Text variant="body4" color="$neutral3">
-              10%
-            </Text>
-          </Flex>
-          <Flex width={FEE_COL_WIDTH} shrink={false} />
-        </Flex>
       </Flex>
     </Flex>
   )
