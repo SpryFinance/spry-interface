@@ -32,7 +32,6 @@ export const paths = [
   '/positions/add/new',
   '/positions/add/:chainName/:poolAddress',
   '/positions/create',
-  '/positions/create/:protocolVersion',
   '/positions/v4/:chainName/:tokenId',
   '/increase',
   '/portfolio',

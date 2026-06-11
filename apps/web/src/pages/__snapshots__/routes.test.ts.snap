@@ -123,9 +123,7 @@ exports[`Routes > router definition should match snapshot 1`] = `
     "getDescription": [Function],
     "getElement": [Function],
     "getTitle": [Function],
-    "nestedPaths": [
-      ":protocolVersion",
-    ],
+    "nestedPaths": [],
     "path": "/positions/create",
   },
   {

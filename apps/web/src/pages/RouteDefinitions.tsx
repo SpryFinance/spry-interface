@@ -221,11 +221,11 @@ export const routes: RouteDefinition[] = [
     enabled: (args) => Boolean(args.isAddLiquidityRevampEnabled),
   }),
   createRouteDefinition({
+    // SPRY: v4-only, so no /positions/create/:protocolVersion variant - plain /positions/create.
     path: '/positions/create',
     getElement: () => <CreatePosition />,
     getTitle: getPositionPageTitle,
     getDescription: getPositionPageDescription,
-    nestedPaths: [':protocolVersion'],
   }),
   createRouteDefinition({
     path: '/positions',

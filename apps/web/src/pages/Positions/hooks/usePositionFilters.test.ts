@@ -62,11 +62,8 @@ describe('usePositionFilters', () => {
 
     act(() => result.current.toggleStatus(PositionStatus.CLOSED))
 
-    expect(result.current.statusFilter).toEqual([
-      PositionStatus.IN_RANGE,
-      PositionStatus.OUT_OF_RANGE,
-      PositionStatus.CLOSED,
-    ])
+    // SPRY: the default status filter is [IN_RANGE] (= "In Pool"); v4 has no out-of-range.
+    expect(result.current.statusFilter).toEqual([PositionStatus.IN_RANGE, PositionStatus.CLOSED])
   })
 
   it('toggleStatus removes a status that was present', () => {
@@ -74,7 +71,7 @@ describe('usePositionFilters', () => {
 
     act(() => result.current.toggleStatus(PositionStatus.IN_RANGE))
 
-    expect(result.current.statusFilter).toEqual([PositionStatus.OUT_OF_RANGE])
+    expect(result.current.statusFilter).toEqual([])
   })
 
   it('toggleVersion does not mutate statusFilter, and toggleStatus does not mutate versionFilter', () => {
@@ -84,11 +81,7 @@ describe('usePositionFilters', () => {
     act(() => result.current.toggleStatus(PositionStatus.CLOSED))
 
     expect(result.current.versionFilter).toEqual([])
-    expect(result.current.statusFilter).toEqual([
-      PositionStatus.IN_RANGE,
-      PositionStatus.OUT_OF_RANGE,
-      PositionStatus.CLOSED,
-    ])
+    expect(result.current.statusFilter).toEqual([PositionStatus.IN_RANGE, PositionStatus.CLOSED])
   })
 
   it('toggleVersion uses a functional setter — captured handler from earlier render still applies relative to latest atom value', () => {

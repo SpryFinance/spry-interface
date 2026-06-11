@@ -53,7 +53,8 @@ describe('PositionsHeader', () => {
 
     expect(screen.queryByText('Your positions')).not.toBeInTheDocument()
     expect(screen.getByText('Status')).toBeInTheDocument()
-    expect(screen.getByText('Protocol')).toBeInTheDocument()
+    // SPRY: the Protocol filter is removed (v4-only).
+    expect(screen.queryByText('Protocol')).not.toBeInTheDocument()
     expect(NetworkFilter).not.toHaveBeenCalled()
     expect(screen.queryByTestId('network-filter')).not.toBeInTheDocument()
   })
@@ -69,22 +70,12 @@ describe('PositionsHeader', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/positions/add?entryPoint=%2Fportfolio%2Fpools%3Fchain%3Dbase')
   })
 
-  it('should hide the revamp create button when showCreateButton is false', () => {
-    mocked(useFeatureFlag).mockImplementation((flag) => flag === FeatureFlags.AddLiquidityRevamp)
-
+  it('should hide the create button when showCreateButton is false', () => {
     render(<PositionsHeader {...defaultProps} showCreateButton={false} />)
 
+    // SPRY: v4-only - a single create button (no version dropdown), and no Protocol filter.
     expect(screen.queryByRole('button', { name: 'New position' })).not.toBeInTheDocument()
-    // Filters still render so watchers can scope what they see.
     expect(screen.getByText('Status')).toBeInTheDocument()
-    expect(screen.getByText('Protocol')).toBeInTheDocument()
-  })
-
-  it('should hide the legacy create button when showCreateButton is false', () => {
-    render(<PositionsHeader {...defaultProps} showCreateButton={false} />)
-
-    expect(screen.queryByText('New')).not.toBeInTheDocument()
-    expect(screen.getByText('Status')).toBeInTheDocument()
-    expect(screen.getByText('Protocol')).toBeInTheDocument()
+    expect(screen.queryByText('Protocol')).not.toBeInTheDocument()
   })
 })

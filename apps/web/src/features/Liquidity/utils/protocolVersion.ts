@@ -32,7 +32,8 @@ export function getProtocols(version: ProtocolVersion | undefined): Protocols | 
 export function getProtocolStatusLabel(status: PositionStatus, t: AppTFunction): string | undefined {
   switch (status) {
     case PositionStatus.IN_RANGE:
-      return t('common.withinRange')
+      // SPRY: positions are full-range, so there is no in/out-of-range concept - an open position is "In Pool".
+      return 'In Pool'
     case PositionStatus.OUT_OF_RANGE:
       return t('common.outOfRange')
     case PositionStatus.CLOSED:

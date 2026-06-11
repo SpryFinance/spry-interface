@@ -40,11 +40,9 @@ export const defaultFeeTiers: Record<FeeAmount, FeeDataWithChain> = {
 
 // SPRY: v4-only (SpryHook is a v4 hook); v2/v3 LP positions are not supported.
 export const LP_POSITION_PROTOCOL_VERSIONS = [ProtocolVersion.V4]
-export const LP_POSITION_STATUS_FILTER_OPTIONS = [
-  PositionStatus.IN_RANGE,
-  PositionStatus.OUT_OF_RANGE,
-  PositionStatus.CLOSED,
-]
+// SPRY: positions have no concentrated range (full-range by design), so there is no
+// in-range/out-of-range distinction - just "In Pool" (open, = IN_RANGE) vs "Closed".
+export const LP_POSITION_STATUS_FILTER_OPTIONS = [PositionStatus.IN_RANGE, PositionStatus.CLOSED]
 
 export const DEFAULT_LP_POSITION_PROTOCOL_FILTER = [...LP_POSITION_PROTOCOL_VERSIONS]
-export const DEFAULT_LP_POSITION_STATUS_FILTER = [PositionStatus.IN_RANGE, PositionStatus.OUT_OF_RANGE]
+export const DEFAULT_LP_POSITION_STATUS_FILTER = [PositionStatus.IN_RANGE]
