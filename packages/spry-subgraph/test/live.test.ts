@@ -46,8 +46,8 @@ describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
     if (first) {
       // eslint-disable-next-line no-console
       console.log(`pool ${first.id}: tier=${first.tier} feeTier=${first.feeTier}`);
-      expect(Array.isArray(await fetchPoolSwaps(client, first.id, { first: 5 }))).toBe(true);
-      expect(Array.isArray(await fetchPoolWindows(client, first.id, { first: 5 }))).toBe(true);
+      expect(Array.isArray(await fetchPoolSwaps(client, { pool: first.id, first: 5 }))).toBe(true);
+      expect(Array.isArray(await fetchPoolWindows(client, { pool: first.id, first: 5 }))).toBe(true);
     } else {
       // eslint-disable-next-line no-console
       console.log('no Spry pools indexed yet on Base Sepolia');
@@ -62,7 +62,7 @@ describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
       console.log('no pools yet; skipping swap reproduction');
       return;
     }
-    const swaps = await fetchPoolSwaps(client, pool.id, { first: 10 });
+    const swaps = await fetchPoolSwaps(client, { pool: pool.id, first: 10 });
     if (swaps.length === 0) {
       // eslint-disable-next-line no-console
       console.log('no swaps indexed yet; skipping swap reproduction');

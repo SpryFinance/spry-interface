@@ -66,6 +66,6 @@ describe('typed api unwraps the response', () => {
     const swaps = createSpryGraphClient('http://x', {
       fetchFn: mockFetch({ data: { swaps: [{ viaSpryRouter: true }] } }),
     });
-    expect((await fetchPoolSwaps(swaps, '0xabc'))[0]?.viaSpryRouter).toBe(true);
+    expect((await fetchPoolSwaps(swaps, { pool: '0xabc' }))[0]?.viaSpryRouter).toBe(true);
   });
 });

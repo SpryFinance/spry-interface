@@ -1,20 +1,20 @@
 import { PositionStatus, ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
 import { useCallback, useMemo } from 'react'
-import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import type { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { Platform } from 'uniswap/src/features/platforms/types/Platform'
-import {
-  type UseWalletPositionsResult,
-  useWalletPositions,
-} from 'uniswap/src/features/positions/hooks/useWalletPositions'
-import { parseRestPosition } from 'uniswap/src/features/positions/parseRestPosition'
 import type { PositionInfo } from 'uniswap/src/features/positions/types'
 import { getPositionKey } from 'uniswap/src/features/positions/utils'
 import { usePositionVisibilityCheck } from 'uniswap/src/features/visibility/hooks/usePositionVisibilityCheck'
+import { useSpryWalletPositions } from '~/features/Liquidity/spry/useSpryWalletPositions'
 import { usePendingLPTransactionsChangeListener } from '~/state/transactions/hooks'
-import { useRequestPositionsForSavedPairs } from '~/state/user/hooks'
 
-const PAGE_SIZE = 25
+// SPRY: positions come from the Spry subgraph + live chain reads
+// (useSpryWalletPositions) instead of the Uniswap gateway ListPositions, which
+// does not serve Base Sepolia. The gateway plumbing this replaced
+// (uniswap/src/features/positions/hooks/useWalletPositions +
+// useRequestPositionsForSavedPairs + parseRestPosition) can be restored from
+// git history if a gateway-served mainnet ever needs it. Status/version
+// filters are applied locally so toggling them never refetches; pagination is
+// gone because the whole wallet arrives in one query.
 
 export interface UseWalletPositionsWebParams {
   address: string | undefined
@@ -23,16 +23,15 @@ export interface UseWalletPositionsWebParams {
   statusFilter: PositionStatus[]
 }
 
-type ForwardedFromWalletPositions = Pick<
-  UseWalletPositionsResult,
-  'isFetching' | 'isPlaceholderData' | 'hasNextPage' | 'refetch'
->
-
-export interface UseWalletPositionsWebResult extends ForwardedFromWalletPositions {
+export interface UseWalletPositionsWebResult {
   visiblePositions: PositionInfo[]
   hiddenPositions: PositionInfo[]
+  isFetching: boolean
+  isPlaceholderData: boolean
+  hasNextPage: boolean
   isLoadingPositions: boolean
   hasErrorWithoutData: boolean
+  refetch: () => void
   loadMorePositions: () => void
 }
 
@@ -43,51 +42,27 @@ export function useWalletPositionsWeb({
   statusFilter,
 }: UseWalletPositionsWebParams): UseWalletPositionsWebResult {
   const isPositionVisible = usePositionVisibilityCheck()
-  const { chains: defaultChains } = useEnabledChains({ platform: Platform.EVM })
 
-  const {
-    allPositions: allBEPositions,
-    isLoading,
-    isFetching,
-    isPlaceholderData,
-    hasNextPage,
-    hasData,
-    error,
-    refetch,
-    fetchNextPage,
-  } = useWalletPositions({
-    account: address ?? '',
-    chainIds: chainFilter ? [chainFilter] : defaultChains,
-    protocolVersions: versionFilter,
-    statuses: statusFilter,
-    includeHidden: true,
-    autoFetchAllPages: false,
-    pageSize: PAGE_SIZE,
+  const { positions, isLoading, isFetching, error, refetch } = useSpryWalletPositions({
+    address,
+    chainFilter,
   })
 
-  const savedPositions = useRequestPositionsForSavedPairs()
-
-  const isLoadingPositions = !!address && (isLoading || !hasData) && !error
-  const hasErrorWithoutData = !!error && !hasData
+  const isLoadingPositions = !!address && isLoading
+  const hasErrorWithoutData = !!error && positions.length === 0
 
   const { visiblePositions, hiddenPositions } = useMemo(() => {
-    const parsedSaved = savedPositions
-      .filter((position) => {
-        const matchesChain = !chainFilter || position.data?.position?.chainId === chainFilter
-        const matchesStatus = position.data?.position?.status && statusFilter.includes(position.data.position.status)
-        const matchesVersion =
-          position.data?.position?.protocolVersion && versionFilter.includes(position.data.position.protocolVersion)
-        return matchesChain && matchesStatus && matchesVersion
-      })
-      .map((p) => p.data?.position)
-      .map(parseRestPosition)
-      .filter((position): position is PositionInfo => !!position)
-
     const dedupedById = new Map<string, PositionInfo>()
-    for (const position of [...allBEPositions, ...parsedSaved]) {
-      const positionId = getPositionKey(position)
-      if (!dedupedById.has(positionId)) {
-        dedupedById.set(positionId, position)
+    for (const position of positions) {
+      const matchesChain = !chainFilter || position.chainId === chainFilter
+      const matchesStatus = statusFilter.includes(position.status)
+      const matchesVersion = versionFilter.includes(position.version)
+      if (!matchesChain || !matchesStatus || !matchesVersion) {
+        continue
+      }
+      const key = getPositionKey(position)
+      if (!dedupedById.has(key)) {
+        dedupedById.set(key, position)
       }
     }
 
@@ -108,22 +83,20 @@ export function useWalletPositionsWeb({
     }
 
     return { visiblePositions: visible, hiddenPositions: hidden }
-  }, [allBEPositions, savedPositions, chainFilter, statusFilter, versionFilter, isPositionVisible])
+  }, [positions, chainFilter, statusFilter, versionFilter, isPositionVisible])
 
   usePendingLPTransactionsChangeListener(refetch)
 
   const loadMorePositions = useCallback(() => {
-    if (hasNextPage && !isFetching) {
-      fetchNextPage()
-    }
-  }, [hasNextPage, isFetching, fetchNextPage])
+    // single-shot fetch; nothing to page
+  }, [])
 
   return {
     visiblePositions,
     hiddenPositions,
     isFetching,
-    isPlaceholderData,
-    hasNextPage,
+    isPlaceholderData: false,
+    hasNextPage: false,
     isLoadingPositions,
     hasErrorWithoutData,
     refetch,

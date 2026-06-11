@@ -40,6 +40,56 @@ export interface PoolRow {
   token1: TokenRef;
 }
 
+/** A token ref with full ERC-20 metadata (the positions queries). */
+export interface TokenMetaRef {
+  /** The token (currency) address; the zero address is native ETH. */
+  id: string;
+  symbol: string;
+  name: string;
+  decimals: string;
+}
+
+/**
+ * A row from the positions-by-owner query: one canonical-PositionManager
+ * ERC-721. NOT necessarily a Spry position (the PositionManager is shared);
+ * resolve the poolKey on-chain and filter against the indexed pools.
+ */
+export interface PositionRow {
+  /** Same as tokenId. */
+  id: string;
+  tokenId: string;
+  /** Current owner, lowercase. */
+  owner: string;
+  createdAtTimestamp: string;
+}
+
+/** A row from the modifies-by-origin query (script-seeded / raw liquidity attribution). */
+export interface ModifyRow {
+  /** The contract that called PoolManager.modifyLiquidity (router or PositionManager). */
+  sender: string;
+  /** Signed liquidity delta. */
+  amount: string;
+  tickLower: string;
+  tickUpper: string;
+  timestamp: string;
+  pool: { id: string };
+}
+
+/** A row from the pools-by-ids query: pool identity + state + token metadata. */
+export interface PositionPoolRow {
+  id: string;
+  /** Current dynamic fee in pips (NOT the pool-key fee; Spry keys use DYNAMIC_FEE_FLAG). */
+  feeTier: string;
+  tickSpacing: string;
+  sqrtPrice: string;
+  tick: string | null;
+  liquidity: string;
+  hooks: string;
+  tier: PoolTier;
+  token0: TokenMetaRef;
+  token1: TokenMetaRef;
+}
+
 /** A row from the recent-swaps query. */
 export interface SwapRow {
   timestamp: string;
