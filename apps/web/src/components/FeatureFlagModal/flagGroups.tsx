@@ -95,17 +95,6 @@ export function buildFlagGroups(extras: {
       ],
     },
     {
-      name: 'Toucan',
-      flags: [
-        { flag: FeatureFlags.ToucanAuctionKYC, label: 'Enable Toucan Auction KYC' },
-        { flag: FeatureFlags.ToucanLaunchAuction, label: 'Enable Toucan Launch Auction' },
-        {
-          flag: FeatureFlags.ToucanTickDetailsTooltip,
-          label: 'Show Remaining (currency required) on chart-bar tooltip',
-        },
-      ],
-    },
-    {
       name: 'Embedded Wallet',
       flags: [{ flag: FeatureFlags.EmbeddedWallet, label: 'Add internal embedded wallet functionality' }],
       extra: extras.extensionDropdown,

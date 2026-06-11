@@ -8,22 +8,13 @@ import {
 import { getMonitoredSagaReducers, type MonitoredSaga, waitForRehydration } from 'uniswap/src/utils/saga'
 import { liquiditySaga } from '~/state/sagas/liquidity/liquiditySaga'
 import { lpIncentivesClaimSaga } from '~/state/sagas/lp_incentives/lpIncentivesSaga'
-import { submitToucanBidSaga } from '~/state/sagas/toucan/submitBidSaga'
-import { withdrawBidAndClaimTokensToucanBidSaga } from '~/state/sagas/toucan/withdrawBidAndClaimTokensSaga'
 import { cancelOrderSaga } from '~/state/sagas/transactions/cancelOrderSaga'
 import { cancelPlanStepSaga } from '~/state/sagas/transactions/cancelPlanStepSaga'
 import { swapActions, swapReducer, swapSaga, swapSagaName } from '~/state/sagas/transactions/swapSaga'
 import { watchTransactionsSaga } from '~/state/sagas/transactions/watcherSaga'
 import { wrapSaga } from '~/state/sagas/transactions/wrapSaga'
 
-const sagas = [
-  wrapSaga,
-  liquiditySaga,
-  watchTransactionsSaga,
-  lpIncentivesClaimSaga,
-  submitToucanBidSaga,
-  withdrawBidAndClaimTokensToucanBidSaga,
-]
+const sagas = [wrapSaga, liquiditySaga, watchTransactionsSaga, lpIncentivesClaimSaga]
 
 // Stateful sagas that are registered with the store on startup
 const monitoredSagas: Record<string, MonitoredSaga> = {

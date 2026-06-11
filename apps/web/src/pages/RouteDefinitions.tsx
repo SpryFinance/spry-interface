@@ -1,8 +1,7 @@
 import { isDevEnv } from '@universe/environment'
-import { FeatureFlags, useFeatureFlag, useStatsigClientStatus } from '@universe/gating'
+import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { lazy, ReactNode, Suspense, useMemo } from 'react'
 import { matchPath, Navigate, Route, Routes, useLocation } from 'react-router'
-import { SpinningLoader } from 'ui/src'
 import { WRAPPED_PATH } from 'uniswap/src/components/banners/shared/utils'
 import { CHROME_EXTENSION_UNINSTALL_URL_PATH } from 'uniswap/src/constants/urls'
 import { EXTENSION_PASSKEY_AUTH_PATH } from 'uniswap/src/features/passkey/constants'
@@ -50,9 +49,6 @@ const ExtensionPasskeyAuthPopUp = lazy(() => import('~/pages/ExtensionPasskeyAut
 const PasskeyManagement = lazy(() => import('~/pages/PasskeyManagement'))
 const ExtensionUninstall = lazy(() => import('~/pages/ExtensionUninstall/ExtensionUninstall'))
 const Portfolio = lazy(() => import('~/pages/Portfolio/Portfolio'))
-const ToucanToken = lazy(() => import('~/pages/Explore/ToucanToken'))
-const CreateAuction = lazy(() => import('~/pages/Liquidity/CreateAuction/CreateAuction'))
-const XOAuthCallbackPage = lazy(() => import('~/pages/Liquidity/CreateAuction/XOAuthCallbackPage'))
 const BetaPage = lazy(() => import('~/pages/Beta'))
 const Wrapped = lazy(() => import('~/pages/Wrapped'))
 const SpryProbe = lazy(() => import('~/pages/SpryProbe'))
@@ -102,29 +98,6 @@ const StaticTitlesAndDescriptions = {
   MigrateDescriptionV4: i18n.t('title.easilyRemoveV4'),
   AddLiquidityDescription: i18n.t('title.earnFees'),
   PasskeyManagementTitle: i18n.t('title.managePasskeys'),
-  // TODO(LP-295): Update after launch
-  ToucanPlaceholderDescription: 'Placeholder description for Toucan page',
-}
-
-/**
- * Registers /liquidity/launch-auction even while Statsig is still loading so direct
- * navigation does not fall through to 404. After gates are ready, shows the page or not-found.
- */
-function CreateAuctionRouteGate(): JSX.Element {
-  const isToucanLaunchAuctionEnabled = useFeatureFlag(FeatureFlags.ToucanLaunchAuction)
-  const { isStatsigReady } = useStatsigClientStatus()
-
-  if (!isStatsigReady) {
-    return <SpinningLoader color="$accent1" />
-  }
-  if (!isToucanLaunchAuctionEnabled) {
-    return <Navigate to="/not-found" replace />
-  }
-  return (
-    <Suspense fallback={null}>
-      <CreateAuction />
-    </Suspense>
-  )
 }
 
 export interface RouteDefinition {
@@ -207,32 +180,6 @@ export const routes: RouteDefinition[] = [
     getElement: () => (
       <Suspense fallback={null}>
         <PoolDetails />
-      </Suspense>
-    ),
-  }),
-  createRouteDefinition({
-    path: '/explore/auctions/:chainName/:auctionAddress',
-    getTitle: () => StaticTitlesAndDescriptions.DetailsPageBaseTitle,
-    getDescription: () => StaticTitlesAndDescriptions.ToucanPlaceholderDescription,
-    getElement: () => (
-      <Suspense fallback={null}>
-        <ToucanToken />
-      </Suspense>
-    ),
-  }),
-  createRouteDefinition({
-    path: '/liquidity/launch-auction',
-    getTitle: () => i18n.t('toucan.createAuction.title'),
-    getDescription: () => StaticTitlesAndDescriptions.ToucanPlaceholderDescription,
-    getElement: () => <CreateAuctionRouteGate />,
-  }),
-  createRouteDefinition({
-    path: '/liquidity/launch-auction/x/callback',
-    getTitle: () => 'X Verification',
-    getDescription: () => StaticTitlesAndDescriptions.ToucanPlaceholderDescription,
-    getElement: () => (
-      <Suspense fallback={null}>
-        <XOAuthCallbackPage />
       </Suspense>
     ),
   }),

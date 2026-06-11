@@ -13,7 +13,6 @@ import {
   MAX_FEE_TIER_DECIMALS,
   mergeFeeTiers,
 } from '~/features/Liquidity/utils/feeTiers'
-import { NEW_TOKEN_PLACEHOLDER_ADDRESS } from '~/pages/Liquidity/CreateAuction/types'
 import { FeeTierData } from '~/types/liquidity'
 
 /**
@@ -36,11 +35,7 @@ export function useAllFeeTierPoolData({
   const { t } = useTranslation()
   const { formatPercent } = useLocalizationContext()
 
-  const isPlaceholderToken = (c: Maybe<Currency>) => c?.isToken && c.address === NEW_TOKEN_PLACEHOLDER_ADDRESS
-  const shouldFetchPools =
-    Boolean(chainId && sdkCurrencies.TOKEN0 && sdkCurrencies.TOKEN1) &&
-    !isPlaceholderToken(sdkCurrencies.TOKEN0) &&
-    !isPlaceholderToken(sdkCurrencies.TOKEN1)
+  const shouldFetchPools = Boolean(chainId && sdkCurrencies.TOKEN0 && sdkCurrencies.TOKEN1)
 
   const { data: poolData } = useGetPoolsByTokens(
     {

@@ -36,7 +36,6 @@ export const useTabsContent = (): TabsSection[] => {
   const { chainId: portfolioChainId, isExternalWallet } = usePortfolioRoutes()
   const isPortfolioDefiTabEnabled = useFeatureFlag(FeatureFlags.PortfolioDefiTab)
   const portfolioPoolsBalancesEnabled = useFeatureFlag(FeatureFlags.PortfolioPoolsBalances)
-  const isToucanLaunchAuctionEnabled = useFeatureFlag(FeatureFlags.ToucanLaunchAuction)
   const isAddLiquidityRevamp = useFeatureFlag(FeatureFlags.AddLiquidityRevamp)
   const entryPoint = resolveEntryPoint({ search, state })
   const isPortfolioPoolsEntryPointActive = entryPoint.kind === EntryPointKind.PortfolioPools
@@ -71,16 +70,6 @@ export const useTabsContent = (): TabsSection[] => {
           internal: true,
           elementName: ElementName.NavbarPoolDropdownCreatePosition,
         },
-        ...(isToucanLaunchAuctionEnabled
-          ? [
-              {
-                label: t('toucan.createAuction.launchAuction'),
-                href: '/liquidity/launch-auction',
-                internal: true,
-                elementName: ElementName.NavbarPoolDropdownLaunchAuction,
-              },
-            ]
-          : []),
       ],
     },
     {
@@ -97,12 +86,6 @@ export const useTabsContent = (): TabsSection[] => {
           href: '/explore/tokens',
           internal: true,
           elementName: ElementName.NavbarExploreDropdownTokens,
-        },
-        {
-          label: t('toucan.auctions'),
-          href: '/explore/auctions',
-          internal: true,
-          elementName: ElementName.NavbarExploreDropdownToucan,
         },
         {
           label: t('common.pools'),

@@ -44,7 +44,6 @@ import { useHasInjectedWallets } from '~/features/wallet/connection/hooks/useOrd
 import { useAccount } from '~/hooks/useAccount'
 import { PageType, useIsPage } from '~/hooks/useIsPage'
 import { useModalState } from '~/hooks/useModalState'
-import { ReturnToAuctionBanner } from '~/pages/Swap/ReturnToAuctionBanner'
 import { useResetOverrideOneClickSwapFlag } from '~/pages/Swap/settings/OneClickSwap'
 import { useWebSwapSettings } from '~/pages/Swap/settings/useWebSwapSettings'
 import { useEmbeddedWalletState } from '~/state/embeddedWallet/store'
@@ -91,7 +90,6 @@ export function SwapPage() {
           />
         </WebFORNudgeProvider>
       </PageWrapper>
-      <ReturnToAuctionBanner />
     </Trace>
   )
 }
