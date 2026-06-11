@@ -38,7 +38,8 @@ export const defaultFeeTiers: Record<FeeAmount, FeeDataWithChain> = {
   },
 } as const
 
-export const LP_POSITION_PROTOCOL_VERSIONS = [ProtocolVersion.V4, ProtocolVersion.V3, ProtocolVersion.V2]
+// SPRY: v4-only (SpryHook is a v4 hook); v2/v3 LP positions are not supported.
+export const LP_POSITION_PROTOCOL_VERSIONS = [ProtocolVersion.V4]
 export const LP_POSITION_STATUS_FILTER_OPTIONS = [
   PositionStatus.IN_RANGE,
   PositionStatus.OUT_OF_RANGE,

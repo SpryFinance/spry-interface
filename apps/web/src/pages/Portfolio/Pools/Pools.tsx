@@ -2,7 +2,7 @@ import { PositionStatus, ProtocolVersion } from '@uniswap/client-data-api/dist/d
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Anchor, Flex, Text, TouchableArea } from 'ui/src'
+import { Flex } from 'ui/src'
 import { Pools } from 'ui/src/components/icons/Pools'
 import { BaseCard } from 'uniswap/src/components/BaseCard/BaseCard'
 import { PortfolioBalancePart } from 'uniswap/src/data/rest/getWalletBalances/getWalletBalances'
@@ -27,7 +27,6 @@ import { PoolsActionRow } from '~/pages/Portfolio/Pools/PoolsActionRow'
 import { PortfolioTab } from '~/pages/Portfolio/types'
 import { buildPortfolioUrl } from '~/pages/Portfolio/utils/portfolioUrls'
 import { useCreatePositionHref } from '~/utils/createPositionRoute'
-import { buildImportV2PositionsHref } from '~/utils/importV2PositionsRoute'
 
 const POSITIONS_LIST_MAX_WIDTH = 768
 const POSITIONS_SIDEBAR_WIDTH = 360
@@ -214,27 +213,6 @@ export function PortfolioPools() {
         <Flex row gap="$spacing24" alignItems="flex-start" $xl={{ flexDirection: 'column' }}>
           <Flex grow shrink width="100%" maxWidth={POSITIONS_LIST_MAX_WIDTH} $xl={{ maxWidth: '100%' }}>
             {renderListContent()}
-            {!isExternalWallet && (
-              <Flex
-                row
-                alignItems="center"
-                mt="$spacing12"
-                py="$spacing8"
-                gap="$gap8"
-                $sm={{ flexDirection: 'column', alignItems: 'flex-start' }}
-              >
-                <Text variant="body3" color="$neutral2">
-                  {t('pool.import.link.description')}
-                </Text>
-                <Anchor href={buildImportV2PositionsHref({ entryPoint: portfolioPoolsUrl })} textDecorationLine="none">
-                  <TouchableArea>
-                    <Text variant="body3" color="$neutral1">
-                      {t('pool.import.positions.v2')}
-                    </Text>
-                  </TouchableArea>
-                </Anchor>
-              </Flex>
-            )}
           </Flex>
           <Flex width={POSITIONS_SIDEBAR_WIDTH} flexShrink={0} gap="$gap12" $xl={{ width: '100%' }}>
             {isLpIncentivesEnabled && (

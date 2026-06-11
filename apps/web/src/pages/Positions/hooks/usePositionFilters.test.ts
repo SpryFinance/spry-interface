@@ -42,18 +42,19 @@ describe('usePositionFilters', () => {
   it('toggleVersion removes a version that was present', () => {
     const { result } = renderUsePositionFilters()
 
-    act(() => result.current.toggleVersion(ProtocolVersion.V2))
+    // SPRY: the default filter is v4-only, so toggling V4 off empties it.
+    act(() => result.current.toggleVersion(ProtocolVersion.V4))
 
-    expect(result.current.versionFilter).toEqual([ProtocolVersion.V4, ProtocolVersion.V3])
+    expect(result.current.versionFilter).toEqual([])
   })
 
   it('toggleVersion re-adds a version after removing it', () => {
     const { result } = renderUsePositionFilters()
 
-    act(() => result.current.toggleVersion(ProtocolVersion.V2))
-    act(() => result.current.toggleVersion(ProtocolVersion.V2))
+    act(() => result.current.toggleVersion(ProtocolVersion.V4))
+    act(() => result.current.toggleVersion(ProtocolVersion.V4))
 
-    expect(result.current.versionFilter).toEqual([ProtocolVersion.V4, ProtocolVersion.V3, ProtocolVersion.V2])
+    expect(result.current.versionFilter).toEqual([ProtocolVersion.V4])
   })
 
   it('toggleStatus adds a status that was absent', () => {
@@ -79,10 +80,10 @@ describe('usePositionFilters', () => {
   it('toggleVersion does not mutate statusFilter, and toggleStatus does not mutate versionFilter', () => {
     const { result } = renderUsePositionFilters()
 
-    act(() => result.current.toggleVersion(ProtocolVersion.V2))
+    act(() => result.current.toggleVersion(ProtocolVersion.V4))
     act(() => result.current.toggleStatus(PositionStatus.CLOSED))
 
-    expect(result.current.versionFilter).toEqual([ProtocolVersion.V4, ProtocolVersion.V3])
+    expect(result.current.versionFilter).toEqual([])
     expect(result.current.statusFilter).toEqual([
       PositionStatus.IN_RANGE,
       PositionStatus.OUT_OF_RANGE,
@@ -98,14 +99,14 @@ describe('usePositionFilters', () => {
 
     // Mutate state via a different handler so the atom value diverges from
     // what the captured handler "saw" at capture time.
-    act(() => result.current.toggleVersion(ProtocolVersion.V3))
-    // versionFilter is now [V4, V2]
+    act(() => result.current.toggleVersion(ProtocolVersion.V4))
+    // versionFilter is now []
 
     // Invoke the captured handler — if the toggle closed over a stale snapshot,
-    // it would re-derive against the original [V4, V3, V2] and produce a wrong array.
-    // With a functional setter, it applies relative to the latest [V4, V2].
+    // it would re-derive against the original [V4] and remove V4, yielding [].
+    // With a functional setter, it applies relative to the latest [] and re-adds V4.
     act(() => capturedToggle(ProtocolVersion.V4))
 
-    expect(result.current.versionFilter).toEqual([ProtocolVersion.V2])
+    expect(result.current.versionFilter).toEqual([ProtocolVersion.V4])
   })
 })

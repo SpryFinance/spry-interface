@@ -159,7 +159,8 @@ const Toolbar = () => {
 
   const versionOptions = useMemo(
     () =>
-      [ProtocolVersion.V4, ProtocolVersion.V3, ProtocolVersion.V2]
+      // SPRY: v4-only (SpryHook is a v4 hook); no v2/v3 position creation.
+      [ProtocolVersion.V4]
         .filter((version) => version !== protocolVersion)
         .map((version) => (
           <TouchableArea key={`version-${version}`} onPress={() => handleVersionChange(version)}>

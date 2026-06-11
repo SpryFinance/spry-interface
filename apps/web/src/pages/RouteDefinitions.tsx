@@ -8,11 +8,7 @@ import { EXTENSION_PASSKEY_AUTH_PATH } from 'uniswap/src/features/passkey/consta
 import i18n from 'uniswap/src/i18n'
 import { getExploreDescription, getExploreTitle } from '~/pages/getExploreTitle'
 import { getPortfolioDescription, getPortfolioTitle } from '~/pages/getPortfolioTitle'
-import {
-  getAddLiquidityPageTitle,
-  getPositionPageDescription,
-  getPositionPageTitle,
-} from '~/pages/getPositionPageTitle'
+import { getPositionPageDescription, getPositionPageTitle } from '~/pages/getPositionPageTitle'
 // High-traffic pages (index and /swap) should not be lazy-loaded.
 // SPRY: index serves the swap page while testnet-only, so the Landing import is parked
 // (restore it with the `/` getElement below for mainnets). Landing still renders /preview.
@@ -23,26 +19,10 @@ import { isBrowserRouterEnabled } from '~/utils/env'
 const AddLiquidity = lazy(() => import('~/pages/AddLiquidity/AddLiquidity'))
 const AddLiquidityPool = lazy(() => import('~/pages/AddLiquidity/AddLiquidityPool'))
 const CreatePosition = lazy(() => import('~/pages/CreatePosition/CreatePosition'))
-const AddLiquidityV3WithTokenRedirects = lazy(() => import('~/pages/AddLiquidityV3/redirects'))
-const AddLiquidityV2WithTokenRedirects = lazy(() => import('~/pages/AddLiquidityV2/redirects'))
 const RedirectExplore = lazy(() => import('~/pages/Explore/redirects'))
-const MigrateV3 = lazy(() => import('~/pages/Migrate'))
 const NotFound = lazy(() => import('~/pages/NotFound'))
 const Pool = lazy(() => import('~/pages/Positions'))
-const LegacyPoolRedirects = lazy(() =>
-  import('~/pages/LegacyPool/redirects').then((module) => ({ default: module.LegacyPoolRedirects })),
-)
-const PoolFinderRedirects = lazy(() =>
-  import('~/pages/LegacyPool/redirects').then((module) => ({ default: module.PoolFinderRedirects })),
-)
-const LegacyPositionPageRedirects = lazy(() =>
-  import('~/pages/LegacyPool/redirects').then((module) => ({ default: module.LegacyPositionPageRedirects })),
-)
-const RemoveLiquidityV2WithTokenRedirects = lazy(() =>
-  import('~/pages/LegacyPool/redirects').then((module) => ({ default: module.RemoveLiquidityV2WithTokenRedirects })),
-)
 const PositionPage = lazy(() => import('~/pages/Positions/PositionPage'))
-const V2PositionPage = lazy(() => import('~/pages/Positions/V2PositionPage'))
 const PoolDetails = lazy(() => import('~/pages/PoolDetails'))
 const TokenDetails = lazy(() => import('~/pages/TokenDetails/TokenDetailsPage'))
 const ExtensionPasskeyAuthPopUp = lazy(() => import('~/pages/ExtensionPasskeyAuthPopUp'))
@@ -254,108 +234,10 @@ export const routes: RouteDefinition[] = [
     getDescription: getPositionPageDescription,
   }),
   createRouteDefinition({
-    path: '/positions/v2/:chainName/:pairAddress',
-    getElement: () => <V2PositionPage />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/positions/v3/:chainName/:tokenId',
-    getElement: () => <PositionPage />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
     path: '/positions/v4/:chainName/:tokenId',
     getElement: () => <PositionPage />,
     getTitle: getPositionPageTitle,
     getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/migrate/v2/:chainName/:pairAddress',
-    getElement: () => <MigrateV3 />,
-    getTitle: () => StaticTitlesAndDescriptions.MigrateTitle,
-    getDescription: () => StaticTitlesAndDescriptions.MigrateDescription,
-  }),
-  createRouteDefinition({
-    path: '/migrate/v3/:chainName/:tokenId',
-    getElement: () => <MigrateV3 />,
-    getTitle: () => StaticTitlesAndDescriptions.MigrateTitleV3,
-    getDescription: () => StaticTitlesAndDescriptions.MigrateDescriptionV4,
-  }),
-  // Legacy pool routes
-  createRouteDefinition({
-    path: '/pool',
-    getElement: () => <LegacyPoolRedirects />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/pool/v2/find',
-    getElement: () => <PoolFinderRedirects />,
-    getTitle: getPositionPageDescription,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/pool/v2',
-    getElement: () => <LegacyPositionPageRedirects />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/pool/:tokenId',
-    getElement: () => <LegacyPositionPageRedirects />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/pools/v2/find',
-    getElement: () => <PoolFinderRedirects />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/pools',
-    getElement: () => <LegacyPoolRedirects />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/pools/:tokenId',
-    getElement: () => <LegacyPositionPageRedirects />,
-    getTitle: getPositionPageTitle,
-    getDescription: getPositionPageDescription,
-  }),
-  createRouteDefinition({
-    path: '/add/v2',
-    nestedPaths: [':currencyIdA', ':currencyIdA/:currencyIdB'],
-    getElement: () => <AddLiquidityV2WithTokenRedirects />,
-    getTitle: getAddLiquidityPageTitle,
-    getDescription: () => StaticTitlesAndDescriptions.AddLiquidityDescription,
-  }),
-  createRouteDefinition({
-    path: '/add',
-    nestedPaths: [
-      ':currencyIdA',
-      ':currencyIdA/:currencyIdB',
-      ':currencyIdA/:currencyIdB/:feeAmount',
-      ':currencyIdA/:currencyIdB/:feeAmount/:tokenId',
-    ],
-    getElement: () => <AddLiquidityV3WithTokenRedirects />,
-    getTitle: getAddLiquidityPageTitle,
-    getDescription: () => StaticTitlesAndDescriptions.AddLiquidityDescription,
-  }),
-  createRouteDefinition({
-    path: '/remove/v2/:currencyIdA/:currencyIdB',
-    getElement: () => <RemoveLiquidityV2WithTokenRedirects />,
-    getTitle: () => i18n.t('title.removeLiquidityv2'),
-    getDescription: () => i18n.t('title.removeTokensv2'),
-  }),
-  createRouteDefinition({
-    path: '/remove/:tokenId',
-    getElement: () => <LegacyPositionPageRedirects />,
-    getTitle: () => i18n.t('title.removePoolLiquidity'),
-    getDescription: () => i18n.t('title.removev3Liquidity'),
   }),
   createRouteDefinition({
     path: EXTENSION_PASSKEY_AUTH_PATH,

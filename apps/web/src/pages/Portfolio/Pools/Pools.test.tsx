@@ -255,37 +255,6 @@ describe('PortfolioPools', () => {
     expect(screen.getAllByTestId('liquidity-card-loader')).toHaveLength(5)
   })
 
-  it('should render the pools unavailable state for SVM-only wallets', () => {
-    mocked(usePortfolioAddresses).mockReturnValue({
-      evmAddress: undefined,
-      svmAddress: MOCK_SVM_ADDRESS,
-      isExternalWallet: false,
-    })
-    mocked(useResolvedAddresses).mockReturnValue({
-      evmAddress: undefined,
-      svmAddress: MOCK_SVM_ADDRESS,
-      isExternalWallet: false,
-    })
-
-    render(<PortfolioPools />)
-
-    expect(useWalletPositionsWeb).toHaveBeenCalledWith({
-      address: undefined,
-      chainFilter: null,
-      versionFilter: DEFAULT_LP_POSITION_PROTOCOL_FILTER,
-      statusFilter: DEFAULT_LP_POSITION_STATUS_FILTER,
-    })
-    expect(screen.getByText('Pools aren’t available on Solana')).toBeInTheDocument()
-    expect(screen.getByText('Connect an Ethereum wallet to view your pools')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Connect Ethereum wallet' })).toBeInTheDocument()
-    expect(screen.queryByText('Providing liquidity on different protocols')).not.toBeInTheDocument()
-    expect(screen.queryByText('Hooks on v4')).not.toBeInTheDocument()
-    expect(PortfolioBalance).not.toHaveBeenCalled()
-    expect(PositionsHeader).not.toHaveBeenCalled()
-    expect(screen.queryByTestId(TestID.PortfolioPoolsSearchInput)).not.toBeInTheDocument()
-    expect(screen.queryByText('No positions')).not.toBeInTheDocument()
-  })
-
   it('should use demo wallet data instead of the missing EVM wallet view when fully disconnected', () => {
     mocked(useResolvedAddresses).mockReturnValue({
       evmAddress: undefined,
