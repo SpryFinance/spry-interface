@@ -92,10 +92,10 @@ const Tab = ({
           right={-14}
           backgroundColor="$statusWarning"
           borderRadius="$rounded4"
-          px="$spacing4"
+          px="$spacing2"
           py="$spacing1"
         >
-          <Text variant="body4" fontSize={9} lineHeight={12} fontWeight="600" color="$surface1">
+          <Text variant="body4" fontSize={8} lineHeight={10} fontWeight="600" color="$surface1">
             Soon
           </Text>
         </Flex>
