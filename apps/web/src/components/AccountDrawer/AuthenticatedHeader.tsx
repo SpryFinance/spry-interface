@@ -90,8 +90,16 @@ export function AuthenticatedHeader({
 
   const { percentChange, absoluteChangeUSD, balanceUSD } = portfolioData || {}
 
-  // Treat error-before-first-data as loading so the skeleton stays visible
-  const isLoading = !portfolioData && (portfolioLoading || !!portfolioError)
+  // SPRY: the Uniswap data gateway does not serve some chains (e.g. Base Sepolia, backendSupported: false).
+  // There, a portfolio/price fetch error is expected (the gateway never covers the chain), so it is
+  // neither a provider outage nor a transient loading state.
+  const { chains } = useEnabledChains()
+  const gatewayServesAnEnabledChain = chains.some(isBackendSupportedChainId)
+
+  // Treat error-before-first-data as loading so the skeleton stays visible - but only when the gateway
+  // actually serves the chain. Otherwise the error never clears and the balance would load forever; on
+  // gateway-unsupported chains the balance instead resolves to the "-" placeholder (no fiat data).
+  const isLoading = !portfolioData && (portfolioLoading || (!!portfolioError && gatewayServesAnEnabledChain))
   const isWarmLoading = !!portfolioData && portfolioNetworkStatus === NetworkStatus.loading
 
   const [activityOutage, setActivityOutage] = useState<DataApiOutageState>({
@@ -103,11 +111,8 @@ export function AuthenticatedHeader({
   const outageError = portfolioError ?? activityOutage.error
   const outageDataUpdatedAt = portfolioError ? portfolioDataUpdatedAt : activityOutage.dataUpdatedAt
 
-  // SPRY: the Uniswap data gateway does not serve some chains (e.g. Base Sepolia, backendSupported: false).
-  // There, a portfolio/price fetch error is expected, not a provider outage, so suppress the
-  // "Cannot load latest token prices" banner. Real outages on gateway-served chains still surface.
-  const { chains } = useEnabledChains()
-  const gatewayServesAnEnabledChain = chains.some(isBackendSupportedChainId)
+  // SPRY: suppress the "Cannot load latest token prices" banner on gateway-unsupported chains (see
+  // gatewayServesAnEnabledChain above); genuine outages on gateway-served chains still surface.
   const isOutage = !!outageError && gatewayServesAnEnabledChain
   const { openOutageModal } = useDataApiOutageModal({
     dataUpdatedAt: outageDataUpdatedAt,
