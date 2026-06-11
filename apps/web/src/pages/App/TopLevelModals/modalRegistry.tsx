@@ -218,7 +218,9 @@ export const modalRegistry: ModalRegistry = {
   },
   [ModalName.Help]: {
     component: HelpModal,
-    shouldMount: () => true,
+    // SPRY: the floating bottom-left "?" help button is hidden for the testnet phase.
+    // Restore `shouldMount: () => true` to bring it back for the mainnet production launch.
+    shouldMount: () => false,
   },
   [ModalName.ReceiveCryptoModal]: {
     component: ReceiveCryptoModal,
