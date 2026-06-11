@@ -88,13 +88,14 @@ const Tab = ({
         </TabText>
         <Flex
           position="absolute"
-          top={-2}
-          right={-4}
-          backgroundColor="$surface3"
-          borderRadius="$rounded8"
+          top={-6}
+          right={-14}
+          backgroundColor="$statusWarning"
+          borderRadius="$rounded4"
           px="$spacing4"
+          py="$spacing1"
         >
-          <Text variant="body4" color="$neutral2">
+          <Text variant="body4" fontSize={9} lineHeight={12} fontWeight="600" color="$surface1">
             Soon
           </Text>
         </Flex>
