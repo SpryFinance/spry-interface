@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "ポジションやリワードを表示するには、ウォレットを接続する必要があります。",
   "positions.welcome.connect.wallet": "ウォレットを接続",
   "privacy.anonymizedLogs": "本アプリでは、今後の改善目的で、匿名化された利用状況の統計をログで記録しています。",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "本アプリはオンチェーンデータを取得し、Infura API を使用してコントラクト呼び出しを構築します。",
   "privacy.thirdPartyApis": "本アプリは次のサードパーティ API を使用しています。",
   "privacy.trm": "本アプリは、リスクとコンプライアンス上の理由から、お客様のウォレットアドレスを安全に収集して TRM Labs Inc. と共有します。",

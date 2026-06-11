@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Чтобы просматривать позиции и вознаграждения, подключите кошелек.",
   "positions.welcome.connect.wallet": "Подключите кошелек",
   "privacy.anonymizedLogs": "Приложение регистрирует анонимные статистические данные об использовании, чтобы со временем совершенствоваться.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "Приложение извлекает ончейн-данные и создает вызовы контрактов с помощью API Infura.",
   "privacy.thirdPartyApis": "Это приложение использует следующие сторонние API:",
   "privacy.trm": "Приложение безопасно извлекает адрес вашего кошелька и передает его TRM Labs Inc. из соображений риска и соблюдения требований.",

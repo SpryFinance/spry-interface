@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Untuk melihat posisi dan hadiah, kamu harus menghubungkan dompet.",
   "positions.welcome.connect.wallet": "Hubungkan dompet",
   "privacy.anonymizedLogs": "Aplikasi ini mencatat statistik penggunaan yang dianonimkan untuk ditingkatkan seiring waktu.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "Aplikasi ini mengambil data on-chain dan membuat panggilan kontrak dengan API Infura.",
   "privacy.thirdPartyApis": "Aplikasi ini menggunakan API pihak ketiga berikut:",
   "privacy.trm": "Aplikasi ini dengan aman mengumpulkan alamat dompetmu dan membagikannya dengan TRM Labs Inc. untuk alasan risiko dan kepatuhan.",

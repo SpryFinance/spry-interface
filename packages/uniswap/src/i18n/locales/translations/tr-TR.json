@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Pozisyonlarını ve getirilerini görüntülemek için cüzdanını bağlaman gerekir.",
   "positions.welcome.connect.wallet": "Cüzdanını bağla",
   "privacy.anonymizedLogs": "Uygulama, zaman içinde gelişmek için anonimleştirilmiş kullanım istatistiklerini günlüğe kaydeder.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "Uygulama, zincir içi verileri getirir ve bir Infura API'si ile sözleşme çağrıları oluşturur.",
   "privacy.thirdPartyApis": "Bu uygulama aşağıdaki üçüncü taraf API'leri kullanır:",
   "privacy.trm": "Uygulama, cüzdan adresini güvenli bir şekilde alır, risk ve uyumluluk amaçları doğrultusunda bunu TRM Labs Inc. ile paylaşır.",

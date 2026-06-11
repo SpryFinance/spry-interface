@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Para matingnan ang iyong mga posisyon at reward, dapat mong ikonekta ang wallet mo.",
   "positions.welcome.connect.wallet": "Ikonekta ang iyong wallet",
   "privacy.anonymizedLogs": "Nagla-log ang app ng mga na-anonymize na istatistika ng paggamit para maging mahusay ito sa paglipas ng panahon.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "Nagfe-fetch ang app ng on-chain na data at bumubuo ito ng mga contract call gamit ang Infura API.",
   "privacy.thirdPartyApis": "Ginagamit ng app na ito ang mga sumusunod na third-party na API:",
   "privacy.trm": "Secure na kinokolekta ng app ang iyong wallet address at ibinabahagi ito ng app sa TRM Labs Inc. para sa mga dahilang may kaugnayan sa panganib at pagsunod.",

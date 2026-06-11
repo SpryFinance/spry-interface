@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Bạn cần kết nối ví để xem các vị thế và phần thưởng của bạn.",
   "positions.welcome.connect.wallet": "Kết nối ví của bạn",
   "privacy.anonymizedLogs": "Ứng dụng ghi lại số liệu thống kê sử dụng ẩn danh để cải thiện theo thời gian.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "Ứng dụng lấy dữ liệu onchain và xây dựng lệnh gọi hợp đồng với API Infura.",
   "privacy.thirdPartyApis": "Ứng dụng này sử dụng các API bên thứ ba sau:",
   "privacy.trm": "Ứng dụng thu thập an toàn địa chỉ ví của bạn và chia sẻ với TRM Labs Inc. cho mục đích rủi ro và tuân thủ.",

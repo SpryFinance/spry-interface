@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "要查看你的头寸和奖励，需先连接钱包。",
   "positions.welcome.connect.wallet": "连接钱包",
   "privacy.anonymizedLogs": "该应用会记录匿名使用统计数据，以便随着时间的推移进行改进。",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "该应用获取链上数据并使用 Infura API 构建合约调用。",
   "privacy.thirdPartyApis": "此应用使用以下第三方 API：",
   "privacy.trm": "该应用会安全地收集你的钱包地址，并出于风险和合规原因与 TRM Labs Inc. 共享。",

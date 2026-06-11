@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Debes conectar tu billetera para ver tus posiciones y recompensas.",
   "positions.welcome.connect.wallet": "Conecta tu billetera",
   "privacy.anonymizedLogs": "La app registra estadísticas anónimas de uso para implementar mejoras con el tiempo.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "La app recupera datos en cadena y construye opciones de contrato con una API de Infura.",
   "privacy.thirdPartyApis": "Esta app utiliza las siguientes API de terceros:",
   "privacy.trm": "La app recopila de manera segura la dirección de la billetera y la comparte con TRM Labs Inc. por motivos de riesgo y cumplimiento.",

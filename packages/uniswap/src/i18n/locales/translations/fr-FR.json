@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Connectez votre wallet pour afficher vos positions et vos récompenses.",
   "positions.welcome.connect.wallet": "Connecter votre wallet",
   "privacy.anonymizedLogs": "L'app enregistre des statistiques d'utilisation anonymisées afin de s'améliorer au fil du temps.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "L'app récupère des données sur la chaîne et construit des appels de contrats avec une API Infura.",
   "privacy.thirdPartyApis": "Cette app utilise les API tierces suivantes :",
   "privacy.trm": "L'app collecte en toute sécurité l'adresse de votre wallet et la partage avec TRM Labs Inc. pour des raisons de risque et de conformité.",

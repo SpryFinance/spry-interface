@@ -1815,7 +1815,7 @@
   "positions.welcome.connect.description": "Koppel je wallet om je posities en beloningen te bekijken.",
   "positions.welcome.connect.wallet": "Je wallet koppelen",
   "privacy.anonymizedLogs": "De app registreert geanonimiseerde gebruiksstatistieken om deze in de loop van de tijd te verbeteren.",
-  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance server.",
+  "privacy.autoRouter": "The app fetches the most efficient trade route from a Spry Finance graph.",
   "privacy.infura": "De app haalt gegevens uit de chain op en bouwt contractoproepen op met een Infura API.",
   "privacy.thirdPartyApis": "Deze app maakt gebruik van de volgende API's van derden:",
   "privacy.trm": "De app verzamelt veilig je walletadres en deelt het met TRM Labs Inc. voor risico- en nalevingsdoeleinden.",
