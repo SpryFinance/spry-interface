@@ -54,7 +54,6 @@ test.describe(
 
       await page.goto('/')
       await expect(page.getByTestId(TestID.LandingPage)).not.toBeVisible()
-      await expect(page.getByTestId(TestID.BuyFiatButton)).not.toBeVisible()
       await expect(page).toHaveURL('/swap')
     })
 

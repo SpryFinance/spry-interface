@@ -59,7 +59,6 @@ export function buildFlagGroups(extras: {
         { flag: FeatureFlags.UnirouteEnabled, label: 'Enable Uniroute' },
         { flag: FeatureFlags.UseUniversalRouterVersion211, label: 'Use Universal Router v2.1.1' },
         { flag: FeatureFlags.ViemProviderEnabled, label: 'Enable Viem Provider' },
-        { flag: FeatureFlags.LimitsFees, label: 'Enable Limits fees' },
         { flag: FeatureFlags.EnablePermitMismatchUX, label: 'Enable Permit2 mismatch detection' },
         { flag: FeatureFlags.NetworkFilterV2, label: 'Enable Network Filter V2' },
         {

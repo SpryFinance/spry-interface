@@ -22,7 +22,6 @@ import { useTrace } from 'utilities/src/telemetry/trace/TraceContext'
 import { DEFAULT_TXN_DISMISS_MS, L2_TXN_DISMISS_MS } from '~/constants/misc'
 import { useHandleUniswapXActivityUpdate } from '~/hooks/useHandleUniswapXActivityUpdate'
 import { usePollPendingBatchTransactions } from '~/state/activity/polling/batch'
-import { usePollPendingBridgeTransactions } from '~/state/activity/polling/bridge'
 import { usePollPendingOrders } from '~/state/activity/polling/orders'
 import { useActivePlanTransactions, usePollPendingPlanTransactions } from '~/state/activity/polling/plans'
 import { usePollPendingTransactions } from '~/state/activity/polling/transactions'
@@ -45,7 +44,6 @@ export function ActivityStateUpdater() {
 function PollingActivityStateUpdater({ onActivityUpdate }: { onActivityUpdate: OnActivityUpdate }) {
   usePollPendingTransactions(onActivityUpdate)
   usePollPendingBatchTransactions(onActivityUpdate)
-  usePollPendingBridgeTransactions(onActivityUpdate)
   usePollPendingOrders(onActivityUpdate)
   useActivePlanTransactions(onActivityUpdate)
   usePollPendingPlanTransactions(onActivityUpdate)

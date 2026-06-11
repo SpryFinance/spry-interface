@@ -107,13 +107,7 @@ test.describe(
         const actionTiles = page.getByTestId(TestID.PortfolioActionTiles)
         await expect(actionTiles.getByTestId(TestID.PortfolioActionTileSend)).toBeVisible()
         await expect(actionTiles.getByTestId(TestID.PortfolioActionTileReceive)).toBeVisible()
-        await expect(actionTiles.getByTestId(TestID.PortfolioActionTileBuy)).toBeVisible()
         await expect(actionTiles.getByTestId(TestID.PortfolioActionTileMore)).toBeVisible()
-      })
-
-      test('should navigate to buy page when clicking Buy tile', async ({ page }) => {
-        await page.getByTestId(TestID.PortfolioActionTiles).getByTestId(TestID.PortfolioActionTileBuy).click()
-        await expect(page).toHaveURL(/\/buy/)
       })
     })
 
@@ -134,13 +128,12 @@ test.describe(
         await expect(actionTiles.getByTestId(TestID.PortfolioActionTileCopyAddress)).toBeVisible()
       })
 
-      test('should not show Swap, Buy, or More tiles for external wallet', async ({ page }) => {
+      test('should not show Swap or More tiles for external wallet', async ({ page }) => {
         const actionTiles = page.getByTestId(TestID.PortfolioActionTiles)
         await expect(actionTiles.getByTestId(TestID.PortfolioActionTileSend)).toBeVisible()
 
         // These should NOT be visible for external wallet
         await expect(page.getByTestId(TestID.PortfolioActionTileSwap)).not.toBeVisible()
-        await expect(page.getByTestId(TestID.PortfolioActionTileBuy)).not.toBeVisible()
       })
     })
 
@@ -230,7 +223,6 @@ test.describe(
       test('should display action tiles in demo view', async ({ page }) => {
         await page.goto('/portfolio?eagerlyConnect=false')
         const actionTiles = page.getByTestId(TestID.PortfolioActionTiles)
-        await expect(actionTiles.getByTestId(TestID.PortfolioActionTileBuy)).toBeVisible()
         await expect(actionTiles.getByTestId(TestID.PortfolioActionTileReceive)).toBeVisible()
       })
 
@@ -317,7 +309,7 @@ test.describe(
 
       test('should display action tiles on mobile', async ({ page }) => {
         const actionTiles = page.getByTestId(TestID.PortfolioActionTiles)
-        await expect(actionTiles.getByTestId(TestID.PortfolioActionTileBuy)).toBeVisible()
+        await expect(actionTiles.getByTestId(TestID.PortfolioActionTileSend)).toBeVisible()
       })
 
       test('should display tokens table on mobile', async ({ page }) => {

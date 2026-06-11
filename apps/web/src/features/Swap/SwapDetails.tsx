@@ -57,8 +57,8 @@ export function DropdownController({
 }
 
 /**
- * IMPORTANT: This legacy component is only used for web LIMIT orders and assumes `trade` is a `LimitOrderTrade`,
- *            even though there are some `isLimitTrade` calls. This should eventually be cleaned up or deprecated.
+ * SPRY: this was a limit-order-only component (it assumed `trade` was a `LimitOrderTrade`). With limit
+ * orders pruned, it renders the confirm-swap details row and CTA for regular swap trades.
  */
 export function SwapDetails({
   trade,
