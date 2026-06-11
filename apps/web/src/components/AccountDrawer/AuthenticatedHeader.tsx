@@ -14,6 +14,8 @@ import AnimatedNumber, {
 import { TestnetModeBanner } from 'uniswap/src/components/banners/TestnetModeBanner'
 import { RelativeChange } from 'uniswap/src/components/RelativeChange/RelativeChange'
 import { useConnectionStatus } from 'uniswap/src/features/accounts/store/hooks'
+import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
+import { isBackendSupportedChainId } from 'uniswap/src/features/chains/utils'
 import { usePortfolioTotalValue } from 'uniswap/src/features/dataApi/balances/balancesRest'
 import { DataApiOutageBanner } from 'uniswap/src/features/dataApi/outage/DataApiOutageBanner'
 import type { DataApiOutageState } from 'uniswap/src/features/dataApi/types'
@@ -101,7 +103,12 @@ export function AuthenticatedHeader({
   const outageError = portfolioError ?? activityOutage.error
   const outageDataUpdatedAt = portfolioError ? portfolioDataUpdatedAt : activityOutage.dataUpdatedAt
 
-  const isOutage = !!outageError
+  // SPRY: the Uniswap data gateway does not serve some chains (e.g. Base Sepolia, backendSupported: false).
+  // There, a portfolio/price fetch error is expected, not a provider outage, so suppress the
+  // "Cannot load latest token prices" banner. Real outages on gateway-served chains still surface.
+  const { chains } = useEnabledChains()
+  const gatewayServesAnEnabledChain = chains.some(isBackendSupportedChainId)
+  const isOutage = !!outageError && gatewayServesAnEnabledChain
   const { openOutageModal } = useDataApiOutageModal({
     dataUpdatedAt: outageDataUpdatedAt,
   })
