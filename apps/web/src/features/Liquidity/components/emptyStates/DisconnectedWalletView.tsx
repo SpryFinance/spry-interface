@@ -3,8 +3,11 @@ import { Button, Flex, Text } from 'ui/src'
 import { Wallet } from 'ui/src/components/icons/Wallet'
 import { useAccountDrawer } from '~/components/AccountDrawer/MiniPortfolio/hooks'
 import { BUTTON_AREA_WIDTH } from '~/features/Liquidity/components/emptyStates/PositionsEmptyStateLayout'
-import { LiquidityLearnMoreTiles } from '~/features/Liquidity/components/LearnMoreTiles'
 
+// SPRY: the "Providing liquidity on different protocols" / "Hooks on v4" learn-more
+// tiles (LiquidityLearnMoreTiles) are pruned from the disconnected state for the testnet
+// phase - they link to Uniswap's help center. RESTORE FOR MAINNET: re-import
+// LiquidityLearnMoreTiles and render it after the connect card (repointed at Spry docs).
 export function DisconnectedWalletView() {
   const { t } = useTranslation()
   const accountDrawer = useAccountDrawer()
@@ -14,16 +17,15 @@ export function DisconnectedWalletView() {
   }
 
   return (
-    <Flex gap="$spacing12">
-      <Flex
-        padding="$spacing24"
-        centered
-        gap="$gap16"
-        borderRadius="$rounded20"
-        borderColor="$surface3"
-        borderWidth="$spacing1"
-        borderStyle="solid"
-      >
+    <Flex
+      padding="$spacing24"
+      centered
+      gap="$gap16"
+      borderRadius="$rounded20"
+      borderColor="$surface3"
+      borderWidth="$spacing1"
+      borderStyle="solid"
+    >
         <Flex padding="$padding12" borderRadius="$rounded12" backgroundColor="$surface3">
           <Wallet size="$icon.24" color="$neutral1" />
         </Flex>
@@ -62,7 +64,5 @@ export function DisconnectedWalletView() {
           </Button>
         </Flex>
       </Flex>
-      <LiquidityLearnMoreTiles />
-    </Flex>
   )
 }

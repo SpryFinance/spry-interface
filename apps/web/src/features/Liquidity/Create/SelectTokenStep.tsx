@@ -38,7 +38,6 @@ import { CurrencySearchModal } from '~/components/SearchModal/CurrencySearchModa
 import { CreatingPoolInfo, PoolAlreadyCreatedInfo } from '~/features/Liquidity/Create/CreatingPoolInfo'
 import { useLiquidityUrlState } from '~/features/Liquidity/Create/hooks/useLiquidityUrlState'
 import { PoolParsingError } from '~/features/Liquidity/Create/PoolParsingError'
-import { HookModal } from '~/features/Liquidity/HookModal'
 import { buildEmptySpryPosition } from '~/features/Liquidity/spry/buildEmptySpryPosition'
 import { SpryTierSelector } from '~/features/Liquidity/spry/SpryTierSelector'
 import { useSpryWalletPositions } from '~/features/Liquidity/spry/useSpryWalletPositions'
@@ -125,7 +124,6 @@ export function SelectTokensStep({
   const dispatch = useDispatch()
   const { setSelectedChainId, setIsUserSelectedToken } = useMultichainContext()
   const trace = useTrace()
-  const [hookModalOpen, setHookModalOpen] = useState(false)
   const [showWrappedNativeWarning, setShowWrappedNativeWarning] = useState(false)
   const allowedV4WethHookAddresses: string[] = useDynamicConfigValue({
     config: DynamicConfigs.AllowedV4WethHookAddresses,
@@ -282,11 +280,15 @@ export function SelectTokensStep({
       return
     }
 
-    if (hook !== userApprovedHook) {
-      setHookModalOpen(true)
-    } else {
-      onContinue()
+    // SPRY: the only hook on Spry is the SpryHook, pinned and pre-approved by the
+    // tier selector, so the "Adding hook" speedbump never applies. Auto-approve any
+    // not-yet-approved hook and continue instead of ever showing that modal (which is
+    // pruned from the render below). RESTORE FOR MAINNET (allow arbitrary hooks): bring
+    // back the HookModal render + `if (hook !== userApprovedHook) setHookModalOpen(true)`.
+    if (hook && hook !== userApprovedHook) {
+      setPositionState((state) => ({ ...state, userApprovedHook: hook }))
     }
+    onContinue()
   }
 
   const wrappedNativeWarning = useMemo((): WrappedNativeWarning | undefined => {
@@ -351,20 +353,10 @@ export function SelectTokensStep({
     !migratingPosition && !creatingPoolOrPair && !!poolOrPair && !!poolId && !!token0 && !!token1 && !!fee
 
   return (
-    <>
-      {hook && (
-        <HookModal
-          isOpen={hookModalOpen}
-          address={hook}
-          onClose={() => setHookModalOpen(false)}
-          onClearHook={() => setPositionState((state) => ({ ...state, hook: undefined, fee: undefined }))}
-          onContinue={() => {
-            setPositionState((state) => ({ ...state, userApprovedHook: hook }))
-            onContinue()
-          }}
-        />
-      )}
-      <PrefetchBalancesWrapper>
+    // SPRY: the "Adding hook" speedbump modal is pruned for the testnet phase (every Spry
+    // position uses the pre-approved SpryHook). See handleOnContinue for the auto-approve +
+    // the mainnet-restore note.
+    <PrefetchBalancesWrapper>
         <Flex gap="$spacing32" {...rest}>
           <Flex gap="$spacing16">
             <Flex gap="$spacing12">
@@ -465,8 +457,7 @@ export function SelectTokensStep({
           chainIds={supportedChains}
           flow={TokenSelectorFlow.Liquidity}
         />
-      </PrefetchBalancesWrapper>
-    </>
+    </PrefetchBalancesWrapper>
   )
 }
 
