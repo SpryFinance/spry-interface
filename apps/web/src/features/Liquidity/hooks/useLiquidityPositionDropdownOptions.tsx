@@ -2,6 +2,7 @@ import { PositionStatus, ProtocolVersion } from '@uniswap/client-data-api/dist/d
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
+import { Flex, Text } from 'ui/src'
 import { ArrowRight } from 'ui/src/components/icons/ArrowRight'
 import { Dollar } from 'ui/src/components/icons/Dollar'
 import { Eye } from 'ui/src/components/icons/Eye'
@@ -15,7 +16,6 @@ import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import { PositionInfo } from 'uniswap/src/features/positions/types'
 import { ModalName } from 'uniswap/src/features/telemetry/constants'
 import { setPositionVisibility } from 'uniswap/src/features/visibility/slice'
-import { getPoolDetailsURL } from 'uniswap/src/utils/linking'
 import { useReportPositionHandler } from '~/features/Liquidity/hooks/useReportPositionHandler'
 import { useAccount } from '~/hooks/useAccount'
 import { useSelectChain } from '~/hooks/useSelectChain'
@@ -51,15 +51,25 @@ export function useLiquidityPositionDropdownOptions({
       isV3Position && isOpenLiquidityPosition && !isV4UnsupportedChain(liquidityPosition.chainId)
     const hasFees = liquidityPosition.fee0Amount?.greaterThan(0) || liquidityPosition.fee1Amount?.greaterThan(0)
 
+    // SPRY: "Pool info" is coming-soon for the testnet phase - the pool-details page lives under the
+    // disabled Explore surface, so the option is grayed, unreachable, and badged on every breakpoint
+    // (this menu is shared by desktop hover, touch, and long-press). RESTORE FOR MAINNET: replace with
+    //   onPress: () => liquidityPosition.poolId && navigate(getPoolDetailsURL(liquidityPosition.poolId, liquidityPosition.chainId))
+    // and drop disabled/textColor/iconColor/trailingIcon (+ re-import getPoolDetailsURL from uniswap/src/utils/linking).
     const viewPoolInfoOption: MenuOptionItem = {
-      onPress: () => {
-        if (!liquidityPosition.poolId) {
-          return
-        }
-        navigate(getPoolDetailsURL(liquidityPosition.poolId, liquidityPosition.chainId))
-      },
+      onPress: () => {},
       label: t('pool.info'),
       Icon: InfoCircleFilled,
+      disabled: true,
+      textColor: '$neutral3',
+      iconColor: '$neutral3',
+      trailingIcon: (
+        <Flex backgroundColor="$statusWarning" borderRadius="$rounded4" px="$spacing4" py="$spacing1">
+          <Text variant="body4" fontSize={8} lineHeight={10} fontWeight="600" color="$surface1">
+            Soon
+          </Text>
+        </Flex>
+      ),
     }
 
     // Read-only callers (e.g. watched wallets) can only view the pool — every other action would mutate the owner's positions.

@@ -95,6 +95,66 @@ function PairNameText({ positionInfo, linkToPool }: { positionInfo: PositionInfo
   return <Text variant="subheading1">{pair}</Text>
 }
 
+interface HeaderBlockProps {
+  positionInfo: PositionInfo
+  linkToPool: boolean
+  hideStatusIndicator: boolean
+  statusLabel: string | undefined
+  spryMeta: ReturnType<typeof getSpryPositionMeta>
+}
+
+/** Compact (mobile) header: pair name, status under it, then tier + zone counts as one row. */
+function HeaderMini({ positionInfo, linkToPool, hideStatusIndicator, statusLabel, spryMeta }: HeaderBlockProps) {
+  return (
+    <Flex gap="$spacing1">
+      <PairNameText positionInfo={positionInfo} linkToPool={linkToPool} />
+      {statusLabel && (
+        <Text variant="body3" color={statusColor(positionInfo.status)}>
+          {statusLabel}
+        </Text>
+      )}
+      {!hideStatusIndicator && spryMeta && (
+        <Flex row gap="$gap12" alignItems="center" pt="$spacing2">
+          <SpryTierBadge tier={spryMeta.tier} />
+          <SpryZoneCounts alertCount={spryMeta.alertCount} dangerCount={spryMeta.dangerCount} />
+        </Flex>
+      )}
+    </Flex>
+  )
+}
+
+/**
+ * Full header: two aligned columns - (pair name over tier badge) beside (status over zone counts) -
+ * so the zone counts sit exactly under the "In Pool"/"Closed" label.
+ */
+function HeaderColumns({ positionInfo, linkToPool, hideStatusIndicator, statusLabel, spryMeta }: HeaderBlockProps) {
+  return (
+    <Flex row gap="$gap12" alignItems="flex-start">
+      <Flex gap="$spacing2">
+        <PairNameText positionInfo={positionInfo} linkToPool={linkToPool} />
+        {!hideStatusIndicator &&
+          (spryMeta ? (
+            <SpryTierBadge tier={spryMeta.tier} />
+          ) : (
+            <Flex row gap="$spacing6" alignItems="center">
+              <LiquidityPositionStatusIndicator status={positionInfo.status} />
+            </Flex>
+          ))}
+      </Flex>
+      <Flex gap="$spacing2" justifyContent="space-between" alignSelf="stretch" py="$spacing2">
+        {statusLabel && (
+          <Text variant="body3" color={statusColor(positionInfo.status)}>
+            {statusLabel}
+          </Text>
+        )}
+        {!hideStatusIndicator && spryMeta && (
+          <SpryZoneCounts alertCount={spryMeta.alertCount} dangerCount={spryMeta.dangerCount} />
+        )}
+      </Flex>
+    </Flex>
+  )
+}
+
 export function LiquidityPositionInfo({
   positionInfo,
   currencyLogoSize = 44,
@@ -136,37 +196,23 @@ export function LiquidityPositionInfo({
         chainId={includeNetworkInLogo ? chainId : null}
       />
       <Flex gap={isMiniVersion ? '$none' : '$spacing2'}>
-        {/* SPRY: two aligned columns - (pair name over tier badge) beside (status over zone counts) -
-            so the zone numbers sit exactly under the "In Pool"/"Closed" label. */}
-        <Flex
-          flexDirection={isMiniVersion ? 'column' : 'row'}
-          gap={isMiniVersion ? '$none' : '$gap12'}
-          $md={{ gap: isMiniVersion ? '$none' : '$gap12' }}
-          alignItems="flex-start"
-        >
-          <Flex gap="$spacing2">
-            <PairNameText positionInfo={positionInfo} linkToPool={linkToPool} />
-            {!isMiniVersion &&
-              !hideStatusIndicator &&
-              (spryMeta ? (
-                <SpryTierBadge tier={spryMeta.tier} />
-              ) : (
-                <Flex row gap="$spacing6" alignItems="center">
-                  <LiquidityPositionStatusIndicator status={status} />
-                </Flex>
-              ))}
-          </Flex>
-          <Flex gap="$spacing2" justifyContent="space-between" alignSelf="stretch" py="$spacing2">
-            {statusLabel && (
-              <Text variant="body3" color={statusColor(status)}>
-                {statusLabel}
-              </Text>
-            )}
-            {!isMiniVersion && !hideStatusIndicator && spryMeta && (
-              <SpryZoneCounts alertCount={spryMeta.alertCount} dangerCount={spryMeta.dangerCount} />
-            )}
-          </Flex>
-        </Flex>
+        {isMiniVersion ? (
+          <HeaderMini
+            positionInfo={positionInfo}
+            linkToPool={linkToPool}
+            hideStatusIndicator={hideStatusIndicator}
+            statusLabel={statusLabel}
+            spryMeta={spryMeta}
+          />
+        ) : (
+          <HeaderColumns
+            positionInfo={positionInfo}
+            linkToPool={linkToPool}
+            hideStatusIndicator={hideStatusIndicator}
+            statusLabel={statusLabel}
+            spryMeta={spryMeta}
+          />
+        )}
 
         {!isMiniVersion && (includeNetwork || (includeLpIncentives && lpIncentiveRewardApr)) && (
           <Flex row gap="$gap12">

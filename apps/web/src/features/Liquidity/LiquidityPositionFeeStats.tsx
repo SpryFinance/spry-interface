@@ -16,10 +16,10 @@ import { ClickableTamaguiStyle } from '~/theme/components/styles'
 
 interface LiquidityPositionFeeStatsProps extends LiquidityPositionMinMaxRangeProps {
   cardHovered: boolean
-  /** Pair-denominated position size, e.g. "41.2K sptA / 2.4K sptB". */
-  formattedValue?: string
-  /** Accrued fees, one line per nonzero side, e.g. ["+22.2 sptA", "+0.25 sptB"]. */
-  feeLines?: string[]
+  /** Position size, one line per pair side, e.g. ["41.2K sptA", "2.4K sptB"]. */
+  positionLines?: string[]
+  /** Accrued fees, one line per NONZERO side; the +amount renders green, the symbol white. */
+  feeLines?: Array<{ value: string; symbol: string }>
   /** Final APR display string ("New pair" on testnets). */
   formattedApr: string
   /** Hides the min/max price-range column (Spry positions are always full-range). */
@@ -82,7 +82,7 @@ export function LiquidityPositionFeeStatsLoader() {
 }
 
 export function LiquidityPositionFeeStats({
-  formattedValue,
+  positionLines,
   feeLines,
   formattedApr,
   hideRangeColumn = false,
@@ -112,8 +112,8 @@ export function LiquidityPositionFeeStats({
         <WrapChildrenForMediaSize>
           <FeeStat>
             <SecondaryText>{t('pool.position')}</SecondaryText>
-            {formattedValue ? (
-              <PrimaryText>{formattedValue}</PrimaryText>
+            {positionLines && positionLines.length > 0 ? (
+              positionLines.map((line) => <PrimaryText key={line}>{line}</PrimaryText>)
             ) : (
               <MouseoverTooltip text={t('position.valueUnavailable')} placement="top">
                 <PrimaryText>-</PrimaryText>
@@ -125,7 +125,12 @@ export function LiquidityPositionFeeStats({
               {t('common.fees')}
             </SecondaryText>
             {feeLines && feeLines.length > 0 ? (
-              feeLines.map((line) => <PrimaryText key={line}>{line}</PrimaryText>)
+              feeLines.map((line) => (
+                <Flex key={`${line.value}-${line.symbol}`} row gap="$spacing4" alignItems="center">
+                  <PrimaryText color="$statusSuccess">{line.value}</PrimaryText>
+                  <PrimaryText>{line.symbol}</PrimaryText>
+                </Flex>
+              ))
             ) : (
               <PrimaryText>-</PrimaryText>
             )}

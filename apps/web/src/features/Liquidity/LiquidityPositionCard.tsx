@@ -107,14 +107,16 @@ export const LiquidityPositionCard = memo(function LiquidityPositionCard({
   const spryMeta = getSpryPositionMeta(liquidityPosition)
   const isTestnetChain = getChainInfo(liquidityPosition.chainId).testnet
 
-  const pairAmount = (amount: CurrencyAmount<Currency>, prefix = ''): string =>
-    `${prefix}${formatCurrencyAmount({ value: amount, type: NumberType.TokenNonTx })} ${amount.currency.symbol}`
+  const formatAmount = (amount: CurrencyAmount<Currency>): string =>
+    formatCurrencyAmount({ value: amount, type: NumberType.TokenNonTx })
 
-  const formattedValue = `${pairAmount(liquidityPosition.currency0Amount)} / ${pairAmount(liquidityPosition.currency1Amount)}`
-  // one line per pair side, zero sides skipped entirely
+  // one line per pair side (both stats); zero fee sides skipped entirely
+  const positionLines = [liquidityPosition.currency0Amount, liquidityPosition.currency1Amount].map(
+    (amount) => `${formatAmount(amount)} ${amount.currency.symbol}`,
+  )
   const feeLines = [fee0Amount, fee1Amount]
     .filter((amount): amount is CurrencyAmount<Currency> => !!amount && amount.quotient.toString() !== '0')
-    .map((amount) => pairAmount(amount, '+'))
+    .map((amount) => ({ value: `+${formatAmount(amount)}`, symbol: amount.currency.symbol ?? '' }))
   const formattedApr = isTestnetChain
     ? 'New pair'
     : liquidityPosition.apr
@@ -195,7 +197,7 @@ export const LiquidityPositionCard = memo(function LiquidityPositionCard({
           )}
         </Flex>
         <LiquidityPositionFeeStats
-          formattedValue={formattedValue}
+          positionLines={positionLines}
           feeLines={feeLines}
           formattedApr={formattedApr}
           hideRangeColumn={!!spryMeta}

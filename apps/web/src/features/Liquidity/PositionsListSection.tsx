@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Flex, type FlexProps, Text, useMedia } from 'ui/src'
 import { InlineExpandoRow } from 'uniswap/src/components/ExpandoRow/InlineExpandoRow'
+import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import type { PositionInfo } from 'uniswap/src/features/positions/types'
 import { getPositionKey } from 'uniswap/src/features/positions/utils'
 import { getPoolDetailsURL } from 'uniswap/src/utils/linking'
@@ -23,6 +24,32 @@ function getPositionCardLinkTarget({
     return getPoolDetailsURL(position.poolId, position.chainId)
   }
   return getPositionUrl(position, { entryPoint })
+}
+
+/**
+ * SPRY: position cards do NOT navigate on testnet chains - the position detail page and the pool
+ * details page are still gateway-fed and broken there. Cards on mainnet chains keep their links.
+ * Restore for testnets by deleting the testnet branch here when the detail-page rails land.
+ */
+function PositionCardWrapper({
+  position,
+  readOnly,
+  entryPoint,
+  children,
+}: {
+  position: PositionInfo
+  readOnly: boolean
+  entryPoint?: string
+  children: React.ReactNode
+}) {
+  if (getChainInfo(position.chainId).testnet) {
+    return <Flex cursor="default">{children}</Flex>
+  }
+  return (
+    <Link style={{ textDecoration: 'none' }} to={getPositionCardLinkTarget({ position, readOnly, entryPoint })}>
+      {children}
+    </Link>
+  )
 }
 
 interface HiddenSectionPadding {
@@ -100,8 +127,10 @@ function VirtualizedPositionsList({
   const { t } = useTranslation()
   const media = useMedia()
 
+  // Initial estimates only - rows self-measure below (the redesigned cards vary in height with
+  // their stacked pair lines, and fixed sizes made cards touch/overlap).
   const positionItemHeight = useMemo(() => {
-    return media.sm ? 366 : media.md ? 284 : 184
+    return media.sm ? 420 : media.md ? 320 : 240
   }, [media])
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -133,28 +162,25 @@ function VirtualizedPositionsList({
         {virtualItems.map((virtualItem) => {
           const position = positions[virtualItem.index]
           return (
+            // SPRY: rows self-measure (measureElement + data-index) and carry the inter-card gap as
+            // bottom padding, so spacing holds at every breakpoint regardless of card height.
             <Flex
               key={getPositionKey(position)}
+              // Tamagui refs are TamaguiElement (HTMLElement on web); the virtualizer wants Element.
+              ref={(node) => virtualizer.measureElement(node instanceof Element ? node : null)}
+              data-index={virtualItem.index}
               position="absolute"
               top={0}
               left={0}
               width="100%"
-              height={virtualItem.size}
+              pb="$spacing16"
               style={{
                 transform: `translateY(${virtualItem.start - virtualizer.options.scrollMargin}px)`,
               }}
             >
-              <Link
-                style={{ textDecoration: 'none' }}
-                to={getPositionCardLinkTarget({ position, readOnly, entryPoint })}
-              >
-                <LiquidityPositionCard
-                  showVisibilityOption
-                  liquidityPosition={position}
-                  showMigrateButton
-                  readOnly={readOnly}
-                />
-              </Link>
+              <PositionCardWrapper position={position} readOnly={readOnly} entryPoint={entryPoint}>
+                <LiquidityPositionCard showVisibilityOption liquidityPosition={position} readOnly={readOnly} />
+              </PositionCardWrapper>
             </Flex>
           )
         })}
@@ -208,10 +234,11 @@ function HiddenPositions({
           showHiddenPositions ? (
             <Flex gap="$gap16">
               {hiddenPositions.map((position) => (
-                <Link
+                <PositionCardWrapper
                   key={getPositionKey(position)}
-                  style={{ textDecoration: 'none' }}
-                  to={getPositionCardLinkTarget({ position, readOnly, entryPoint })}
+                  position={position}
+                  readOnly={readOnly}
+                  entryPoint={entryPoint}
                 >
                   <LiquidityPositionCard
                     showVisibilityOption
@@ -219,7 +246,7 @@ function HiddenPositions({
                     isVisible={false}
                     readOnly={readOnly}
                   />
-                </Link>
+                </PositionCardWrapper>
               ))}
             </Flex>
           ) : undefined
