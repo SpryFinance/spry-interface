@@ -5,10 +5,11 @@
 // and returned through the same liquidityQueries seams, mirroring the swap
 // local-rails pattern (spryLocalQuote / sprySwapApproval).
 //
-// SCOPE: today every Spry position is a RAW position - liquidity seeded through
-// the canonical PoolModifyLiquidityTest router with salt = bytes32(owner EOA)
-// and no NFT (the positions list synthesizes tokenIds "spry-raw-<poolId>|<tl>|
-// <tu>|<router>"). The builders therefore target that router:
+// SCOPE: two position kinds exist on Base Sepolia and both are handled here.
+//
+// RAW positions (liquidity seeded through the canonical PoolModifyLiquidityTest
+// router with salt = bytes32(owner EOA), no NFT; the positions list synthesizes
+// tokenIds "spry-raw-<poolId>|<tl>|<tu>|<router>"). Builders target the router:
 //
 //   router.modifyLiquidity(poolKey, { tickLower, tickUpper, liquidityDelta,
 //   salt = bytes32(wallet) }, hookData = 0x)
@@ -17,13 +18,31 @@
 //     the router settles the deltas to msg.sender)
 //   - decrease: negative delta from the live on-chain liquidity x percentage
 //   - increase: positive delta sized with the v4 SDK from the entered amount;
-//     ERC20 legs are pulled via transferFrom (hence the approval builder) and
-//     a native ETH leg is sent as msg.value (the router refunds any excess)
+//     ERC20 legs are pulled via transferFrom (hence the plain approve-to-router
+//     in the approval builder) and a native ETH leg is sent as msg.value (the
+//     router refunds any excess)
 //
-// PositionManager NFT positions (none exist yet on Base Sepolia; the create
-// flow that would mint them is still gateway-gapped) fall through to the
-// gateway untouched - extend here with V4PositionManager calldata when that
-// flow lands. The wallet signing these must be the position's original owner:
+// NFT positions (PositionManager ERC-721s, minted by the create flow below or
+// by third parties). Builders use @uniswap/v4-sdk V4PositionManager calldata:
+//
+//   - create (NEW pool): addCallParameters with createPool, which multicalls
+//     initializePool(key, sqrtPriceX96) + a full-range mint in ONE transaction.
+//     ERC20 legs settle through Permit2, so the approval builder's CREATE
+//     branch emits up to two txs per leg: ERC20.approve(Permit2) (matched to
+//     the token0/token1Approval slots by `to`) and Permit2.approve(token, posm)
+//     (to = Permit2, which normalizeApprovalResponse routes into the
+//     token0/token1PermitTransaction slots; the LP saga executes both before
+//     the create). Creating a position in an EXISTING pool never reaches this
+//     module from the UI - the create page routes existing pools into the
+//     shared Add-liquidity modal instead.
+//   - collect / decrease: collectCallParameters / removeCallParameters by
+//     tokenId (payout-only, so no approvals).
+//   - increase: routed through the RAW router path at the NFT's range (the
+//     liquidity lands in a sibling raw position keyed by the wallet's salt).
+//     This keeps the approval story uniform - the approval request carries no
+//     tokenId, so it cannot know posm/Permit2 vs router per position.
+//
+// The wallet signing the raw builders must be the position's original owner:
 // the salt IS the owner address, and the positions list only shows a wallet
 // its own positions, so this holds by construction.
 
@@ -43,7 +62,12 @@ import {
   type IncreasePositionRequest,
   type LPApprovalRequest,
 } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v2/api_pb'
-import { ApprovalTransactionRequest, LPToken } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v2/types_pb'
+import {
+  ApprovalTransactionRequest,
+  LPAction,
+  LPToken,
+  type CreatePoolParameters,
+} from '@uniswap/client-liquidity/dist/uniswap/liquidity/v2/types_pb'
 import type { PoolInfoRequest } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v1/api_pb'
 import { PoolInfoResponse } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v1/api_pb'
 import {
@@ -51,12 +75,28 @@ import {
   Protocols,
   TransactionRequest,
 } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v1/types_pb'
+import { permit2Address } from '@uniswap/permit2-sdk'
 import type { Currency } from '@uniswap/sdk-core'
-import { Token } from '@uniswap/sdk-core'
-import { Pool as V4Pool, Position as V4Position } from '@uniswap/v4-sdk'
-import { encodeFunctionData, encodePacked, erc20Abi, keccak256, maxUint256, pad, toHex, type Address, type Hex } from 'viem'
+import { Percent, Token } from '@uniswap/sdk-core'
+import { TickMath } from '@uniswap/v3-sdk'
+import { Pool as V4Pool, Position as V4Position, V4PositionManager } from '@uniswap/v4-sdk'
+import JSBI from 'jsbi'
+import {
+  encodeFunctionData,
+  encodePacked,
+  erc20Abi,
+  getAddress,
+  keccak256,
+  maxUint160,
+  maxUint256,
+  pad,
+  toHex,
+  type Address,
+  type Hex,
+} from 'viem'
 import { ZERO_ADDRESS } from 'uniswap/src/constants/misc'
 import { nativeOnChain } from 'uniswap/src/constants/tokens'
+import { normalizeTokenAddressForCache } from 'uniswap/src/data/cache'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
@@ -144,6 +184,68 @@ const STATE_VIEW_ABI = [
   },
 ] as const
 
+const POSITION_MANAGER_LP_ABI = [
+  {
+    type: 'function',
+    name: 'getPoolAndPositionInfo',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [
+      {
+        name: 'poolKey',
+        type: 'tuple',
+        components: [
+          { name: 'currency0', type: 'address' },
+          { name: 'currency1', type: 'address' },
+          { name: 'fee', type: 'uint24' },
+          { name: 'tickSpacing', type: 'int24' },
+          { name: 'hooks', type: 'address' },
+        ],
+      },
+      { name: 'info', type: 'uint256' },
+    ],
+  },
+  {
+    type: 'function',
+    name: 'getPositionLiquidity',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: 'liquidity', type: 'uint128' }],
+  },
+] as const
+
+const PERMIT2_LP_ABI = [
+  {
+    type: 'function',
+    name: 'allowance',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'user', type: 'address' },
+      { name: 'token', type: 'address' },
+      { name: 'spender', type: 'address' },
+    ],
+    outputs: [
+      { name: 'amount', type: 'uint160' },
+      { name: 'expiration', type: 'uint48' },
+      { name: 'nonce', type: 'uint48' },
+    ],
+  },
+  {
+    type: 'function',
+    name: 'approve',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint160' },
+      { name: 'expiration', type: 'uint48' },
+    ],
+    outputs: [],
+  },
+] as const
+
+const MAX_UINT48 = BigInt('0xffffffffffff')
+
 interface RawPositionRef {
   poolId: Hex
   tickLower: number
@@ -173,6 +275,136 @@ function saltForOwner(owner: string): Hex {
 /** PoolManager position slot id: keccak256(abi.encodePacked(owner, tickLower, tickUpper, salt)). */
 function positionSlot(ref: RawPositionRef, salt: Hex): Hex {
   return keccak256(encodePacked(['address', 'int24', 'int24', 'bytes32'], [ref.router, ref.tickLower, ref.tickUpper, salt]))
+}
+
+/** Parse a PositionManager NFT tokenId (plain decimal digits); undefined for raw/synthetic ids. */
+function parseNftTokenId(tokenId: string | undefined): bigint | undefined {
+  return tokenId && /^\d+$/.test(tokenId) ? BigInt(tokenId) : undefined
+}
+
+/**
+ * Sign-extend the int24 fields packed inside PositionManager's PositionInfo
+ * word (modulo/division instead of mask/shift: this package lints no-bitwise,
+ * and they are equivalent on non-negative bigints).
+ */
+function toInt24(value: bigint): number {
+  const masked = value % BigInt(0x1000000)
+  return Number(masked >= BigInt(0x800000) ? masked - BigInt(0x1000000) : masked)
+}
+
+interface NftPositionState {
+  key: PoolKeyStruct
+  poolId: Hex
+  tickLower: number
+  tickUpper: number
+  liquidity: bigint
+  sqrtPriceX96: bigint
+  tick: number
+}
+
+/** Live pool key + range + liquidity + price for a PositionManager NFT position. */
+async function fetchNftPositionState(tokenId: bigint): Promise<NftPositionState> {
+  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  if (!config) {
+    throw new Error('Spry LP: no Spry config for Base Sepolia')
+  }
+  const posm = config.addresses.positionManager
+  const [keyAndInfo, liquidity] = await Promise.all([
+    spryPublicClient.readContract({
+      address: posm,
+      abi: POSITION_MANAGER_LP_ABI,
+      functionName: 'getPoolAndPositionInfo',
+      args: [tokenId],
+    }),
+    spryPublicClient.readContract({
+      address: posm,
+      abi: POSITION_MANAGER_LP_ABI,
+      functionName: 'getPositionLiquidity',
+      args: [tokenId],
+    }),
+  ])
+  const [rawKey, infoPacked] = keyAndInfo
+  // a burned/nonexistent tokenId reads back an all-zero key
+  if (rawKey.tickSpacing === 0) {
+    throw new Error(`Spry LP: position ${tokenId} does not exist (burned?)`)
+  }
+  const key: PoolKeyStruct = {
+    currency0: rawKey.currency0,
+    currency1: rawKey.currency1,
+    fee: rawKey.fee,
+    tickSpacing: rawKey.tickSpacing,
+    hooks: rawKey.hooks,
+  }
+  const poolId = computeSpryPoolId({
+    currency0: key.currency0,
+    currency1: key.currency1,
+    fee: key.fee,
+    tickSpacing: key.tickSpacing,
+    hooks: key.hooks,
+  })
+  const slot0 = await spryPublicClient.readContract({
+    address: config.addresses.stateView,
+    abi: STATE_VIEW_ABI,
+    functionName: 'getSlot0',
+    args: [poolId],
+  })
+  return {
+    key,
+    poolId,
+    tickLower: toInt24(infoPacked / BigInt(0x100)), // info >> 8
+    tickUpper: toInt24(infoPacked / BigInt(0x100000000)), // info >> 32
+    liquidity,
+    sqrtPriceX96: slot0[0],
+    tick: slot0[1],
+  }
+}
+
+/** SDK Currency pair for a pool key, reading ERC20 decimals live (symbols are display-only here). */
+async function currenciesForPoolKey(key: PoolKeyStruct): Promise<[Currency, Currency]> {
+  const erc20Legs = [key.currency0, key.currency1].filter((address) => !isSameEvmAddress(address, ZERO_ADDRESS))
+  const decimalsResults = await spryPublicClient.multicall({
+    contracts: erc20Legs.map((address) => ({
+      address: getAddress(address),
+      abi: erc20Abi,
+      functionName: 'decimals' as const,
+    })),
+    allowFailure: false,
+  })
+  const decimalsByAddress = new Map(erc20Legs.map((address, i) => [normalizeTokenAddressForCache(address), decimalsResults[i]]))
+  const toCurrency = (address: string): Currency =>
+    isSameEvmAddress(address, ZERO_ADDRESS)
+      ? nativeOnChain(SPRY_LP_CHAIN_ID)
+      : new Token(SPRY_LP_CHAIN_ID, address, decimalsByAddress.get(normalizeTokenAddressForCache(address)) ?? 18)
+  return [toCurrency(key.currency0), toCurrency(key.currency1)]
+}
+
+function v4PoolFromState(args: {
+  currency0: Currency
+  currency1: Currency
+  key: PoolKeyStruct
+  sqrtPriceX96: bigint | string
+  tick: number
+}): V4Pool {
+  return new V4Pool(
+    args.currency0,
+    args.currency1,
+    args.key.fee,
+    args.key.tickSpacing,
+    args.key.hooks,
+    args.sqrtPriceX96.toString(),
+    '0', // pool-wide liquidity does not affect amount math
+    args.tick,
+  )
+}
+
+/** Form slippage is in percent units (e.g. 2.5); the SDK wants a Percent. */
+function percentFromSlippage(slippageTolerance: number | undefined): Percent {
+  const bps = Math.round((slippageTolerance ?? 2.5) * 100)
+  return new Percent(Math.max(0, Math.min(10_000, bps)), 10_000)
+}
+
+function deadlineOrDefault(deadline: number | undefined): string {
+  return String(deadline && deadline > 0 ? deadline : Math.floor(Date.now() / 1000) + 1200)
 }
 
 async function fetchSpryPool(poolId: Hex): Promise<PositionPoolRow> {
@@ -219,14 +451,14 @@ function encodeModifyLiquidity(args: {
   })
 }
 
-function buildTxRequest(args: { to: string; from: string; data: Hex; value: bigint }): TransactionRequest {
+function buildTxRequest(args: { to: string; from: string; data: Hex; value: bigint; gasLimit?: string }): TransactionRequest {
   return new TransactionRequest({
     to: args.to,
     from: args.from,
     data: args.data,
     value: toHex(args.value),
     chainId: SPRY_LP_CHAIN_ID,
-    gasLimit: SPRY_LP_GAS_LIMIT,
+    gasLimit: args.gasLimit ?? SPRY_LP_GAS_LIMIT,
   })
 }
 
@@ -236,34 +468,123 @@ function isSpryLpChain(chainId: number): boolean {
 }
 
 /**
- * Collect fees: modifyLiquidity with liquidityDelta = 0 credits the position's
- * accrued fees, which the router pays out to the caller.
+ * Collect fees.
+ * - raw positions: modifyLiquidity with liquidityDelta = 0 credits the
+ *   position's accrued fees, which the router pays out to the caller.
+ * - NFT positions: V4PositionManager collect calldata (decrease-by-zero +
+ *   TAKE_PAIR to the owner).
  */
 export async function maybeSpryLocalClaimFees(params: ClaimFeesRequest): Promise<ClaimFeesResponse | undefined> {
-  const ref = parseSpryRawTokenId(params.tokenId)
-  if (!isSpryLpChain(params.chainId) || !ref || !params.walletAddress) {
+  if (!isSpryLpChain(params.chainId) || !params.walletAddress) {
     return undefined
   }
-  const pool = await fetchSpryPool(ref.poolId)
-  const data = encodeModifyLiquidity({
-    key: poolKeyFromRow(pool),
-    tickLower: ref.tickLower,
-    tickUpper: ref.tickUpper,
-    liquidityDelta: BigInt(0),
-    salt: saltForOwner(params.walletAddress),
+
+  const ref = parseSpryRawTokenId(params.tokenId)
+  if (ref) {
+    const pool = await fetchSpryPool(ref.poolId)
+    const data = encodeModifyLiquidity({
+      key: poolKeyFromRow(pool),
+      tickLower: ref.tickLower,
+      tickUpper: ref.tickUpper,
+      liquidityDelta: BigInt(0),
+      salt: saltForOwner(params.walletAddress),
+    })
+    return new ClaimFeesResponse({
+      requestId: 'spry-local-claim',
+      claim: buildTxRequest({ to: ref.router, from: params.walletAddress, data, value: BigInt(0) }),
+    })
+  }
+
+  const nftTokenId = parseNftTokenId(params.tokenId)
+  if (nftTokenId === undefined) {
+    return undefined
+  }
+  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  if (!config) {
+    return undefined
+  }
+  const state = await fetchNftPositionState(nftTokenId)
+  const [currency0, currency1] = await currenciesForPoolKey(state.key)
+  const position = new V4Position({
+    pool: v4PoolFromState({ currency0, currency1, key: state.key, sqrtPriceX96: state.sqrtPriceX96, tick: state.tick }),
+    liquidity: state.liquidity.toString(),
+    tickLower: state.tickLower,
+    tickUpper: state.tickUpper,
+  })
+  const { calldata, value } = V4PositionManager.collectCallParameters(position, {
+    tokenId: nftTokenId.toString(),
+    recipient: params.walletAddress,
+    slippageTolerance: new Percent(0), // collect moves no principal
+    deadline: deadlineOrDefault(undefined),
   })
   return new ClaimFeesResponse({
     requestId: 'spry-local-claim',
-    claim: buildTxRequest({ to: ref.router, from: params.walletAddress, data, value: BigInt(0) }),
+    claim: buildTxRequest({
+      to: config.addresses.positionManager,
+      from: params.walletAddress,
+      data: calldata as Hex,
+      value: BigInt(value),
+    }),
   })
 }
 
-/** Decrease: negative delta = live on-chain liquidity x the requested percentage. */
+/**
+ * Decrease.
+ * - raw positions: negative delta = live on-chain liquidity x the requested
+ *   percentage, through the router.
+ * - NFT positions: V4PositionManager remove calldata by tokenId.
+ */
 export async function maybeSpryLocalDecreasePosition(
   params: DecreasePositionRequest,
 ): Promise<DecreasePositionResponse | undefined> {
+  if (!isSpryLpChain(params.chainId) || !params.walletAddress) {
+    return undefined
+  }
+
+  const nftTokenId = parseNftTokenId(params.nftTokenId)
+  if (nftTokenId !== undefined) {
+    const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+    if (!config) {
+      return undefined
+    }
+    const state = await fetchNftPositionState(nftTokenId)
+    if (state.liquidity === BigInt(0)) {
+      throw new Error('Spry LP: nothing to remove (zero live liquidity for this position)')
+    }
+    const [currency0, currency1] = await currenciesForPoolKey(state.key)
+    const position = new V4Position({
+      pool: v4PoolFromState({
+        currency0,
+        currency1,
+        key: state.key,
+        sqrtPriceX96: state.sqrtPriceX96,
+        tick: state.tick,
+      }),
+      liquidity: state.liquidity.toString(),
+      tickLower: state.tickLower,
+      tickUpper: state.tickUpper,
+    })
+    const percentBps = Math.min(10_000, Math.max(0, Math.round(params.liquidityPercentageToDecrease * 100)))
+    const { calldata, value } = V4PositionManager.removeCallParameters(position, {
+      tokenId: nftTokenId.toString(),
+      liquidityPercentage: new Percent(percentBps, 10_000),
+      slippageTolerance: percentFromSlippage(params.slippageTolerance),
+      deadline: deadlineOrDefault(params.deadline),
+      burnToken: false, // keep the NFT so the position stays visible as Closed
+    })
+    return new DecreasePositionResponse({
+      requestId: 'spry-local-decrease',
+      decrease: buildTxRequest({
+        to: config.addresses.positionManager,
+        from: params.walletAddress,
+        data: calldata as Hex,
+        value: BigInt(value),
+      }),
+    })
+  }
+
   const ref = parseSpryRawTokenId(params.nftTokenId)
-  if (!isSpryLpChain(params.chainId) || !ref || !params.walletAddress) {
+  if (!ref) {
     return undefined
   }
   const config = getSpryConfig(SPRY_LP_CHAIN_ID)
@@ -316,54 +637,78 @@ function currencyForPoolToken(token: { id: string; decimals: string; symbol: str
 export async function maybeSpryLocalIncreasePosition(
   params: IncreasePositionRequest,
 ): Promise<IncreasePositionResponse | undefined> {
-  const ref = parseSpryRawTokenId(params.nftTokenId)
   const independent = params.independentToken
-  if (!isSpryLpChain(params.chainId) || !ref || !params.walletAddress || !independent) {
+  if (!isSpryLpChain(params.chainId) || !params.walletAddress || !independent) {
     return undefined
   }
   const config = getSpryConfig(SPRY_LP_CHAIN_ID)
-  if (!config) {
+  const router = config?.addresses.poolModifyLiquidityTest
+  if (!config || !router) {
     return undefined
   }
-  const pool = await fetchSpryPool(ref.poolId)
-  const slot0 = await spryPublicClient.readContract({
-    address: config.addresses.stateView,
-    abi: STATE_VIEW_ABI,
-    functionName: 'getSlot0',
-    args: [ref.poolId],
-  })
 
-  const currency0 = currencyForPoolToken(pool.token0, SPRY_LP_CHAIN_ID)
-  const currency1 = currencyForPoolToken(pool.token1, SPRY_LP_CHAIN_ID)
-  const key = poolKeyFromRow(pool)
-  const v4Pool = new V4Pool(
-    currency0,
-    currency1,
-    key.fee,
-    key.tickSpacing,
-    key.hooks,
-    slot0[0].toString(),
-    '0', // pool-wide liquidity does not affect amount math
-    slot0[1],
-  )
+  // Resolve the target (pool key + range + live price) from either id form.
+  // NFT increases also go through the ROUTER: the approval request carries no
+  // tokenId so it cannot distinguish Permit2/posm from the router per position,
+  // and a wallet-salted raw add at the same range is equivalent liquidity (it
+  // shows up as a sibling raw position of the same pool).
+  const ref = parseSpryRawTokenId(params.nftTokenId)
+  const nftTokenId = ref ? undefined : parseNftTokenId(params.nftTokenId)
+  let key: PoolKeyStruct
+  let tickLower: number
+  let tickUpper: number
+  let sqrtPriceX96: bigint
+  let tick: number
+  let currency0: Currency
+  let currency1: Currency
+  if (ref) {
+    const [pool, slot0] = await Promise.all([
+      fetchSpryPool(ref.poolId),
+      spryPublicClient.readContract({
+        address: config.addresses.stateView,
+        abi: STATE_VIEW_ABI,
+        functionName: 'getSlot0',
+        args: [ref.poolId],
+      }),
+    ])
+    key = poolKeyFromRow(pool)
+    tickLower = ref.tickLower
+    tickUpper = ref.tickUpper
+    sqrtPriceX96 = slot0[0]
+    tick = slot0[1]
+    currency0 = currencyForPoolToken(pool.token0, SPRY_LP_CHAIN_ID)
+    currency1 = currencyForPoolToken(pool.token1, SPRY_LP_CHAIN_ID)
+  } else if (nftTokenId !== undefined) {
+    const state = await fetchNftPositionState(nftTokenId)
+    key = state.key
+    tickLower = state.tickLower
+    tickUpper = state.tickUpper
+    sqrtPriceX96 = state.sqrtPriceX96
+    tick = state.tick
+    ;[currency0, currency1] = await currenciesForPoolKey(state.key)
+  } else {
+    return undefined
+  }
 
-  const independentIsToken0 = isSameEvmAddress(independent.tokenAddress, pool.token0.id)
-  const independentIsToken1 = isSameEvmAddress(independent.tokenAddress, pool.token1.id)
+  const v4Pool = v4PoolFromState({ currency0, currency1, key, sqrtPriceX96, tick })
+
+  const independentIsToken0 = isSameEvmAddress(independent.tokenAddress, key.currency0)
+  const independentIsToken1 = isSameEvmAddress(independent.tokenAddress, key.currency1)
   if (!independentIsToken0 && !independentIsToken1) {
     throw new Error('Spry LP: independent token is not part of this pool')
   }
   const position = independentIsToken0
     ? V4Position.fromAmount0({
         pool: v4Pool,
-        tickLower: ref.tickLower,
-        tickUpper: ref.tickUpper,
+        tickLower,
+        tickUpper,
         amount0: independent.amount,
         useFullPrecision: true,
       })
     : V4Position.fromAmount1({
         pool: v4Pool,
-        tickLower: ref.tickLower,
-        tickUpper: ref.tickUpper,
+        tickLower,
+        tickUpper,
         amount1: independent.amount,
       })
   const liquidityDelta = BigInt(position.liquidity.toString())
@@ -374,8 +719,8 @@ export async function maybeSpryLocalIncreasePosition(
 
   const data = encodeModifyLiquidity({
     key,
-    tickLower: ref.tickLower,
-    tickUpper: ref.tickUpper,
+    tickLower,
+    tickUpper,
     liquidityDelta,
     salt: saltForOwner(params.walletAddress),
   })
@@ -383,29 +728,39 @@ export async function maybeSpryLocalIncreasePosition(
 
   return new IncreasePositionResponse({
     requestId: 'spry-local-increase',
-    token0: new LPToken({ tokenAddress: pool.token0.id, amount: amount0.toString() }),
-    token1: new LPToken({ tokenAddress: pool.token1.id, amount: amount1.toString() }),
-    increase: buildTxRequest({ to: ref.router, from: params.walletAddress, data, value }),
+    token0: new LPToken({ tokenAddress: key.currency0, amount: amount0.toString() }),
+    token1: new LPToken({ tokenAddress: key.currency1, amount: amount1.toString() }),
+    increase: buildTxRequest({ to: ref?.router ?? router, from: params.walletAddress, data, value }),
   })
 }
 
 /**
- * Approval check for the increase flow: read each ERC20 leg's allowance to the
- * PoolModifyLiquidityTest router and return a plain max approve when short.
- * Native legs need no approval; no permit2 is involved (the test router pulls
- * via transferFrom). NOTE: the approval request carries no tokenId, so this
- * keys purely on the chain - correct while every Base Sepolia position is a
- * raw router position; revisit when NFT positions (permit2 to PositionManager)
- * arrive.
+ * Approval check for the LP write flows. Two spender models:
+ *
+ * - INCREASE (and any non-CREATE action): the PoolModifyLiquidityTest router
+ *   pulls ERC20 legs via plain transferFrom, so each short leg gets one
+ *   ERC20.approve(router) transaction. The approval request carries no
+ *   tokenId; NFT increases are routed through the router too (see
+ *   maybeSpryLocalIncreasePosition), so the router is always the spender.
+ * - CREATE (new pool -> PositionManager mint): posm settles through Permit2,
+ *   so each short leg gets up to two transactions: ERC20.approve(Permit2)
+ *   (matched into the token0/token1Approval slots by `to` = token) and
+ *   Permit2.approve(token, posm, max, far-expiration) (`to` = Permit2, which
+ *   normalizeApprovalResponse classifies as a permit transaction; the LP saga
+ *   executes those right before the create).
+ *
+ * Native legs never need approval (they ride as msg.value).
  */
 export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promise<LPApprovalResponse | undefined> {
   if (!isSpryLpChain(params.chainId) || !params.walletAddress) {
     return undefined
   }
-  const spender = getSpryConfig(SPRY_LP_CHAIN_ID)?.addresses.poolModifyLiquidityTest
-  if (!spender) {
+  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const router = config?.addresses.poolModifyLiquidityTest
+  if (!config || !router) {
     return undefined
   }
+  const owner = params.walletAddress as Address
 
   const erc20Legs = params.lpTokens.filter(
     (lpToken) =>
@@ -413,31 +768,79 @@ export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promi
       !isSameEvmAddress(lpToken.tokenAddress, ZERO_ADDRESS) &&
       BigInt(lpToken.amount || '0') > BigInt(0),
   )
+
+  const transactions: ApprovalTransactionRequest[] = []
+  const pushApproval = (tx: TransactionRequest): void => {
+    transactions.push(new ApprovalTransactionRequest({ transaction: tx, cancelApproval: false, action: params.action }))
+  }
+
+  if (params.action === LPAction.CREATE) {
+    const permit2 = getAddress(permit2Address(SPRY_LP_CHAIN_ID))
+    const posm = config.addresses.positionManager
+    const reads = await Promise.all(
+      erc20Legs.map(async (lpToken) => {
+        const token = getAddress(lpToken.tokenAddress)
+        return Promise.all([
+          spryPublicClient.readContract({
+            address: token,
+            abi: erc20Abi,
+            functionName: 'allowance',
+            args: [owner, permit2],
+          }),
+          spryPublicClient.readContract({
+            address: permit2,
+            abi: PERMIT2_LP_ABI,
+            functionName: 'allowance',
+            args: [owner, token, posm],
+          }),
+        ])
+      }),
+    )
+    const nowSeconds = Math.floor(Date.now() / 1000)
+    erc20Legs.forEach((lpToken, i) => {
+      const amount = BigInt(lpToken.amount)
+      const [erc20Allowance, permit2Allowance] = reads[i] ?? [BigInt(0), [BigInt(0), 0, 0] as const]
+      if (erc20Allowance < amount) {
+        const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [permit2, maxUint256] })
+        pushApproval(
+          buildTxRequest({ to: lpToken.tokenAddress, from: params.walletAddress, data: approveData, value: BigInt(0) }),
+        )
+      }
+      const [permitAmount, permitExpiration] = permit2Allowance
+      if (BigInt(permitAmount) < amount || Number(permitExpiration) <= nowSeconds) {
+        const permitData = encodeFunctionData({
+          abi: PERMIT2_LP_ABI,
+          functionName: 'approve',
+          args: [getAddress(lpToken.tokenAddress), posm, maxUint160, Number(MAX_UINT48)],
+        })
+        pushApproval(
+          buildTxRequest({ to: permit2, from: params.walletAddress, data: permitData, value: BigInt(0) }),
+        )
+      }
+    })
+    return new LPApprovalResponse({ requestId: 'spry-local-approval', transactions })
+  }
+
   const allowances = await Promise.all(
     erc20Legs.map((lpToken) =>
       spryPublicClient.readContract({
         address: lpToken.tokenAddress as Address,
         abi: erc20Abi,
         functionName: 'allowance',
-        args: [params.walletAddress as Address, spender],
+        args: [owner, router],
       }),
     ),
   )
 
-  const transactions: ApprovalTransactionRequest[] = []
   erc20Legs.forEach((lpToken, i) => {
     const allowance = allowances[i] ?? BigInt(0)
     if (allowance >= BigInt(lpToken.amount)) {
       return
     }
-    const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [spender, maxUint256] })
-    transactions.push(
-      new ApprovalTransactionRequest({
-        // normalizeApprovalResponse matches these to token0/token1 by `transaction.to`
-        transaction: buildTxRequest({ to: lpToken.tokenAddress, from: params.walletAddress, data: approveData, value: BigInt(0) }),
-        cancelApproval: false,
-        action: params.action,
-      }),
+    const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [router, maxUint256] })
+    // normalizeApprovalResponse matches these to token0/token1 by `transaction.to`
+    pushApproval(
+      buildTxRequest({ to: lpToken.tokenAddress, from: params.walletAddress, data: approveData, value: BigInt(0) }),
     )
   })
 
@@ -532,12 +935,120 @@ export async function maybeSpryLocalPoolInfo(params: PoolInfoRequest): Promise<P
 }
 
 /**
- * Create a position in an EXISTING Spry pool: same router modify as increase,
- * but addressed by the form's poolReference (set by maybeSpryLocalPoolInfo to
- * the v4 poolId) and always full range for the pool's tick spacing. Brand-new
- * pool initialization is not supported from the UI on testnet (Spry pools are
- * deployed with the hook's tier config), so the newPool case throws a clear
- * error instead of silently 401ing.
+ * Build the NEW-pool create transaction: PositionManager.multicall(
+ * initializePool(key, sqrtPriceX96), modifyLiquidities(mint)) via the v4 SDK's
+ * addCallParameters({ createPool: true }) - pool initialization and the first
+ * (full-range) position land in ONE transaction. ERC20 legs settle through
+ * Permit2 (see the CREATE branch of maybeSpryLocalLPApproval); a native leg
+ * rides as msg.value with a sweep for the excess.
+ */
+async function buildSpryNewPoolCreate(
+  params: CreatePositionRequest,
+  newPool: CreatePoolParameters,
+): Promise<CreatePositionResponse> {
+  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const independent = params.independentToken
+  if (!config || !independent) {
+    throw new Error('Spry LP: malformed create request')
+  }
+  if (!newPool.hooks || !isSameEvmAddress(newPool.hooks, config.addresses.spryHook)) {
+    throw new Error('Spry: only SpryHook pools can be created. Pick one of the Spry fee tiers.')
+  }
+  if (!newPool.tickSpacing || !newPool.initialPrice || newPool.initialPrice === '0') {
+    throw new Error('Spry: set an initial price for the new pool first.')
+  }
+
+  // The form sends sorted (pool-order) token addresses and a sqrtPriceX96 in
+  // that orientation; sort defensively anyway so the key is always canonical.
+  const [sorted0, sorted1] = sortCurrencies(newPool.token0Address as Address, newPool.token1Address as Address)
+  const key: PoolKeyStruct = {
+    currency0: sorted0,
+    currency1: sorted1,
+    fee: newPool.fee,
+    tickSpacing: newPool.tickSpacing,
+    hooks: config.addresses.spryHook,
+  }
+  const [currency0, currency1] = await currenciesForPoolKey(key)
+
+  // Guard: if someone initialized this pool since the form loaded, the
+  // initializePool leg would revert the whole multicall - fail with a clear
+  // next step instead.
+  const id = computeSpryPoolId({
+    currency0: key.currency0,
+    currency1: key.currency1,
+    fee: key.fee,
+    tickSpacing: key.tickSpacing,
+    hooks: key.hooks,
+  })
+  const existingSlot0 = await spryPublicClient.readContract({
+    address: config.addresses.stateView,
+    abi: STATE_VIEW_ABI,
+    functionName: 'getSlot0',
+    args: [id],
+  })
+  if (existingSlot0[0] !== BigInt(0)) {
+    throw new Error('Spry: this pool was just initialized by someone else. Re-select the tier to add liquidity to it instead.')
+  }
+
+  const sqrtPriceX96 = newPool.initialPrice
+  const tickAtPrice = TickMath.getTickAtSqrtRatio(JSBI.BigInt(sqrtPriceX96))
+  const v4Pool = v4PoolFromState({ currency0, currency1, key, sqrtPriceX96, tick: tickAtPrice })
+
+  // proto tick fields default to 0, so a degenerate (0,0) range also falls back to full range
+  const requestTicks = params.tickPrice.case === 'tickBounds' ? params.tickPrice.value : undefined
+  const { tickLower, tickUpper } =
+    requestTicks && requestTicks.tickLower !== requestTicks.tickUpper
+      ? { tickLower: requestTicks.tickLower, tickUpper: requestTicks.tickUpper }
+      : fullRangeTicks(key.tickSpacing)
+
+  const independentIsToken0 = isSameEvmAddress(independent.tokenAddress, key.currency0)
+  const independentIsToken1 = isSameEvmAddress(independent.tokenAddress, key.currency1)
+  if (!independentIsToken0 && !independentIsToken1) {
+    throw new Error('Spry LP: independent token is not part of this pool')
+  }
+  const position = independentIsToken0
+    ? V4Position.fromAmount0({ pool: v4Pool, tickLower, tickUpper, amount0: independent.amount, useFullPrecision: true })
+    : V4Position.fromAmount1({ pool: v4Pool, tickLower, tickUpper, amount1: independent.amount })
+  if (BigInt(position.liquidity.toString()) <= BigInt(0)) {
+    throw new Error('Spry LP: amount too small to add measurable liquidity')
+  }
+  const { amount0, amount1 } = position.mintAmounts
+
+  const { calldata, value } = V4PositionManager.addCallParameters(position, {
+    recipient: params.walletAddress,
+    slippageTolerance: percentFromSlippage(params.slippageTolerance),
+    deadline: deadlineOrDefault(params.deadline),
+    createPool: true,
+    sqrtPriceX96,
+    useNative: currency0.isNative ? nativeOnChain(SPRY_LP_CHAIN_ID) : undefined,
+  })
+
+  return new CreatePositionResponse({
+    requestId: 'spry-local-create',
+    token0: new LPToken({ tokenAddress: key.currency0, amount: amount0.toString() }),
+    token1: new LPToken({ tokenAddress: key.currency1, amount: amount1.toString() }),
+    tickLower,
+    tickUpper,
+    create: buildTxRequest({
+      to: config.addresses.positionManager,
+      from: params.walletAddress,
+      data: calldata as Hex,
+      value: BigInt(value),
+      // initialize (hook tier setup) + mint in one multicall needs more than a plain modify
+      gasLimit: '1500000',
+    }),
+  })
+}
+
+/**
+ * Create a position. Two cases:
+ * - EXISTING Spry pool: same router modify as increase, addressed by the
+ *   form's poolReference (set by maybeSpryLocalPoolInfo to the v4 poolId) and
+ *   always full range for the pool's tick spacing. (The create page normally
+ *   routes existing pools into the Add-liquidity modal before reaching this,
+ *   but deep links can still land here.)
+ * - NEW pool: one PositionManager multicall that initializes the pool at the
+ *   user's initial price and mints the first full-range position.
  */
 export async function maybeSpryLocalCreatePosition(
   params: CreatePositionRequest,
@@ -552,9 +1063,7 @@ export async function maybeSpryLocalCreatePosition(
     return undefined
   }
   if (params.pool.case === 'newPool') {
-    throw new Error(
-      'Spry: this pair + tier has no pool yet, and initializing new pools from the UI is not supported on testnet. Pick a pair with an existing Spry pool.',
-    )
+    return buildSpryNewPoolCreate(params, params.pool.value)
   }
   if (params.pool.case !== 'existingPool' || !params.pool.value.poolReference.startsWith('0x')) {
     return undefined

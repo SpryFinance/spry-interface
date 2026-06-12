@@ -24,7 +24,7 @@ import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
 import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { areAddressesEqual } from 'uniswap/src/utils/addresses'
-import { currencyId as buildCurrencyId } from 'uniswap/src/utils/currencyId'
+import { currencyId as buildCurrencyId, currencyIdToAddress, currencyIdToChain } from 'uniswap/src/utils/currencyId'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 
 const SPRY_SEARCH_CHAIN_ID = UniverseChainId.BaseSepolia
@@ -75,19 +75,21 @@ function commonBaseMatches(query: string): CurrencyInfo[] {
     .map(toSearchCurrencyInfo)
 }
 
-async function searchByAddress(client: SpryGraphClient, address: string): Promise<CurrencyInfo[]> {
-  const known = commonBaseMatches(address)
-  if (known.length > 0) {
+async function resolveByAddress(client: SpryGraphClient | null, address: string): Promise<CurrencyInfo | null> {
+  const [known] = commonBaseMatches(address)
+  if (known) {
     return known
   }
 
   // any token already indexed in a Spry pool (the subgraph stores ids lowercase)
-  const { token } = await client.request<{ token: SubgraphTokenRow | null }>(
-    `query($id: ID!) { token(id: $id) { id symbol name decimals } }`,
-    { id: normalizeTokenAddressForCache(address) },
-  )
-  if (token) {
-    return [subgraphTokenToCurrencyInfo(token)]
+  if (client) {
+    const { token } = await client.request<{ token: SubgraphTokenRow | null }>(
+      `query($id: ID!) { token(id: $id) { id symbol name decimals } }`,
+      { id: normalizeTokenAddressForCache(address) },
+    )
+    if (token) {
+      return subgraphTokenToCurrencyInfo(token)
+    }
   }
 
   // arbitrary ERC20: read metadata live so pasting any address still works
@@ -101,7 +103,7 @@ async function searchByAddress(client: SpryGraphClient, address: string): Promis
     allowFailure: true,
   })
   if (decimals.status !== 'success') {
-    return [] // not an ERC20 (or not deployed) - nothing to offer
+    return null // not an ERC20 (or not deployed) - nothing to offer
   }
   const currency = new Token(
     SPRY_SEARCH_CHAIN_ID,
@@ -110,7 +112,58 @@ async function searchByAddress(client: SpryGraphClient, address: string): Promis
     symbol.status === 'success' ? symbol.result : undefined,
     name.status === 'success' ? name.result : undefined,
   )
-  return [toSearchCurrencyInfo(buildPartialCurrencyInfo(currency))]
+  return toSearchCurrencyInfo(buildPartialCurrencyInfo(currency))
+}
+
+async function searchByAddress(client: SpryGraphClient, address: string): Promise<CurrencyInfo[]> {
+  const info = await resolveByAddress(client, address)
+  return info ? [info] : []
+}
+
+/**
+ * One-token local resolution for Base Sepolia (common bases -> subgraph ->
+ * live ERC20 metadata). Used as the fallback inside useCurrencyInfo so a
+ * selected unknown token actually renders (the gateway token query the rest of
+ * the app re-resolves through serves nothing on testnet).
+ */
+export async function fetchSpryCurrencyInfoByAddress(address: string): Promise<CurrencyInfo | null> {
+  const config = getSpryConfig(SPRY_SEARCH_CHAIN_ID)
+  const client = config?.subgraphUrl ? createSpryGraphClient(config.subgraphUrl) : null
+  return resolveByAddress(client, address)
+}
+
+/**
+ * Spry local fallback for {@link useCurrencyInfo}: resolves a Base Sepolia
+ * currencyId without the gateway. Returns undefined for other chains, while
+ * skipped, or when the address is not a live ERC20.
+ */
+export function useSpryLocalCurrencyInfo(
+  currencyIdInput: string | undefined,
+  options?: { skip?: boolean },
+): Maybe<CurrencyInfo> {
+  const chainId = currencyIdInput ? currencyIdToChain(currencyIdInput) : undefined
+  let address: string | undefined
+  try {
+    address = currencyIdInput ? currencyIdToAddress(currencyIdInput) : undefined
+  } catch (_error) {
+    address = undefined
+  }
+  const applies = chainId === SPRY_SEARCH_CHAIN_ID && !!address && isAddress(address)
+
+  const { data } = useQuery({
+    queryKey: ['spryLocalCurrencyInfo', address ? normalizeTokenAddressForCache(address) : ''],
+    queryFn: () => fetchSpryCurrencyInfoByAddress(address ?? ''),
+    enabled: applies && !options?.skip,
+    staleTime: Infinity, // ERC20 metadata is immutable
+  })
+
+  return useMemo(() => {
+    if (!applies || !data) {
+      return undefined
+    }
+    // keep the caller's exact currencyId so map lookups keyed on it stay stable
+    return { ...data, currencyId: currencyIdInput ?? data.currencyId }
+  }, [applies, data, currencyIdInput])
 }
 
 async function searchByText(client: SpryGraphClient, query: string): Promise<CurrencyInfo[]> {

@@ -2,6 +2,7 @@ import { GqlResult, GraphQLApi } from '@universe/api'
 import { useMemo } from 'react'
 import { getCommonBase } from 'uniswap/src/constants/routing'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
+import { useSpryLocalCurrencyInfo } from 'uniswap/src/features/dataApi/sprySearchTokens'
 import { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
 import { currencyIdToContractInput } from 'uniswap/src/features/dataApi/utils/currencyIdToContractInput'
 import { gqlTokenToCurrencyInfo } from 'uniswap/src/features/dataApi/utils/gqlTokenToCurrencyInfo'
@@ -56,8 +57,16 @@ function useCurrencyInfoQuery(
     return queryResult.data?.token && gqlTokenToCurrencyInfo(queryResult.data.token)
   }, [_currencyId, queryResult.data?.token])
 
+  // SPRY: the gateway token query serves nothing for Base Sepolia, so any token
+  // outside COMMON_BASES (e.g. one selected via search-by-address) resolved to
+  // undefined and rendered as "no token selected". Resolve those locally
+  // (subgraph -> live ERC20 metadata) instead.
+  const spryLocalCurrencyInfo = useSpryLocalCurrencyInfo(_currencyId, {
+    skip: options?.skip || Boolean(currencyInfo),
+  })
+
   return {
-    currencyInfo,
+    currencyInfo: currencyInfo ?? spryLocalCurrencyInfo,
     loading: queryResult.loading,
     error: queryResult.error,
   }

@@ -30,8 +30,8 @@ import {
   WrappedLiquidityPositionRangeChart,
 } from '~/features/Liquidity/charts/LiquidityPositionRangeChart/LiquidityPositionRangeChart'
 import { PoolOutOfSyncError } from '~/features/Liquidity/Create/PoolOutOfSyncError'
-import { LiquidityPositionInfoBadges } from '~/features/Liquidity/LiquidityPositionInfoBadges'
 import { LowLPSlippageWarning } from '~/features/Liquidity/LowLPSlippageWarning'
+import { SpryTierBadgeFromFee } from '~/features/Liquidity/spry/SpryTierBadge'
 import { getBaseAndQuoteCurrencies } from '~/features/Liquidity/utils/currency'
 import { getTickToPrice, getV4TickToPrice } from '~/features/Liquidity/utils/getTickToPrice'
 import { getTicksAtLimit } from '~/features/Liquidity/utils/priceRangeInfo'
@@ -134,7 +134,7 @@ export function ReviewModal({
     currencies,
     protocolVersion,
     creatingPoolOrPair,
-    positionState: { fee, hook },
+    positionState: { fee },
     currentTransactionStep,
     price,
     poolOrPair,
@@ -245,7 +245,8 @@ export function ReviewModal({
                   <Text variant="heading3">{currencyAmounts?.TOKEN1?.currency.symbol}</Text>
                 </Flex>
                 <Flex row gap={2} alignItems="center">
-                  <LiquidityPositionInfoBadges size="small" version={protocolVersion} v4hook={hook} feeTier={fee} />
+                  {/* SPRY: the v4 / hook-address / Dynamic chips are replaced by the tier badge. */}
+                  <SpryTierBadgeFromFee feeTier={fee} />
                 </Flex>
               </Flex>
               <DoubleCurrencyLogo

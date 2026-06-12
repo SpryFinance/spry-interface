@@ -1,18 +1,18 @@
 /* oxlint-disable max-lines */
 
-import { ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
+import { PositionStatus, ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
 import type { Currency } from '@uniswap/sdk-core'
+import type { Pool as V4Pool } from '@uniswap/v4-sdk'
 import {
   AllowedV4WethHookAddressesConfigKey,
   DynamicConfigs,
-  FeatureFlags,
   useDynamicConfigValue,
-  useFeatureFlag,
 } from '@universe/gating'
 import { getSpryConfig } from '@spry/config'
 import type { Dispatch, SetStateAction } from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router'
 import type { FlexProps } from 'ui/src'
 import { Button, DropdownButton, Flex, Shine, Text } from 'ui/src'
@@ -25,7 +25,7 @@ import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import type { FeeData } from 'uniswap/src/features/positions/types'
-import { LiquidityEventName } from 'uniswap/src/features/telemetry/constants'
+import { LiquidityEventName, ModalName } from 'uniswap/src/features/telemetry/constants'
 import { sendAnalyticsEvent } from 'uniswap/src/features/telemetry/send'
 import { FeePoolSelectAction } from 'uniswap/src/features/telemetry/types'
 import { useCurrencyInfo } from 'uniswap/src/features/tokens/useCurrencyInfo'
@@ -35,23 +35,23 @@ import { PrefetchBalancesWrapper } from '~/appGraphql/data/apollo/AdaptiveTokenB
 import { ErrorCallout } from '~/components/ErrorCallout'
 import { DoubleCurrencyLogo } from '~/components/Logo/DoubleLogo'
 import { CurrencySearchModal } from '~/components/SearchModal/CurrencySearchModal'
-import { NATIVE_CHAIN_ID } from '~/constants/tokens'
 import { CreatingPoolInfo, PoolAlreadyCreatedInfo } from '~/features/Liquidity/Create/CreatingPoolInfo'
 import { useLiquidityUrlState } from '~/features/Liquidity/Create/hooks/useLiquidityUrlState'
 import { PoolParsingError } from '~/features/Liquidity/Create/PoolParsingError'
 import { HookModal } from '~/features/Liquidity/HookModal'
+import { buildEmptySpryPosition } from '~/features/Liquidity/spry/buildEmptySpryPosition'
 import { SpryTierSelector } from '~/features/Liquidity/spry/SpryTierSelector'
+import { useSpryWalletPositions } from '~/features/Liquidity/spry/useSpryWalletPositions'
 import { hasLPFoTTransferError } from '~/features/Liquidity/utils/hasLPFoTTransferError'
 import { isUnsupportedLPChain } from '~/features/Liquidity/utils/isUnsupportedLPChain'
-import { getProtocolVersionLabel } from '~/features/Liquidity/utils/protocolVersion'
 import { serializeSwapStateToURLParameters } from '~/features/Swap/state/swap/tradeQueryParams'
+import { useAccount } from '~/hooks/useAccount'
 import { SUPPORTED_V2POOL_CHAIN_IDS } from '~/hooks/useNetworkSupportsV2'
-import { buildPoolSearchParams } from '~/pages/AddLiquidity/poolLinkParams'
 import { useCreateLiquidityContext } from '~/pages/CreatePosition/CreateLiquidityContextProvider'
+import { setOpenModal } from '~/state/application/reducer'
 import { useMultichainContext } from '~/state/multichain/useMultichainContext'
 import { SwitchNetworkAction } from '~/state/popups/types'
 import { isV4UnsupportedChain } from '~/utils/networkSupportsV4'
-import { getChainUrlParam } from '~/utils/params/chainParams'
 
 interface WrappedNativeWarning {
   wrappedToken: Currency
@@ -122,12 +122,11 @@ export function SelectTokensStep({
 } & FlexProps) {
   const { loadingA, loadingB } = useLiquidityUrlState()
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const dispatch = useDispatch()
   const { setSelectedChainId, setIsUserSelectedToken } = useMultichainContext()
   const trace = useTrace()
   const [hookModalOpen, setHookModalOpen] = useState(false)
   const [showWrappedNativeWarning, setShowWrappedNativeWarning] = useState(false)
-  const isAddLiquidityRevamp = useFeatureFlag(FeatureFlags.AddLiquidityRevamp)
   const allowedV4WethHookAddresses: string[] = useDynamicConfigValue({
     config: DynamicConfigs.AllowedV4WethHookAddresses,
     key: AllowedV4WethHookAddressesConfigKey.HookAddresses,
@@ -243,19 +242,38 @@ export function SelectTokensStep({
     [token0, token1, setSelectedChainId, setIsUserSelectedToken],
   )
 
+  // SPRY: adding liquidity to an EXISTING pool + tier goes through the shared
+  // Add-liquidity modal (the same one the positions list opens), NOT step 2 +
+  // the create review. The modal gets the wallet's live position in that pool
+  // when one exists, or a zero-liquidity raw stand-in whose synthetic tokenId
+  // points the local increase rails at the router (the first add mints it).
+  const walletAddress = useAccount().address
+  const { positions: spryWalletPositions } = useSpryWalletPositions({
+    address: walletAddress,
+    chainFilter: null,
+  })
+
+  const openExistingPoolAddLiquidity = (): boolean => {
+    if (!poolId || !poolOrPair || protocolVersion !== ProtocolVersion.V4 || !walletAddress) {
+      return false
+    }
+    // oxlint-disable-next-line universe-custom/no-tolowercase-address-currencyid -- bytes32 poolIds (not addresses), compared in subgraph (lowercase) casing
+    const inThisPool = spryWalletPositions.filter((position) => position.poolId.toLowerCase() === poolId.toLowerCase())
+    const existing =
+      inThisPool.find((position) => position.status !== PositionStatus.CLOSED && String(position.tokenId).startsWith('spry-raw-')) ??
+      inThisPool.find((position) => position.status !== PositionStatus.CLOSED) ??
+      inThisPool.at(0)
+    const positionInfo =
+      existing ?? buildEmptySpryPosition({ pool: poolOrPair as V4Pool, poolId, owner: walletAddress })
+    if (!positionInfo) {
+      return false
+    }
+    dispatch(setOpenModal({ name: ModalName.AddLiquidity, initialState: positionInfo }))
+    return true
+  }
+
   const handleOnContinue = () => {
-    if (poolAlreadyExists && poolId && token0.chainId) {
-      const base = `/positions/add/${getChainUrlParam(token0.chainId)}/${poolId}`
-      const params = buildPoolSearchParams({
-        currencyA: token0.isNative ? NATIVE_CHAIN_ID : token0.address,
-        currencyB: token1.isNative ? NATIVE_CHAIN_ID : token1.address,
-        chain: getChainUrlParam(token0.chainId),
-        fee,
-        hookAddress: hook,
-        protocolVersion: getProtocolVersionLabel(protocolVersion),
-      })
-      const search = params.toString()
-      navigate(search ? `${base}?${search}` : base)
+    if (poolAlreadyExists && openExistingPoolAddLiquidity()) {
       return
     }
 
@@ -327,15 +345,10 @@ export function SelectTokensStep({
 
   const hasError = isUnsupportedTokenSelected || Boolean(fotErrorToken)
 
+  // SPRY: not gated on the AddLiquidityRevamp flag - existing pools ALWAYS
+  // route to the Add-liquidity modal on Spry.
   const poolAlreadyExists =
-    isAddLiquidityRevamp &&
-    !migratingPosition &&
-    !creatingPoolOrPair &&
-    !!poolOrPair &&
-    !!poolId &&
-    !!token0 &&
-    !!token1 &&
-    !!fee
+    !migratingPosition && !creatingPoolOrPair && !!poolOrPair && !!poolId && !!token0 && !!token1 && !!fee
 
   return (
     <>
