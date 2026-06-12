@@ -13,6 +13,9 @@ Supported chains: **Sepolia** (11155111), **Base Sepolia** (84532),
 canonical V4Quoter + StateView + PoolManager + PositionManager + Permit2,
 `startBlock` = the hook deploy block, `blockWindowHint` = 30 from the live
 `BLOCK_WINDOW()`, and `subgraphUrl` = the Goldsky endpoint, indexing healthy).
+It also carries the optional `poolModifyLiquidityTest` address (the canonical
+v4 test router): the seeded "raw" liquidity positions live under it, and the
+app's local LP rails target it for those positions.
 
 **Sepolia and Unichain Sepolia are pre-deployment**: `spryHook`, `spryRouter`,
 `quoter`, and `stateView` are placeholders (`0xffff...ffff`), and `subgraphUrl`
@@ -26,8 +29,8 @@ Sepolia today); use it to gate Spry-specific UI per chain.
 
 ## TODO
 
-- Base Sepolia is fully configured. (Subgraph data populates as Spry pools are
-  created on-chain.)
+- Base Sepolia is fully configured and serving the live app (pools seeded,
+  subgraph indexing them).
 - Sepolia / Unichain Sepolia: fill `spryHook`, `spryRouter`, `quoter`,
   `stateView`, `startBlock`, and `subgraphUrl` when deployed there.
 
@@ -42,7 +45,7 @@ import {
 
 const config = requireSpryConfig(DEFAULT_CHAIN_ID);
 config.addresses.poolManager; // real
-isSpryDeployed(config);       // false (pre-deployment)
+isSpryDeployed(config);       // true on Base Sepolia (the default chain); false on the pre-deployment chains
 ```
 
 ## The Spry-pool predicate (brief section 2)
@@ -63,5 +66,5 @@ returns is already Spry.
 ## Test
 
 ```bash
-npm test --workspace @spry/config
+cd packages/spry-config && bunx vitest run
 ```

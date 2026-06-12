@@ -1,5 +1,10 @@
 # apps/web integration plan (brief section 15)
 
+> **Historical document.** This was the integration plan written before the
+> fork landed. The plan has been executed (and exceeded: the full LP lifecycle
+> including pool creation now runs on local rails); see the root
+> [README](../README.md) for the current state of the app.
+
 The brief's section 15 deliverable, grounded in the **real upstream tree** rather
 than from memory. All paths below are verified against the pinned upstream.
 

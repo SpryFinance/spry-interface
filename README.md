@@ -9,33 +9,80 @@ against upstream is meant to stay small and auditable.
 ## Current state
 
 The upstream monorepo fork (pinned at `web/5.148.6`, commit `417e7724`) is
-landed and functional. The app runs as a single-protocol, single-chain
-interface on **Base Sepolia (84532)**, and the full swap path is verified
-end-to-end on-chain: quote (V4 `Quoter`, reflecting the `SpryHook` dynamic
-fee), approve (ERC-20 to `SpryRouter`), swap (`SpryRouter` calldata), and
-confirmation (RPC receipt).
+landed and **fully functional** as a single-protocol, single-chain interface on
+**Base Sepolia (84532)**. Both core product surfaces work end to end against
+the live chain:
 
-Because the Uniswap Trading API gateway does not serve Base Sepolia, the swap
-pipeline runs on **local rails**: quotes are priced on-chain via the `Quoter`
-across every candidate route and tier, transactions are built locally from
-`@spry/sdk` calldata builders, approvals are read directly from the chain, and
-confirmations come from RPC receipts. The trade objects still flow through the
-upstream `transformQuoteToTrade` pipeline, so everything downstream (review
-modal, slippage, settings) is stock upstream code.
+**Swap** - quote (V4 `Quoter`, reflecting the `SpryHook` dynamic fee across
+every candidate route and tier), approve (ERC-20 to `SpryRouter`), swap
+(`SpryRouter` calldata), confirmation (RPC receipt). The swap form carries a
+per-pool dynamic fee/tier/zone widget (all tiers of a pair, grouped by hop,
+best route highlighted), and the review shows the exact dynamic fee the swap
+pays.
 
-Spry-native UI on top of upstream: a per-pool dynamic fee/tier/zone widget in
-the swap form (all tiers of a pair, grouped by hop, best route highlighted), a
-"Dynamic fee" row in the swap review showing the exact fee this swap pays, and
-route labeling ("Spry").
+**Pool (the full LP lifecycle)** -
 
-Pruned from upstream (gone, not hidden): limit orders, fiat buy/sell, the
-trade-options / routing-preference surface, **all Solana/SVM support** (wallet
-adapters, trade service, Jupiter clients, dependencies), and **all cross-chain
-/ bridging functionality** (bridge trades, the Across routing surface, the
-wormhole bridged-asset withdraw flow). Type-level members that exhaustive
-upstream type maps require (e.g. the `Platform.SVM` enum member, the generated
+- **Your positions**: discovered through the Spry subgraph and priced from
+  live chain reads (`StateView` / `PositionManager` multicalls). Cards show
+  pair-denominated principal and uncollected fees, the position's Spry tier
+  badge, In Pool / Closed status, and the pool's alert / danger zone swap
+  counts, with a per-pool dynamic-fee sparkline.
+- **Collect fees / add / remove liquidity**: transactions are built locally
+  and verified against the chain (collect simulations match the displayed
+  uncollected fees exactly).
+- **New position**: a Spry-native create flow. The fee-tier step presents the
+  five Spry tiers (icons, typical pairs, base-to-cap fee bands) instead of a
+  static fee list, and selecting a tier pins the `SpryHook` automatically.
+  If the pair + tier already has a pool, the flow routes into the shared
+  Add-liquidity modal against your live position. If not, the app **creates
+  the pool**: one `PositionManager` multicall that initializes the pool at
+  your chosen price and mints the first full-range position, with Permit2
+  approvals sequenced in front of it. Spry positions are always full range.
+- **Token selection**: search by symbol or by pasted address resolves locally
+  (common bases, then the subgraph, then live on-chain ERC-20 metadata), so
+  any token on the chain can be selected.
+
+### Local rails (no Uniswap backend)
+
+The Uniswap Trading API gateway and GraphQL backends do not serve Base
+Sepolia, so every data and transaction path runs on **local rails**: the
+client prices, builds, and confirms everything itself from the chain and the
+Spry subgraph, behind the same query seams the upstream code already calls.
+
+- **Swap rails**: `spryLocalQuote` (on-chain `Quoter` pricing),
+  `sprySwapApproval`, `sprySwapTransaction` (`@spry/sdk` calldata). Trade
+  objects still flow through the upstream `transformQuoteToTrade` pipeline, so
+  everything downstream (review modal, slippage, settings) is stock upstream
+  code.
+- **LP rails**: `spryLocalLiquidity` intercepts all six liquidity-service
+  query seams (claim fees / increase / decrease / approval check / pool lookup
+  / create). Existing positions transact through the position's own channel
+  (the seeded raw-position router or `PositionManager` by NFT tokenId via the
+  v4 SDK); new pools go through `PositionManager` with Permit2.
+- **Positions data**: `useSpryWalletPositions` (subgraph discovery + one
+  multicall for live state) replaces the gateway positions list.
+- **Token resolution**: `sprySearchTokens` + a local fallback inside
+  `useCurrencyInfo` replace gateway token search and metadata.
+
+Pruned from upstream (gone, not hidden): limit orders, fiat buy/sell (and the
+fiat on-ramp integration web-wide), the trade-options / routing-preference /
+UniswapX surface, **all Solana/SVM support** (wallet adapters, trade service,
+Jupiter clients, dependencies), **all cross-chain / bridging functionality**
+(bridge trades, the Across routing surface, the wormhole bridged-asset
+withdraw flow), the launch-auction (Toucan) surface, and the **v2/v3 LP
+surfaces** (Spry is v4-only: migrate flows, v2/v3 add/remove pages, the
+create-flow protocol picker). Type-level members that exhaustive upstream type
+maps require (e.g. the `Platform.SVM` enum member, the generated
 `Routing.BRIDGE`/`JUPITER` members) are deliberately stranded and routed to
 no-op implementations.
+
+Intentionally gated for the testnet phase (hidden or disabled with `SPRY:`
+restore comments inline, to be re-enabled for mainnet): the Explore and
+Portfolio navs (coming-soon badges), position-card navigation to the detail
+page (its data source is still gateway-fed), the card menu's "Pool info"
+option, the "Get help" buttons (they linked to Uniswap's support desk), the
+"Adding hook" speedbump (the only hook on Spry is the pre-approved
+`SpryHook`), and the Uniswap help-center learn-more tiles.
 
 ```
 spry-interface/
@@ -50,7 +97,7 @@ spry-interface/
 │   └── ...             upstream workspace packages (uniswap, ui, api, utilities, ...)
 ├── tools/
 │   └── contract-diff/  read-only Foundry harness: generates the @spry/fee differential fixture
-├── docs/               fork-landing runbook + integration plan
+├── docs/               fork-landing runbook + integration plan (historical)
 └── package.json        upstream bun + nx workspace root
 ```
 
@@ -71,11 +118,12 @@ Quality gates (run after changes):
 
 ```bash
 # lint + format (oxc - NOT eslint/prettier)
-bunx oxlint <files>
+bunx oxlint -c oxlint.config.ts <files>
 bunx oxfmt <files>
 
-# typecheck the shared package (reliable; always pass --skip-nx-cache)
-bunx nx typecheck:tsgo uniswap --skip-nx-cache
+# typecheck (tsgo; output is ANSI-colored - strip before grepping)
+bunx tsgo --noEmit -p packages/uniswap/tsconfig.json
+bunx tsgo --noEmit -p apps/web/tsconfig.json
 
 # unit tests, per package
 cd packages/uniswap && bunx vitest run
@@ -87,7 +135,7 @@ cd packages/spry-fee && bunx vitest run
 
 Note: `nx typecheck web` does not reliably check `apps/web/src` (a pre-existing
 `functions/` project-reference issue makes it bail early), so web changes are
-verified by vitest, oxlint, and the build.
+verified by tsgo on the app tsconfig, vitest, oxlint, and the build.
 
 ## Deployment
 
@@ -181,16 +229,22 @@ into a meta tag for both dev and the deployed worker).
 To keep the diff against `Uniswap/interface` (`apps/web`) auditable, Spry code
 is isolated from upstream code:
 
-- **Spry-specific (new):** the `packages/spry-*` packages, the local swap rails
-  (`spryLocalQuote`, `sprySwapTransaction`, `sprySwapApproval`), and the Spry
-  widgets (`SpryFeeWidget`, `SpryFeeInfo`). These are additive and clearly
-  namespaced; shared-code edits carry `SPRY:` comments.
+- **Spry-specific (new):** the `packages/spry-*` packages; the local swap
+  rails (`spryLocalQuote`, `sprySwapTransaction`, `sprySwapApproval`); the
+  local LP rails (`spryLocalLiquidity`, `useSpryWalletPositions`,
+  `sprySearchTokens`, `buildEmptySpryPosition`); and the Spry UI
+  (`SpryFeeWidget`, `SpryFeeInfo`, `SpryTierSelector`, `SpryTierBadge`,
+  `SpryFeeSparkline`, `SpryTiersCard`). These are additive and clearly
+  namespaced; shared-code edits carry `SPRY:` comments, and testnet-only
+  gates carry `RESTORE FOR MAINNET` notes with the original code inline.
 - **Upstream v4 (kept, lightly rewired):** swap, positions/LP, portfolio,
   ERC-20 token infrastructure (selector, balances, allowances + Permit2, token
   safety, token detail pages), and the pools explore list.
 - **Removed:** limit orders, fiat buy/sell, the trade-options / routing /
-  UniswapX surface, Solana/SVM support, and cross-chain bridging. Spry has a
-  single fixed execution path: `SpryRouter` -> `PoolManager.unlock` -> `SpryHook`.
+  UniswapX surface, Solana/SVM support, cross-chain bridging, the launch
+  auction, and the v2/v3 LP surfaces. Spry has a single fixed execution path
+  for swaps (`SpryRouter` -> `PoolManager.unlock` -> `SpryHook`) and standard
+  v4 channels for liquidity.
 
 ## The packages
 
@@ -210,7 +264,8 @@ is isolated from upstream code:
   viem; ABIs vendored from `spry-contracts`.
 - [`@spry/subgraph`](packages/spry-subgraph/README.md) - typed GraphQL queries
   and a thin fetch client for the Spry subgraph (pools, swaps, tiers, fee
-  windows). For history / analytics only.
+  windows, positions and liquidity modifications). Discovery and analytics
+  only; live amounts always come from chain reads.
 
 ## Sibling repositories
 
@@ -235,17 +290,28 @@ This app integrates with three repos checked out alongside it under `../`:
 - The same pair can exist in multiple tiers: tier (tick spacing) is part of the
   pool ID, every tier-pool is a separate route, and the router quotes all of
   them and executes the best.
+- Spry positions are **always full range** for the tier's tick spacing; the
+  create flow pins the range and never exposes a range picker.
+- Positions come in two kinds and the LP rails handle both: standard
+  `PositionManager` ERC-721s (by tokenId), and "raw" `PoolManager` positions
+  seeded through the canonical `PoolModifyLiquidityTest` router with
+  `salt = bytes32(owner)`. Display amounts and uncollected fees always come
+  from live `StateView` reads, never from subgraph aggregates.
 
 ## Roadmap
 
 Remaining increments:
 
-1. Tier picker on create/add-liquidity.
-2. Repoint Explore / pool analytics to `@spry/subgraph` (the gateway-fed views
-   are empty on Base Sepolia).
-3. Full branding/asset pass (favicon, landing page, remaining "Uniswap"
-   strings).
-4. Optional: split routing across tiers (the testnet pools are thin; a large
+1. Position **detail page** on local rails (cards intentionally don't navigate
+   on testnet until then).
+2. Repoint Explore / pool analytics to `@spry/subgraph` and re-enable the
+   Explore + Portfolio navs (currently coming-soon).
+3. Sweep the remaining Uniswap marketing surfaces (landing page sections,
+   support links in error boundaries).
+4. Mainnet pass: re-enable the testnet gates (`RESTORE FOR MAINNET` markers),
+   repoint help/support links at Spry channels, real WalletConnect / analytics
+   keys, mainnet addresses in `@spry/config`.
+5. Optional: split routing across tiers (the testnet pools are thin; a large
    exact-output can exceed any single tier's in-range liquidity today).
 
 Visual / styling work is a separate later pass.

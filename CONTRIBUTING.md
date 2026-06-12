@@ -1,37 +1,72 @@
-# Contributing to Uniswap Interface
+# Contributing to the Spry interface
 
-👋 Thanks for your interest in contributing to Uniswap!  
-This repository is the **public mirror** of Uniswap Labs' front-end interfaces, including the web app, wallet mobile app, and wallet browser extension.
+Thanks for your interest in Spry! This repository is the Spry web app: a fork
+of the Uniswap v4 web interface (`Uniswap/interface`, pinned at `web/5.148.6`)
+maintained by SpryFinance. It currently runs on **Base Sepolia** and is
+**pre-audit / pre-mainnet**.
 
-## Development Workflow
+## Getting set up
 
-Uniswap Labs maintains and develops all interfaces in a **private repository**. At the end of each development cycle:
+```bash
+nvm install 22.22.2 && nvm use 22.22.2   # the preinstall check enforces the exact version
+bun install
+bun web dev                               # http://localhost:3000
+```
 
-1. A **production release** is created internally.
-2. The release is then **published to this public repository**.
-3. All releases are tagged and visible in the [Releases](https://github.com/Uniswap/interface/releases) tab.
+See the [README](README.md) for the full architecture, environment variables,
+and deployment notes.
 
-Because of this private development model:
+## Before you open a PR
 
-**We do not accept pull requests to this repository.**
+Run the quality gates on what you touched:
 
-## How You *Can* Contribute
+```bash
+bunx oxlint -c oxlint.config.ts <files>        # lint (oxc, not eslint)
+bunx oxfmt <files>                             # format (oxc, not prettier)
+bunx tsgo --noEmit -p apps/web/tsconfig.json   # typecheck the app
+bunx tsgo --noEmit -p packages/uniswap/tsconfig.json
+cd apps/web && bunx vitest run <related test files>
+```
 
-We still welcome your ideas, feedback, and issue reports. The best ways to contribute are:
+All four should be clean (the only allowed failures are ones you can show are
+pre-existing on `main`).
 
-### Reporting Bugs
+## House rules for changes
 
-Open a [GitHub Issue](https://github.com/Uniswap/interface/issues/new?template=bug_report.md) and fill out the template. Be sure to include:
+This fork has one overriding design goal: **the diff against upstream
+`Uniswap/interface` stays small and auditable.** Practically:
 
-- Which app is affected (web, mobile, or extension)
-- Platform (iOS, Android, browser version, etc.)
-- App version (Production or dev)
-- Steps to reproduce, screenshots, logs, etc.
+- **New Spry behavior goes in Spry-namespaced code**: the `packages/spry-*`
+  workspaces, `apps/web/src/features/Liquidity/spry/`, the `spryLocal*` rail
+  modules. Prefer adding a seam over rewriting an upstream function.
+- **Edits inside upstream files carry a `SPRY:` comment** explaining what
+  changed and why.
+- **Testnet-only gates carry a `RESTORE FOR MAINNET` note** with the original
+  upstream code kept inline (commented), so the mainnet pass is a grep, not an
+  archaeology dig.
+- **Don't delete upstream code you could strand instead** when a type-level
+  member is required by exhaustive maps (see the SVM / bridging precedents).
+- Local rails must **never price a trade or position from the JS fee curve or
+  the subgraph**: execution amounts come from the `V4Quoter` and live
+  `StateView` reads (see "Key invariants" in the README).
 
-### Suggesting Features or Improvements
+## Reporting bugs
 
-Start a [Discussion](https://github.com/Uniswap/interface/discussions) to propose ideas, gather feedback, or brainstorm improvements.
+Open a GitHub issue on this repository with:
 
-## Repo Overview
+- What you did, what you expected, and what happened (screenshots help)
+- The page/flow (swap, positions list, create position, add/remove/collect)
+- Browser + viewport (desktop / tablet / mobile), and the wallet you used
+- The chain (Base Sepolia today) and, for failed transactions, the tx hash or
+  the exact error text from the review modal
 
-- Review the [README](README.md) to understand the repo's general architecture.
+For protocol-level issues (the hook, the fee curve, the router), file against
+[`spry-contracts`](https://github.com/SpryFinance/spry-contracts) instead. For
+indexing issues (missing pools/positions, wrong fee history), file against
+[`spry-subgraph`](https://github.com/SpryFinance/spry-subgraph).
+
+## Security
+
+Please do **not** open public issues for security-sensitive findings (anything
+that could affect funds once deployed beyond testnet). Reach out to the
+maintainers privately first.

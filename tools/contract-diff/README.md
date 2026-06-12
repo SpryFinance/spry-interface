@@ -32,9 +32,9 @@ forge script tools/contract-diff/script/DumpFees.s.sol --root tools/contract-dif
 Then run the differential test:
 
 ```bash
-npm test --workspace @spry/fee
+cd packages/spry-fee && bunx vitest run
 ```
 
 The committed CSV fixture is the source of truth for the test, so day-to-day
-`npm test` and CI never need Foundry. Regenerate only if `spry-contracts`
+test runs and CI never need Foundry. Regenerate only if `spry-contracts`
 changes (the hook is immutable, so in practice this is a one-time artifact).

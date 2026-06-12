@@ -64,5 +64,5 @@ and fee come from the `V4Quoter`.
 ## Test
 
 ```bash
-npm test --workspace @spry/slippage
+cd packages/spry-slippage && bunx vitest run
 ```

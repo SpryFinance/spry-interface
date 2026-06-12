@@ -72,5 +72,5 @@ marginalFee(0, 1200, p);      // integral-mode fee for a swap pushing cum 0 -> 1
 ## Test
 
 ```bash
-npm test --workspace @spry/fee
+cd packages/spry-fee && bunx vitest run
 ```

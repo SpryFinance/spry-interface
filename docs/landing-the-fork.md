@@ -1,5 +1,9 @@
 # Landing the apps/web fork
 
+> **Historical document.** This runbook was used to land the fork and is kept
+> for reference. The fork has long since landed; see the root
+> [README](../README.md) for the current state of the app.
+
 How to bring the upstream Uniswap `apps/web` into this repo on top of the Spry
 foundation packages. This must run in an environment with the upstream
 toolchain, which the current dev box does not have:
