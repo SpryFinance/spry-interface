@@ -16,6 +16,12 @@ export interface SpryAddresses {
   spryHook: Address;
   /** SpryRouter. Pre-deployment placeholder. Every swap routes through it. */
   spryRouter: Address;
+  /**
+   * Canonical V4 PoolModifyLiquidityTest router (testnets only). The seeding
+   * scripts LP through it with salt = owner address; the LP write flows target
+   * it for those raw (non-NFT) positions.
+   */
+  poolModifyLiquidityTest?: Address;
 }
 
 /** Full Spry configuration for one chain. */

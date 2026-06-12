@@ -28,6 +28,14 @@ import {
   V1LiquidityServiceClient,
   V2LiquidityServiceClient,
 } from 'uniswap/src/data/apiClients/liquidityService/LiquidityServiceClient'
+// SPRY: the gateway Liquidity Service 401s on Base Sepolia; these build the LP write
+// transactions locally for Spry positions and fall through (undefined) elsewhere.
+import {
+  maybeSpryLocalClaimFees,
+  maybeSpryLocalDecreasePosition,
+  maybeSpryLocalIncreasePosition,
+  maybeSpryLocalLPApproval,
+} from 'uniswap/src/data/apiClients/liquidityService/spryLocalLiquidity'
 import { ReactQueryCacheKey } from 'utilities/src/reactQuery/cache'
 import { type QueryOptionsResult } from 'utilities/src/reactQuery/queryOptions'
 
@@ -57,6 +65,10 @@ function getCheckLPApprovalQueryOptions(
       if (!params) {
         throw new Error('params required')
       }
+      const spryLocal = await maybeSpryLocalLPApproval(params)
+      if (spryLocal) {
+        return spryLocal
+      }
       return client.checkLPApproval(params)
     },
     ...rest,
@@ -72,6 +84,10 @@ function getClaimFeesQueryOptions(
     queryFn: async () => {
       if (!params) {
         throw new Error('params required')
+      }
+      const spryLocal = await maybeSpryLocalClaimFees(params)
+      if (spryLocal) {
+        return spryLocal
       }
       return client.claimFees(params)
     },
@@ -169,6 +185,10 @@ function getDecreasePositionQueryOptions(
       if (!params) {
         throw new Error('params required')
       }
+      const spryLocal = await maybeSpryLocalDecreasePosition(params)
+      if (spryLocal) {
+        return spryLocal
+      }
       return client.decreasePosition(params)
     },
     ...rest,
@@ -184,6 +204,10 @@ function getIncreasePositionQueryOptions(
     queryFn: async () => {
       if (!params) {
         throw new Error('params required')
+      }
+      const spryLocal = await maybeSpryLocalIncreasePosition(params)
+      if (spryLocal) {
+        return spryLocal
       }
       return client.increasePosition(params)
     },

@@ -62,6 +62,9 @@ export const BASE_SEPOLIA: SpryChainConfig = {
     permit2: PERMIT2_ADDRESS,
     spryHook: '0x43C99D40E2E7FBa44435bFC6Da57a74d38fD0080', // deployed + verified on-chain
     spryRouter: '0xd4Af9FFDf2067d4CA422526D308E08CDBE690642', // deployed + verified on-chain
+    // canonical PoolModifyLiquidityTest: the seeding scripts' LP router (verified as the sender of
+    // every indexed ModifyLiquidity event); the LP write flows target it for raw (non-NFT) positions.
+    poolModifyLiquidityTest: '0x37429cd17cb1454c34e7f50b09725202fd533039',
   },
   startBlock: 42508548, // SpryHook deploy block on Base Sepolia
   blockWindowHint: 30, // confirmed from the deployed BLOCK_WINDOW() (authoritative value is on-chain)
