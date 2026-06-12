@@ -2,12 +2,11 @@ import { ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes
 import type { Currency } from '@uniswap/sdk-core'
 import { parseRestProtocolVersion } from '@universe/api'
 import type { Dispatch, SetStateAction } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router'
-import { Button, Flex, styled, Text, TouchableArea } from 'ui/src'
+import { useParams } from 'react-router'
+import { Button, Flex, styled } from 'ui/src'
 import { RotateLeft } from 'ui/src/components/icons/RotateLeft'
-import { zIndexes } from 'ui/src/theme'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { InterfacePageName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
@@ -16,19 +15,14 @@ import { Slippage } from 'uniswap/src/features/transactions/components/settings/
 import { LPTransactionSettingsStoreContextProvider } from 'uniswap/src/features/transactions/components/settings/stores/transactionSettingsStore/LPTransactionSettingsStoreContextProvider'
 import { useTransactionSettingsStore } from 'uniswap/src/features/transactions/components/settings/stores/transactionSettingsStore/useTransactionSettingsStore'
 import { usePrevious } from 'utilities/src/react/hooks'
-import { Dropdown } from '~/components/Dropdowns/Dropdown'
-import { DynamicFeeTierSpeedbump } from '~/features/Liquidity/Create/DynamicFeeTierSpeedbump'
 import { FormStepsWrapper, FormWrapper } from '~/features/Liquidity/Create/FormWrapper'
 import { useLiquidityUrlState } from '~/features/Liquidity/Create/hooks/useLiquidityUrlState'
 import { useLPSlippageValue } from '~/features/Liquidity/Create/hooks/useLPSlippageValues'
 import { ResetCreatePositionFormModal } from '~/features/Liquidity/Create/ResetCreatePositionsFormModal'
-import { DEFAULT_POSITION_STATE, PositionFlowStep } from '~/features/Liquidity/Create/types'
-import { FeeTierSearchModal } from '~/features/Liquidity/FeeTierSearchModal'
+import { PositionFlowStep } from '~/features/Liquidity/Create/types'
 import { LPSettings } from '~/features/Liquidity/LPSettings'
-import { getProtocolVersionLabel } from '~/features/Liquidity/utils/protocolVersion'
 import {
   CreateLiquidityContextProvider,
-  DEFAULT_PRICE_RANGE_STATE,
   useCreateLiquidityContext,
 } from '~/pages/CreatePosition/CreateLiquidityContextProvider'
 import { CreatePositionTxContextProvider } from '~/pages/CreatePosition/CreatePositionTxContext'
@@ -99,22 +93,14 @@ const ToolbarContainer = styled(Flex, {
 })
 
 const Toolbar = () => {
-  const navigate = useNavigate()
-  const { t } = useTranslation()
   const {
     isNativeTokenAOnly,
     currencies,
-    positionState,
-    setPositionState,
-    setStep,
     reset: resetCreatePositionState,
-    setPriceRangeState,
     resetPriceRange: resetPriceRangeState,
     resetDeposit: resetDepositState,
   } = useCreateLiquidityContext()
-  const { protocolVersion } = positionState
   const customSlippageTolerance = useTransactionSettingsStore((s) => s.customSlippageTolerance)
-  const [versionDropdownOpen, setVersionDropdownOpen] = useState(false)
 
   const [showResetModal, setShowResetModal] = useState(false)
 
@@ -138,37 +124,8 @@ const Toolbar = () => {
     }
   }, [handleReset, isTestnetModeEnabled, prevIsTestnetModeEnabled])
 
-  const handleVersionChange = useCallback(
-    (version: ProtocolVersion) => {
-      // SPRY: v4-only, so there is no versioned create route - stay on /positions/create.
-      setTimeout(() => navigate('/positions/create'), 1)
-
-      setPositionState({
-        ...DEFAULT_POSITION_STATE,
-        protocolVersion: version,
-      })
-      setPriceRangeState(DEFAULT_PRICE_RANGE_STATE)
-      setStep(PositionFlowStep.SELECT_TOKENS_AND_FEE_TIER)
-      setVersionDropdownOpen(false)
-    },
-    [setPositionState, setPriceRangeState, setStep, navigate],
-  )
-
-  const versionOptions = useMemo(
-    () =>
-      // SPRY: v4-only (SpryHook is a v4 hook); no v2/v3 position creation.
-      [ProtocolVersion.V4]
-        .filter((version) => version !== protocolVersion)
-        .map((version) => (
-          <TouchableArea key={`version-${version}`} onPress={() => handleVersionChange(version)}>
-            <Flex p="$spacing8" borderRadius="$rounded8" hoverStyle={{ backgroundColor: '$surface2' }}>
-              <Text variant="body2">{t('position.new.protocol', { protocol: getProtocolVersionLabel(version) })}</Text>
-            </Flex>
-          </TouchableArea>
-        )),
-    [handleVersionChange, protocolVersion, t],
-  )
-
+  // SPRY: the protocol-version dropdown ("v4 position") is pruned - Spry is v4-only, so the
+  // dropdown had nothing to offer. Restore from git history if other versions ever return.
   return (
     <Flex>
       <ResetCreatePositionFormModal
@@ -179,22 +136,6 @@ const Toolbar = () => {
 
       <ToolbarContainer>
         <ResetButton onClickReset={() => setShowResetModal(true)} isDisabled={isNativeTokenAOnly} />
-        <Dropdown
-          containerStyle={{ width: 'auto' }}
-          buttonStyle={{ py: '$spacing8', px: '$spacing12' }}
-          dropdownStyle={{ width: 200, borderRadius: '$rounded16', zIndex: zIndexes.popover }}
-          adaptToSheet
-          menuLabel={
-            <Text variant="buttonLabel3" lineHeight="16px" whiteSpace="nowrap">
-              {t('position.protocol', { protocol: getProtocolVersionLabel(protocolVersion) })}
-            </Text>
-          }
-          isOpen={versionDropdownOpen}
-          toggleOpen={() => setVersionDropdownOpen(!versionDropdownOpen)}
-          alignRight
-        >
-          {versionOptions}
-        </Dropdown>
         <Flex
           borderRadius="$rounded12"
           borderWidth={!customSlippageTolerance ? '$spacing1' : '$none'}
@@ -219,33 +160,12 @@ const Toolbar = () => {
   )
 }
 
-export const SharedCreateModals = () => {
-  const {
-    positionState: { fee: selectedFee, protocolVersion, hook },
-    currencies,
-    setPositionState,
-    feeTierSearchModalOpen,
-    setFeeTierSearchModalOpen,
-    setDynamicFeeTierSpeedbumpData,
-  } = useCreateLiquidityContext()
-  const { chainId } = useMultichainContext()
-
-  return (
-    <>
-      <FeeTierSearchModal
-        isOpen={feeTierSearchModalOpen}
-        onClose={() => setFeeTierSearchModalOpen(false)}
-        chainId={chainId}
-        protocolVersion={protocolVersion}
-        hook={hook}
-        sdkCurrencies={currencies.sdk}
-        selectedFee={selectedFee}
-        onSelectFee={(fee) => setPositionState((prev) => ({ ...prev, fee }))}
-        onSelectDynamicFee={(fee) => setDynamicFeeTierSpeedbumpData({ open: true, wishFeeData: fee })}
-      />
-      <DynamicFeeTierSpeedbump />
-    </>
-  )
+// SPRY: the custom fee-tier search modal and its dynamic-fee speedbump are pruned - Spry pools
+// only exist at the five fixed tiers (the SpryTierSelector), so there is nothing to search or
+// create. The export stays (AddLiquidityPool renders it) but mounts nothing; restore the
+// FeeTierSearchModal + DynamicFeeTierSpeedbump renders from git history if custom tiers return.
+export const SharedCreateModals = (): null => {
+  return null
 }
 
 function CreatePositionContent({

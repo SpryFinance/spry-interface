@@ -1,21 +1,18 @@
-/* oxlint-disable max-lines */
 import { ProtocolVersion } from '@uniswap/client-data-api/dist/data/v1/poolTypes_pb'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, Button, Flex, SegmentedControl, Text, useMedia, useSporeColors } from 'ui/src'
 import { AlertTriangleFilled } from 'ui/src/components/icons/AlertTriangleFilled'
-import { fonts, zIndexes } from 'ui/src/theme'
+import { fonts } from 'ui/src/theme'
 import { AmountInput } from 'uniswap/src/components/AmountInput/AmountInput'
 import { WarningSeverity } from 'uniswap/src/components/modals/WarningModal/types'
 import { PositionInfo } from 'uniswap/src/features/positions/types'
-import { D3LiquidityRangeInput } from '~/features/Liquidity/charts/D3LiquidityRangeInput/D3LiquidityRangeInput'
 import { useDefaultInitialPrice } from '~/features/Liquidity/Create/hooks/useDefaultInitialPrice'
-import { useTokenControlOptions } from '~/features/Liquidity/Create/hooks/useTokenControlOptions'
 import { PoolOutOfSyncError } from '~/features/Liquidity/Create/PoolOutOfSyncError'
 import { PoolParsingError } from '~/features/Liquidity/Create/PoolParsingError'
 import { PositionOutOfRangeError } from '~/features/Liquidity/Create/PositionOutOfRangeError'
 import { RangeSelectionInput } from '~/features/Liquidity/Create/RangeAmountInput'
-import { PriceRangeState } from '~/features/Liquidity/Create/types'
+import { useTokenControlOptions } from '~/features/Liquidity/Create/hooks/useTokenControlOptions'
 import { DisplayCurrentPrice } from '~/features/Liquidity/DisplayCurrentPrice'
 import { getBaseAndQuoteCurrencies } from '~/features/Liquidity/utils/currency'
 import { getPriceDifference } from '~/features/Liquidity/utils/getPriceDifference'
@@ -23,11 +20,6 @@ import { isInvalidPrice, isInvalidRange } from '~/features/Liquidity/utils/price
 import { useCreateLiquidityContext } from '~/pages/CreatePosition/CreateLiquidityContextProvider'
 import { tryParsePrice } from '~/state/mint/v3/utils'
 import { PositionField } from '~/types/position'
-
-enum RangeSelection {
-  FULL = 'FULL',
-  CUSTOM = 'CUSTOM',
-}
 
 const InitialPriceInput = () => {
   const [otherCurrencyPrice, setOtherCurrencyPrice] = useState<string | undefined>()
@@ -269,15 +261,6 @@ const InitialPriceInput = () => {
   )
 }
 
-function RangeControl({ value, active }: { value: string; active: boolean }) {
-  return (
-    <Text color={active ? '$neutral1' : '$neutral2'} userSelect="none" variant="buttonLabel3">
-      {value}
-    </Text>
-  )
-}
-
-// oxlint-disable-next-line complexity
 export const SelectPriceRangeStep = ({
   positionInfo,
   onContinue,
@@ -290,78 +273,26 @@ export const SelectPriceRangeStep = ({
   const { t } = useTranslation()
 
   const {
-    positionState: { fee, hook, migratingPosition },
-    currencies,
+    positionState: { migratingPosition },
     creatingPoolOrPair,
     poolOrPairLoading,
     poolId,
     protocolVersion,
-    poolOrPair,
     price,
     ticks,
     priceRangeState,
     setPriceRangeState,
   } = useCreateLiquidityContext()
 
-  const { TOKEN0, TOKEN1 } = currencies.display
-  const { baseCurrency, quoteCurrency } = getBaseAndQuoteCurrencies(currencies.display, priceRangeState.priceInverted)
-
-  const controlOptions = useTokenControlOptions([TOKEN0, TOKEN1], 'small')
-
-  const handleSelectToken = useCallback(
-    (option: string) => {
-      if (option === TOKEN0?.symbol) {
-        setPriceRangeState((prevState) => ({
-          ...prevState,
-          priceInverted: false,
-          minTick: undefined,
-          maxTick: undefined,
-        }))
-      } else {
-        setPriceRangeState((prevState) => ({
-          ...prevState,
-          priceInverted: true,
-          minTick: undefined,
-          maxTick: undefined,
-        }))
-      }
-    },
-    [TOKEN0?.symbol, setPriceRangeState],
-  )
-
-  const handleSelectRange = useCallback(
-    (option: RangeSelection) => {
-      if (migratingPosition?.isOutOfRange) {
-        return
-      }
-
-      if (option === RangeSelection.FULL) {
-        setPriceRangeState((prevState) => ({
-          ...prevState,
-          minTick: undefined,
-          maxTick: undefined,
-          fullRange: true,
-        }))
-      } else {
-        setPriceRangeState((prevState) => ({
-          ...prevState,
-          fullRange: false,
-        }))
-      }
-    },
-    [migratingPosition?.isOutOfRange, setPriceRangeState],
-  )
-
-  const segmentedControlRangeOptions = [
-    {
-      display: <RangeControl value={t(`common.fullRange`)} active={priceRangeState.fullRange} />,
-      value: RangeSelection.FULL,
-    },
-    {
-      display: <RangeControl value={t(`common.customRange`)} active={!priceRangeState.fullRange} />,
-      value: RangeSelection.CUSTOM,
-    },
-  ]
+  // SPRY: positions are ALWAYS full range - pin the price-range state so any stale
+  // custom-range state (e.g. from a URL) cannot leak into the create request.
+  useEffect(() => {
+    setPriceRangeState((prevState) =>
+      prevState.fullRange && prevState.minTick === undefined && prevState.maxTick === undefined
+        ? prevState
+        : { ...prevState, fullRange: true, minTick: undefined, maxTick: undefined },
+    )
+  }, [setPriceRangeState])
 
   const handleChartRangeInput = useCallback(
     ({ input, tick }: { input: RangeSelectionInput; tick?: number }) => {
@@ -411,8 +342,6 @@ export const SelectPriceRangeStep = ({
     return <InitialPriceInput />
   }
 
-  const isDisabled = migratingPosition?.isOutOfRange
-
   return (
     <>
       {creatingPoolOrPair && <InitialPriceInput />}
@@ -422,90 +351,21 @@ export const SelectPriceRangeStep = ({
             {t('position.setRange')}
           </Text>
         </Flex>
-        {!migratingPosition?.isOutOfRange && (
-          <SegmentedControl
-            options={segmentedControlRangeOptions}
-            selectedOption={priceRangeState.fullRange ? RangeSelection.FULL : RangeSelection.CUSTOM}
-            onSelectOption={handleSelectRange}
-            fullWidth
-            size="large"
-          />
-        )}
+        {/* SPRY: the Full range / Custom range toggle and the draggable range chart are pruned -
+            Spry positions are ALWAYS full range (pinned by the effect above), so there is no range
+            to choose. Restore the SegmentedControl + D3LiquidityRangeInput from git history if
+            custom ranges ever return. */}
         {!migratingPosition?.isOutOfRange && (
           <Text variant="body3" color="$neutral2">
             {creatingPoolOrPair
               ? t('position.provide.liquidityDescription.creatingPool')
-              : priceRangeState.fullRange
-                ? t('position.provide.liquidityDescription')
-                : t('position.provide.liquidityDescription.custom')}
+              : t('position.provide.liquidityDescription')}
           </Text>
         )}
         <PositionOutOfRangeError positionInfo={positionInfo} />
         <PoolOutOfSyncError />
         <PoolParsingError formComplete />
-        <Flex gap="$gap4" opacity={isDisabled ? 0.6 : 1}>
-          {isDisabled && (
-            <Flex
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              opacity={0}
-              backgroundColor="$surface3"
-              cursor="not-allowed"
-              zIndex={zIndexes.overlay}
-            />
-          )}
-          {baseCurrency && quoteCurrency && fee && poolOrPair?.tickCurrent !== undefined && poolOrPair.tickSpacing && (
-            <D3LiquidityRangeInput
-              key={buildRangeInputKey({ protocolVersion, poolId: poolId ?? '', priceRangeState })}
-              baseCurrency={baseCurrency}
-              quoteCurrency={quoteCurrency}
-              sdkCurrencies={currencies.sdk}
-              creatingPoolOrPair={creatingPoolOrPair}
-              currencyControlOptions={controlOptions}
-              priceInverted={priceRangeState.priceInverted}
-              feeTier={fee.feeAmount}
-              hook={hook}
-              tickSpacing={poolOrPair.tickSpacing}
-              currentTick={poolOrPair.tickCurrent}
-              protocolVersion={protocolVersion}
-              poolId={poolId}
-              poolOrPairLoading={poolOrPairLoading}
-              price={price}
-              currentPrice={Number(price?.toSignificant())}
-              inputMode={priceRangeState.inputMode}
-              migratingPosition={migratingPosition}
-              minTick={priceRangeState.minTick}
-              maxTick={priceRangeState.maxTick}
-              isFullRange={priceRangeState.fullRange}
-              handleSelectToken={handleSelectToken}
-              setMinTick={(tick) => {
-                setPriceRangeState((prev) => {
-                  if (tick !== undefined && prev.maxTick !== undefined && tick >= prev.maxTick) {
-                    return { ...prev, minTick: prev.maxTick - poolOrPair.tickSpacing }
-                  }
-                  return { ...prev, minTick: tick }
-                })
-              }}
-              setMaxTick={(tick) => {
-                setPriceRangeState((prev) => {
-                  if (tick !== undefined && prev.minTick !== undefined && tick <= prev.minTick) {
-                    return { ...prev, maxTick: prev.minTick + poolOrPair.tickSpacing }
-                  }
-                  return { ...prev, maxTick: tick }
-                })
-              }}
-              setIsFullRange={(isFullRange: boolean) => {
-                handleSelectRange(isFullRange ? RangeSelection.FULL : RangeSelection.CUSTOM)
-              }}
-              setInputMode={(inputMode) => {
-                setPriceRangeState((prev) => ({ ...prev, inputMode }))
-              }}
-            />
-          )}
-        </Flex>
+        {!creatingPoolOrPair && <DisplayCurrentPrice price={price} isLoading={poolOrPairLoading} />}
         {(invalidPrice || invalidRange) && (
           <Flex row alignItems="center" px="$padding16" gap="$gap4">
             <AlertTriangleFilled size="$icon.16" color="$statusCritical" />
@@ -526,14 +386,3 @@ export const SelectPriceRangeStep = ({
   )
 }
 
-function buildRangeInputKey({
-  protocolVersion,
-  poolId,
-  priceRangeState,
-}: {
-  protocolVersion: ProtocolVersion
-  poolId: string
-  priceRangeState: PriceRangeState
-}) {
-  return `${poolId}-${priceRangeState.priceInverted}-${protocolVersion}`
-}

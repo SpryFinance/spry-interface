@@ -32,9 +32,11 @@ import {
 // transactions locally for Spry positions and fall through (undefined) elsewhere.
 import {
   maybeSpryLocalClaimFees,
+  maybeSpryLocalCreatePosition,
   maybeSpryLocalDecreasePosition,
   maybeSpryLocalIncreasePosition,
   maybeSpryLocalLPApproval,
+  maybeSpryLocalPoolInfo,
 } from 'uniswap/src/data/apiClients/liquidityService/spryLocalLiquidity'
 import { ReactQueryCacheKey } from 'utilities/src/reactQuery/cache'
 import { type QueryOptionsResult } from 'utilities/src/reactQuery/queryOptions'
@@ -48,6 +50,10 @@ function getPoolInfoQueryOptions(
     queryFn: async () => {
       if (!params) {
         throw new Error('params required')
+      }
+      const spryLocal = await maybeSpryLocalPoolInfo(params)
+      if (spryLocal) {
+        return spryLocal
       }
       return client.poolInfo(params)
     },
@@ -168,6 +174,10 @@ function getCreatePositionQueryOptions(
     queryFn: async () => {
       if (!params) {
         throw new Error('params required')
+      }
+      const spryLocal = await maybeSpryLocalCreatePosition(params)
+      if (spryLocal) {
+        return spryLocal
       }
       return client.createPosition(params)
     },

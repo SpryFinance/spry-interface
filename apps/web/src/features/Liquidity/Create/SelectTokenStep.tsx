@@ -9,18 +9,16 @@ import {
   useDynamicConfigValue,
   useFeatureFlag,
 } from '@universe/gating'
+import { getSpryConfig } from '@spry/config'
 import type { Dispatch, SetStateAction } from 'react'
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import type { FlexProps } from 'ui/src'
 import { Button, DropdownButton, Flex, Shine, Text } from 'ui/src'
-import { InfoCircleFilled } from 'ui/src/components/icons/InfoCircleFilled'
-import { Search } from 'ui/src/components/icons/Search'
 import { iconSizes } from 'ui/src/theme'
 import { TokenLogo } from 'uniswap/src/components/CurrencyLogo/TokenLogo'
 import { TokenSelectorFlow } from 'uniswap/src/components/TokenSelector/types'
-import { ZERO_ADDRESS } from 'uniswap/src/constants/misc'
 import { nativeOnChain, WRAPPED_NATIVE_CURRENCY } from 'uniswap/src/constants/tokens'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
@@ -37,18 +35,12 @@ import { PrefetchBalancesWrapper } from '~/appGraphql/data/apollo/AdaptiveTokenB
 import { ErrorCallout } from '~/components/ErrorCallout'
 import { DoubleCurrencyLogo } from '~/components/Logo/DoubleLogo'
 import { CurrencySearchModal } from '~/components/SearchModal/CurrencySearchModal'
-import { MouseoverTooltip } from '~/components/Tooltip'
 import { NATIVE_CHAIN_ID } from '~/constants/tokens'
-import { AddHook } from '~/features/Liquidity/Create/AddHook'
-import { AdvancedButton } from '~/features/Liquidity/Create/AdvancedButton'
 import { CreatingPoolInfo, PoolAlreadyCreatedInfo } from '~/features/Liquidity/Create/CreatingPoolInfo'
 import { useLiquidityUrlState } from '~/features/Liquidity/Create/hooks/useLiquidityUrlState'
 import { PoolParsingError } from '~/features/Liquidity/Create/PoolParsingError'
-import { FeeTierSelector } from '~/features/Liquidity/FeeTierSelector'
 import { HookModal } from '~/features/Liquidity/HookModal'
-import { useAllFeeTierPoolData } from '~/features/Liquidity/hooks/useAllFeeTierPoolData'
-import { LpIncentivesAprDisplay } from '~/features/Liquidity/LPIncentives/LpIncentivesAprDisplay'
-import { getDefaultFeeTiersWithData, getFeeTierKey } from '~/features/Liquidity/utils/feeTiers'
+import { SpryTierSelector } from '~/features/Liquidity/spry/SpryTierSelector'
 import { hasLPFoTTransferError } from '~/features/Liquidity/utils/hasLPFoTTransferError'
 import { isUnsupportedLPChain } from '~/features/Liquidity/utils/isUnsupportedLPChain'
 import { getProtocolVersionLabel } from '~/features/Liquidity/utils/protocolVersion'
@@ -58,7 +50,6 @@ import { buildPoolSearchParams } from '~/pages/AddLiquidity/poolLinkParams'
 import { useCreateLiquidityContext } from '~/pages/CreatePosition/CreateLiquidityContextProvider'
 import { useMultichainContext } from '~/state/multichain/useMultichainContext'
 import { SwitchNetworkAction } from '~/state/popups/types'
-import { ClickableTamaguiStyle } from '~/theme/components/styles'
 import { isV4UnsupportedChain } from '~/utils/networkSupportsV4'
 import { getChainUrlParam } from '~/utils/params/chainParams'
 
@@ -137,7 +128,6 @@ export function SelectTokensStep({
   const [hookModalOpen, setHookModalOpen] = useState(false)
   const [showWrappedNativeWarning, setShowWrappedNativeWarning] = useState(false)
   const isAddLiquidityRevamp = useFeatureFlag(FeatureFlags.AddLiquidityRevamp)
-  const isLpIncentivesEnabled = useFeatureFlag(FeatureFlags.LpIncentives)
   const allowedV4WethHookAddresses: string[] = useDynamicConfigValue({
     config: DynamicConfigs.AllowedV4WethHookAddresses,
     key: AllowedV4WethHookAddressesConfigKey.HookAddresses,
@@ -149,17 +139,14 @@ export function SelectTokensStep({
     setPositionState,
     protocolVersion,
     creatingPoolOrPair,
-    currencies,
     poolOrPairLoading,
     poolOrPair,
     poolId,
-    setFeeTierSearchModalOpen,
   } = useCreateLiquidityContext()
 
   const token0 = currencyInputs.tokenA
   const token1 = currencyInputs.tokenB
   const [currencySearchInputState, setCurrencySearchInputState] = useState<'tokenA' | 'tokenB' | undefined>(undefined)
-  const [isShowMoreFeeTiersEnabled, toggleShowMoreFeeTiersEnabled] = useReducer((state) => !state, false)
 
   const isToken0Unsupported = isUnsupportedLPChain(token0?.chainId, protocolVersion)
   const isToken1Unsupported = isUnsupportedLPChain(token1?.chainId, protocolVersion)
@@ -179,7 +166,7 @@ export function SelectTokensStep({
 
       setSelectedChainId(currency.chainId)
 
-      // If the tokens change, we want to reset the default fee tier (mostUsedFeeTier) in the useEffect below.
+      // If the tokens change, reset the fee tier so the user re-picks a Spry tier for the new pair.
       setPositionState((prevState) => ({ ...prevState, fee: undefined }))
 
       if (areCurrenciesEqual(currency, otherCurrency) || areCurrenciesEqual(wrappedCurrencyNew, wrappedCurrencyOther)) {
@@ -215,57 +202,25 @@ export function SelectTokensStep({
     [currencySearchInputState, setCurrencyInputs, currencyInputs, setSelectedChainId, setPositionState],
   )
 
-  const handleFeeTierSelect = useCallback(
+  // SPRY: selecting a tier ALSO pins the SpryHook (pre-approved, so the unknown-hook modal never
+  // fires) - the tier + hook together identify the Spry pool the form looks up and targets.
+  const handleSpryTierSelect = useCallback(
     (feeData: FeeData) => {
-      setPositionState((prevState) => ({ ...prevState, fee: feeData }))
+      const spryHookAddress = getSpryConfig(token0?.chainId ?? UniverseChainId.BaseSepolia)?.addresses.spryHook
+      setPositionState((prevState) => ({
+        ...prevState,
+        fee: feeData,
+        hook: spryHookAddress,
+        userApprovedHook: spryHookAddress,
+      }))
       sendAnalyticsEvent(LiquidityEventName.SelectLiquidityPoolFeeTier, {
         action: FeePoolSelectAction.Manual,
         fee_tier: feeData.feeAmount,
         ...trace,
       })
     },
-    [setPositionState, trace],
+    [setPositionState, trace, token0?.chainId],
   )
-
-  const { feeTierData, hasExistingFeeTiers } = useAllFeeTierPoolData({
-    chainId: token0?.chainId,
-    protocolVersion,
-    sdkCurrencies: currencies.sdk,
-    hook: hook ?? ZERO_ADDRESS,
-  })
-
-  const feeTierHasLpRewards = useMemo(
-    () => Object.values(feeTierData).some((tier) => tier.boostedApr && tier.boostedApr > 0) && isLpIncentivesEnabled,
-    [feeTierData, isLpIncentivesEnabled],
-  )
-
-  const mostUsedFeeTier = useMemo(() => {
-    if (hasExistingFeeTiers && Object.keys(feeTierData).length > 0) {
-      return Object.values(feeTierData).reduce((highest, current) => {
-        return current.percentage.greaterThan(highest.percentage) ? current : highest
-      })
-    }
-
-    return undefined
-  }, [hasExistingFeeTiers, feeTierData])
-
-  useEffect(() => {
-    if (fee || isAddLiquidityRevamp) {
-      return
-    }
-
-    if (mostUsedFeeTier) {
-      setPositionState((prevState) => ({
-        ...prevState,
-        fee: mostUsedFeeTier.fee,
-      }))
-      sendAnalyticsEvent(LiquidityEventName.SelectLiquidityPoolFeeTier, {
-        action: FeePoolSelectAction.Recommended,
-        fee_tier: mostUsedFeeTier.fee.feeAmount,
-        ...trace,
-      })
-    }
-  }, [mostUsedFeeTier, fee, setPositionState, trace, isAddLiquidityRevamp])
 
   const { chains } = useEnabledChains({ platform: Platform.EVM })
   const supportedChains = useMemo(() => {
@@ -372,37 +327,6 @@ export function SelectTokensStep({
 
   const hasError = isUnsupportedTokenSelected || Boolean(fotErrorToken)
 
-  const currentFeeTierKey = useMemo(
-    () =>
-      fee
-        ? getFeeTierKey({
-            feeTier: fee.feeAmount,
-            tickSpacing: fee.tickSpacing,
-            isDynamicFee: fee.isDynamic,
-          })
-        : undefined,
-    [fee],
-  )
-
-  const lpIncentiveRewardApr = useMemo(() => {
-    if (!isLpIncentivesEnabled || protocolVersion !== ProtocolVersion.V4) {
-      return undefined
-    }
-
-    // This component makes 2 API calls to ListPools -- one for current selected fee tier, and one to get all pools for all fee tiers
-    // to ensure the current selected fee tier rewards APR matches the same fee tier in the fee tier selector,
-    // grab the rewards tier from the fee tier directly
-    const matchingFeeTier = Object.values(feeTierData).find(
-      (tier) =>
-        getFeeTierKey({
-          feeTier: tier.fee.feeAmount,
-          tickSpacing: tier.fee.tickSpacing,
-          isDynamicFee: tier.fee.isDynamic,
-        }) === currentFeeTierKey,
-    )
-    return matchingFeeTier?.boostedApr && matchingFeeTier.boostedApr > 0 ? matchingFeeTier.boostedApr : undefined
-  }, [isLpIncentivesEnabled, protocolVersion, feeTierData, currentFeeTierKey])
-
   const poolAlreadyExists =
     isAddLiquidityRevamp &&
     !migratingPosition &&
@@ -412,8 +336,6 @@ export function SelectTokensStep({
     !!token0 &&
     !!token1 &&
     !!fee
-
-  const defaultFeeTiers = getDefaultFeeTiersWithData({ chainId: token0?.chainId, feeTierData, protocolVersion })
 
   return (
     <>
@@ -473,123 +395,29 @@ export function SelectTokensStep({
                 wrappedNativeWarning={undefined}
                 fotToken={fotErrorToken}
               />
-              {!hasError && protocolVersion === ProtocolVersion.V4 && <AddHook />}
+              {/* SPRY: the "Add a Hook" option is pruned - every Spry pool uses the SpryHook, which the
+                  tier selector pins automatically. Restore <AddHook /> from git history if arbitrary
+                  hooks ever return. */}
             </Flex>
           </Flex>
           <Flex gap="$spacing24">
             <Flex>
-              <Text variant="subheading1">{t('fee.tier')}</Text>
+              <Text variant="subheading1">Dynamic fee tier</Text>
               <Text variant="body3" color="$neutral2">
-                {protocolVersion === ProtocolVersion.V2 ? t('fee.tier.description.v2') : t('fee.tier.description')}
+                Every Spry pool charges a dynamic fee that moves within its tier's band as volatility and
+                imbalance change. Pick the tier that matches the pair.
               </Text>
             </Flex>
 
-            {protocolVersion !== ProtocolVersion.V2 && (
-              <FeeTierSelector
-                selectedFee={fee}
-                onFeeSelect={handleFeeTierSelect}
-                feeTiers={defaultFeeTiers}
-                disabled={
-                  hasError ||
-                  !currencyInputs.tokenA ||
-                  !currencyInputs.tokenB ||
-                  Boolean(migratingPosition?.isOutOfRange)
-                }
-                isLpIncentivesEnabled={isLpIncentivesEnabled}
-                hasLpRewards={feeTierHasLpRewards}
-                allowDynamicFee={!!hook}
-                isExpanded={isShowMoreFeeTiersEnabled}
-                onToggleExpand={toggleShowMoreFeeTiersEnabled}
-                headerInlineContent={
-                  <>
-                    {fee &&
-                    currentFeeTierKey ===
-                      (mostUsedFeeTier &&
-                        getFeeTierKey({
-                          feeTier: mostUsedFeeTier.fee.feeAmount,
-                          tickSpacing: mostUsedFeeTier.fee.tickSpacing,
-                          isDynamicFee: mostUsedFeeTier.fee.isDynamic,
-                        })) ? (
-                      <MouseoverTooltip text={t('fee.tier.recommended.description')}>
-                        <Flex
-                          justifyContent="center"
-                          borderRadius="$rounded6"
-                          backgroundColor="$surface3"
-                          px={7}
-                          py="$spacing2"
-                          $md={{ display: 'none' }}
-                        >
-                          <Text variant="buttonLabel4">{t('fee.tier.highestTvl')}</Text>
-                        </Flex>
-                      </MouseoverTooltip>
-                    ) : currentFeeTierKey && !feeTierData[currentFeeTierKey]?.created ? (
-                      <Flex justifyContent="center" borderRadius="$rounded6" backgroundColor="$surface3" px={7}>
-                        <Text variant="buttonLabel4">{t('fee.tier.new')}</Text>
-                      </Flex>
-                    ) : null}
-                    {fee && lpIncentiveRewardApr && (
-                      <LpIncentivesAprDisplay
-                        lpIncentiveRewardApr={lpIncentiveRewardApr}
-                        $md={{ display: 'none' }}
-                        isSmall
-                      />
-                    )}
-                  </>
-                }
-                headerSubContent={
-                  lpIncentiveRewardApr ? (
-                    <LpIncentivesAprDisplay
-                      lpIncentiveRewardApr={lpIncentiveRewardApr}
-                      display="none"
-                      $md={{ display: 'flex' }}
-                      isSmall
-                    />
-                  ) : undefined
-                }
-                expandedFooterContent={
-                  protocolVersion === ProtocolVersion.V4 ? (
-                    <AdvancedButton
-                      title={t('fee.tier.search')}
-                      Icon={Search}
-                      onPress={() => {
-                        setFeeTierSearchModalOpen(true)
-                      }}
-                    />
-                  ) : undefined
-                }
-                footerContent={
-                  !lpIncentiveRewardApr && feeTierHasLpRewards && !isShowMoreFeeTiersEnabled ? (
-                    <Flex
-                      row
-                      alignItems="center"
-                      gap="$spacing12"
-                      mt="$spacing4"
-                      p="$spacing12"
-                      $sm={{ p: '$spacing6', gap: '$spacing6' }}
-                      backgroundColor="$accent2"
-                      borderBottomLeftRadius="$rounded12"
-                      borderBottomRightRadius="$rounded12"
-                      width="100%"
-                    >
-                      <InfoCircleFilled color="$accent1" size="$icon.16" />
-                      <Text variant="body3" color="$accent1" mt="$spacing2" $sm={{ variant: 'body4', mt: '$spacing1' }}>
-                        {t('pool.incentives.similarPoolHasRewards')}
-                      </Text>
-                      <Text
-                        mt="$spacing2"
-                        variant="body3"
-                        color="$neutral1"
-                        $sm={{ variant: 'body4', mt: '$spacing1' }}
-                        {...ClickableTamaguiStyle}
-                        onPress={toggleShowMoreFeeTiersEnabled}
-                      >
-                        {t('pool.incentives.switchPools')}
-                      </Text>
-                    </Flex>
-                  ) : undefined
-                }
-              />
-            )}
+            {/* SPRY: the five Spry tiers replace the stock fee-tier grid; the custom fee-tier search
+                ("Search or create other fee tiers") is pruned - Spry pools only exist at these tiers. */}
+            <SpryTierSelector
+              selectedFee={fee}
+              onSelect={(_tier, feeData) => handleSpryTierSelect(feeData)}
+              disabled={
+                hasError || !currencyInputs.tokenA || !currencyInputs.tokenB || Boolean(migratingPosition?.isOutOfRange)
+              }
+            />
           </Flex>
           {poolAlreadyExists ? <PoolAlreadyCreatedInfo /> : <CreatingPoolInfo />}
           <Flex row>

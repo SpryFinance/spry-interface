@@ -1,3 +1,4 @@
+/* oxlint-disable max-lines -- one cohesive module: every LP write flow's local builder lives here */
 // SPRY: local calldata builders for the LP write flows on Base Sepolia. The
 // Uniswap gateway Liquidity Service 401s there, so collect-fees / increase /
 // decrease transactions (and the ERC20 approval check) are synthesized locally
@@ -28,19 +29,28 @@
 
 import { getSpryConfig } from '@spry/config'
 import { DYNAMIC_FEE_FLAG } from '@spry/fee'
+import { poolId as computeSpryPoolId, sortCurrencies } from '@spry/sdk'
 import { createSpryGraphClient, fetchPoolsByIds, type PositionPoolRow } from '@spry/subgraph'
 import {
   ClaimFeesResponse,
+  CreatePositionResponse,
   DecreasePositionResponse,
   IncreasePositionResponse,
   LPApprovalResponse,
   type ClaimFeesRequest,
+  type CreatePositionRequest,
   type DecreasePositionRequest,
   type IncreasePositionRequest,
   type LPApprovalRequest,
 } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v2/api_pb'
 import { ApprovalTransactionRequest, LPToken } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v2/types_pb'
-import { TransactionRequest } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v1/types_pb'
+import type { PoolInfoRequest } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v1/api_pb'
+import { PoolInfoResponse } from '@uniswap/client-liquidity/dist/uniswap/liquidity/v1/api_pb'
+import {
+  PoolInformation,
+  Protocols,
+  TransactionRequest,
+} from '@uniswap/client-liquidity/dist/uniswap/liquidity/v1/types_pb'
 import type { Currency } from '@uniswap/sdk-core'
 import { Token } from '@uniswap/sdk-core'
 import { Pool as V4Pool, Position as V4Position } from '@uniswap/v4-sdk'
@@ -110,6 +120,13 @@ const STATE_VIEW_ABI = [
       { name: 'protocolFee', type: 'uint24' },
       { name: 'lpFee', type: 'uint24' },
     ],
+  },
+  {
+    type: 'function',
+    name: 'getLiquidity',
+    stateMutability: 'view',
+    inputs: [{ name: 'poolId', type: 'bytes32' }],
+    outputs: [{ name: 'liquidity', type: 'uint128' }],
   },
   {
     type: 'function',
@@ -425,4 +442,177 @@ export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promi
   })
 
   return new LPApprovalResponse({ requestId: 'spry-local-approval', transactions })
+}
+
+/** Min/max usable ticks for a tick spacing (Spry positions are always full range). */
+function fullRangeTicks(tickSpacing: number): { tickLower: number; tickUpper: number } {
+  const MAX_TICK = 887272
+  return {
+    tickLower: Math.ceil(-MAX_TICK / tickSpacing) * tickSpacing,
+    tickUpper: Math.floor(MAX_TICK / tickSpacing) * tickSpacing,
+  }
+}
+
+/**
+ * Pool lookup for the create-position form ("does this pair + tier have a
+ * pool, and at what price"). Computes the Spry poolId from the requested pair
+ * + tick spacing (key fee is always the dynamic flag, hooks the SpryHook),
+ * confirms it in the subgraph, and reads live slot0/liquidity from StateView.
+ * pools: [] means "no such pool" (the form then enters create-new-pool mode).
+ */
+export async function maybeSpryLocalPoolInfo(params: PoolInfoRequest): Promise<PoolInfoResponse | undefined> {
+  const poolParams = params.poolParameters
+  if (Number(params.chainId) !== SPRY_LP_CHAIN_ID || !poolParams) {
+    return undefined
+  }
+  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  if (!config) {
+    return undefined
+  }
+  // A non-SpryHook (or hookless) pool config cannot exist on Spry.
+  if (!poolParams.hookAddress || !isSameEvmAddress(poolParams.hookAddress, config.addresses.spryHook)) {
+    return new PoolInfoResponse({ requestId: 'spry-local-poolinfo', pools: [] })
+  }
+  const tickSpacing = poolParams.tickSpacing
+  if (!tickSpacing) {
+    return new PoolInfoResponse({ requestId: 'spry-local-poolinfo', pools: [] })
+  }
+
+  const [currency0, currency1] = sortCurrencies(poolParams.tokenAddressA as Address, poolParams.tokenAddressB as Address)
+  const id = computeSpryPoolId({
+    currency0,
+    currency1,
+    fee: DYNAMIC_FEE_FLAG,
+    tickSpacing,
+    hooks: config.addresses.spryHook,
+  })
+
+  const subgraphClient = createSpryGraphClient(config.subgraphUrl ?? '')
+  const [pool] = config.subgraphUrl ? await fetchPoolsByIds(subgraphClient, [id]) : []
+  if (!pool) {
+    return new PoolInfoResponse({ requestId: 'spry-local-poolinfo', pools: [] })
+  }
+
+  const [slot0, poolLiquidity] = await Promise.all([
+    spryPublicClient.readContract({
+      address: config.addresses.stateView,
+      abi: STATE_VIEW_ABI,
+      functionName: 'getSlot0',
+      args: [id],
+    }),
+    spryPublicClient.readContract({
+      address: config.addresses.stateView,
+      abi: STATE_VIEW_ABI,
+      functionName: 'getLiquidity',
+      args: [id],
+    }),
+  ])
+
+  const aIsToken0 = isSameEvmAddress(poolParams.tokenAddressA, pool.token0.id)
+  return new PoolInfoResponse({
+    requestId: 'spry-local-poolinfo',
+    pools: [
+      new PoolInformation({
+        poolReferenceIdentifier: id,
+        poolProtocol: Protocols.V4,
+        tokenAddressA: poolParams.tokenAddressA,
+        tokenAddressB: poolParams.tokenAddressB,
+        tokenDecimalsA: aIsToken0 ? pool.token0.decimals : pool.token1.decimals,
+        tokenDecimalsB: aIsToken0 ? pool.token1.decimals : pool.token0.decimals,
+        fee: DYNAMIC_FEE_FLAG, // the pool-key fee (consumers build the SDK pool from it)
+        tickSpacing,
+        hookAddress: config.addresses.spryHook,
+        chainId: SPRY_LP_CHAIN_ID,
+        sqrtRatioX96: slot0[0].toString(),
+        currentTick: slot0[1],
+        poolLiquidity: poolLiquidity.toString(),
+      }),
+    ],
+  })
+}
+
+/**
+ * Create a position in an EXISTING Spry pool: same router modify as increase,
+ * but addressed by the form's poolReference (set by maybeSpryLocalPoolInfo to
+ * the v4 poolId) and always full range for the pool's tick spacing. Brand-new
+ * pool initialization is not supported from the UI on testnet (Spry pools are
+ * deployed with the hook's tier config), so the newPool case throws a clear
+ * error instead of silently 401ing.
+ */
+export async function maybeSpryLocalCreatePosition(
+  params: CreatePositionRequest,
+): Promise<CreatePositionResponse | undefined> {
+  const independent = params.independentToken
+  if (!isSpryLpChain(params.chainId) || !params.walletAddress || !independent) {
+    return undefined
+  }
+  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const router = config?.addresses.poolModifyLiquidityTest
+  if (!config || !router) {
+    return undefined
+  }
+  if (params.pool.case === 'newPool') {
+    throw new Error(
+      'Spry: this pair + tier has no pool yet, and initializing new pools from the UI is not supported on testnet. Pick a pair with an existing Spry pool.',
+    )
+  }
+  if (params.pool.case !== 'existingPool' || !params.pool.value.poolReference.startsWith('0x')) {
+    return undefined
+  }
+  const poolIdRef = params.pool.value.poolReference as Hex
+
+  const pool = await fetchSpryPool(poolIdRef)
+  const slot0 = await spryPublicClient.readContract({
+    address: config.addresses.stateView,
+    abi: STATE_VIEW_ABI,
+    functionName: 'getSlot0',
+    args: [poolIdRef],
+  })
+
+  const currency0 = currencyForPoolToken(pool.token0, SPRY_LP_CHAIN_ID)
+  const currency1 = currencyForPoolToken(pool.token1, SPRY_LP_CHAIN_ID)
+  const key = poolKeyFromRow(pool)
+  const { tickLower, tickUpper } = fullRangeTicks(key.tickSpacing)
+  const v4Pool = new V4Pool(
+    currency0,
+    currency1,
+    key.fee,
+    key.tickSpacing,
+    key.hooks,
+    slot0[0].toString(),
+    '0',
+    slot0[1],
+  )
+
+  const independentIsToken0 = isSameEvmAddress(independent.tokenAddress, pool.token0.id)
+  const independentIsToken1 = isSameEvmAddress(independent.tokenAddress, pool.token1.id)
+  if (!independentIsToken0 && !independentIsToken1) {
+    throw new Error('Spry LP: independent token is not part of this pool')
+  }
+  const position = independentIsToken0
+    ? V4Position.fromAmount0({ pool: v4Pool, tickLower, tickUpper, amount0: independent.amount, useFullPrecision: true })
+    : V4Position.fromAmount1({ pool: v4Pool, tickLower, tickUpper, amount1: independent.amount })
+  const liquidityDelta = BigInt(position.liquidity.toString())
+  if (liquidityDelta <= BigInt(0)) {
+    throw new Error('Spry LP: amount too small to add measurable liquidity')
+  }
+  const { amount0, amount1 } = position.mintAmounts
+
+  const data = encodeModifyLiquidity({
+    key,
+    tickLower,
+    tickUpper,
+    liquidityDelta,
+    salt: saltForOwner(params.walletAddress),
+  })
+  const value = currency0.isNative ? BigInt(amount0.toString()) : BigInt(0)
+
+  return new CreatePositionResponse({
+    requestId: 'spry-local-create',
+    token0: new LPToken({ tokenAddress: pool.token0.id, amount: amount0.toString() }),
+    token1: new LPToken({ tokenAddress: pool.token1.id, amount: amount1.toString() }),
+    tickLower,
+    tickUpper,
+    create: buildTxRequest({ to: router, from: params.walletAddress, data, value }),
+  })
 }

@@ -14,8 +14,8 @@ import { CreatingPoolInfo } from '~/features/Liquidity/Create/CreatingPoolInfo'
 import { useDefaultInitialPrice } from '~/features/Liquidity/Create/hooks/useDefaultInitialPrice'
 import { PositionFlowStep } from '~/features/Liquidity/Create/types'
 import { DisplayCurrentPrice } from '~/features/Liquidity/DisplayCurrentPrice'
-import { LiquidityPositionInfoBadges } from '~/features/Liquidity/LiquidityPositionInfoBadges'
 import { PoolStatsContent } from '~/features/Liquidity/PoolInfoCard/PoolInfoCard'
+import { SpryTierBadgeFromFee } from '~/features/Liquidity/spry/SpryTierBadge'
 import { useCreateLiquidityContext } from '~/pages/CreatePosition/CreateLiquidityContextProvider'
 import { PositionField } from '~/types/position'
 
@@ -31,7 +31,7 @@ export const EditSelectTokensStep = ({ poolData }: { poolData?: PoolData }) => {
     resetPriceRange: resetPriceRangeState,
   } = useCreateLiquidityContext()
 
-  const { fee, hook } = positionState
+  const { fee } = positionState
   const { TOKEN0, TOKEN1 } = display
   const media = useMedia()
   const isAddLiquidityRevamp = useFeatureFlag(FeatureFlags.AddLiquidityRevamp)
@@ -72,7 +72,9 @@ export const EditSelectTokensStep = ({ poolData }: { poolData?: PoolData }) => {
             <Text variant="subheading1">{TOKEN1?.symbol}</Text>
           </Flex>
           <Flex row gap={2} alignItems="center">
-            <LiquidityPositionInfoBadges size="small" version={protocolVersion} v4hook={hook} feeTier={fee} />
+            {/* SPRY: the v4 / hook / static-% chips are replaced by the tier badge (icon + name in
+                the tier's color, full detail on hover). */}
+            <SpryTierBadgeFromFee feeTier={fee} />
           </Flex>
         </Flex>
         {isExpandable ? (

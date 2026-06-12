@@ -1,6 +1,8 @@
-import { TIER_BY_INDEX, tierInfo, type PoolTier } from '@spry/fee'
+import { formatFeePercent, isValidTickSpacing, TIER_BY_INDEX, tierFromTickSpacing, tierInfo, type PoolTier } from '@spry/fee'
 import { Flex, Text } from 'ui/src'
+import type { FeeData } from 'uniswap/src/features/positions/types'
 import { TierIcon } from 'uniswap/src/features/transactions/swap/components/SpryFeeWidget/TierIcon'
+import { MouseoverTooltip } from '~/components/Tooltip'
 import { TIER_COLORS } from '~/features/Liquidity/SpryTiersCard'
 
 /** Per-tier color, keyed by tier (TIER_COLORS is ordered by on-chain tier index). */
@@ -21,5 +23,30 @@ export function SpryTierBadge({ tier }: { tier: PoolTier }): JSX.Element {
         {tierInfo(tier).label}
       </Text>
     </Flex>
+  )
+}
+
+/**
+ * SPRY: the tier badge derived from a position form's FeeData (a dynamic-fee
+ * tier is identified by its tick spacing), with the full tier story on hover.
+ * Renders nothing for fee configs that are not a Spry tier.
+ */
+export function SpryTierBadgeFromFee({ feeTier }: { feeTier?: FeeData }): JSX.Element | null {
+  if (!feeTier?.isDynamic || !isValidTickSpacing(feeTier.tickSpacing)) {
+    return null
+  }
+  const tier = tierFromTickSpacing(feeTier.tickSpacing)
+  const info = tierInfo(tier)
+  const base = formatFeePercent(info.baseFeePips)
+  const cap = formatFeePercent(info.capFeePips)
+  return (
+    <MouseoverTooltip
+      text={`${info.label} tier (${info.typicalPairs}). The fee floats from a ${base} base up to a ${cap} cap as volatility and pool imbalance rise, then eases back. Tick spacing ${info.tickSpacing}.`}
+      placement="top"
+    >
+      <Flex cursor="help">
+        <SpryTierBadge tier={tier} />
+      </Flex>
+    </MouseoverTooltip>
   )
 }
