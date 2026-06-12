@@ -11,6 +11,7 @@ import { transformSearchToMultichain } from 'uniswap/src/data/rest/transformSear
 import { useConnectionStatus } from 'uniswap/src/features/accounts/store/hooks'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
+import { useSprySearchTokens } from 'uniswap/src/features/dataApi/sprySearchTokens'
 import { CurrencyInfo, MultichainSearchResult } from 'uniswap/src/features/dataApi/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import { NUMBER_OF_RESULTS_LONG } from 'uniswap/src/features/search/SearchModal/constants'
@@ -76,13 +77,25 @@ export function useSearchTokens({
   size?: number
   hideWSOL?: boolean
 }): GqlResult<CurrencyInfo[]> {
+  // SPRY: the gateway search 401s on Base Sepolia; resolve searches locally there
+  // (common bases -> Spry subgraph tokens -> live on-chain ERC20 metadata).
+  const spryResult = useSprySearchTokens({ searchQuery, chainFilter, skip })
+
   const select = useEvent((data: SearchTokensResponse): CurrencyInfo[] => {
     const multichainResponse = transformSearchToMultichain(data)
     const currencyInfos = multichainResponse.multichainTokens.flatMap(multichainTokenToCurrencyInfos)
     return currencyInfos.filter((c) => !(hideWSOL && isWSOL(c.currency)))
   })
 
-  return useSearchTokensQuery({ searchQuery, chainFilter, skip, size, select })
+  const gatewayResult = useSearchTokensQuery({
+    searchQuery,
+    chainFilter,
+    skip: skip || spryResult !== null,
+    size,
+    select,
+  })
+
+  return spryResult ?? gatewayResult
 }
 
 export function useMultichainSearchTokens({
