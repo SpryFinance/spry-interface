@@ -9,6 +9,8 @@ export type GetHelpHeaderProps = {
   goBack?: () => void
   closeDataTestId?: string
   className?: string
+  /** Hides the "Get help" button while keeping the title / back / close chrome. */
+  hideGetHelp?: boolean
 } & FlexProps
 
 export function GetHelpHeader(_props: GetHelpHeaderProps): JSX.Element {

@@ -13,7 +13,8 @@ import { GetHelpHeader } from 'uniswap/src/components/dialog/GetHelpHeader'
 import { Modal } from 'uniswap/src/components/modals/Modal'
 import { PollingInterval } from 'uniswap/src/constants/misc'
 import { nativeOnChain } from 'uniswap/src/constants/tokens'
-import { uniswapUrls } from 'uniswap/src/constants/urls'
+// SPRY: only used by the hidden "Get help" header link (see the GetHelpHeader render below).
+// import { uniswapUrls } from 'uniswap/src/constants/urls'
 import { liquidityQueries } from 'uniswap/src/data/apiClients/liquidityService/liquidityQueries'
 import type { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
@@ -264,8 +265,11 @@ export function ClaimFeeModal() {
   return (
     <Modal name={ModalName.ClaimFee} onClose={closeModal} isDismissible>
       <Flex gap="$gap16">
+        {/* SPRY: the "Get help" button is hidden for the testnet phase - it links to Uniswap's support
+            desk (helpRequestUrl). RESTORE FOR MAINNET: drop hideGetHelp and re-enable the link prop
+            (repointed at a Spry support channel): link={uniswapUrls.helpRequestUrl} */}
         <GetHelpHeader
-          link={uniswapUrls.helpRequestUrl}
+          hideGetHelp
           title={t('pool.collectFees')}
           closeModal={closeModal}
           closeDataTestId="ClaimFeeModal-close-icon"

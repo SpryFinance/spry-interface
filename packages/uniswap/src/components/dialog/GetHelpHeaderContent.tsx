@@ -20,6 +20,7 @@ export function GetHelpHeaderContent({
   className,
   GetHelpButton,
   backArrowHoverColor,
+  hideGetHelp = false,
   ...props
 }: GetHelpHeaderProps & {
   GetHelpButton: React.ComponentType<GetHelpButtonProps>
@@ -46,7 +47,7 @@ export function GetHelpHeaderContent({
         </Flex>
       )}
       <Flex row fill justifyContent="flex-end" alignItems="center" gap="$spacing12">
-        <GetHelpButton url={link} />
+        {!hideGetHelp && <GetHelpButton url={link} />}
         <ModalCloseIcon testId={closeDataTestId} role="none" onClose={closeModal} />
       </Flex>
     </Flex>
