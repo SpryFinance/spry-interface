@@ -30,8 +30,10 @@ const PRICE_SERVICE_SUPPORT: Record<UniverseChainId, boolean> = {
 
   // Testnets
   [UniverseChainId.Sepolia]: true,
-  [UniverseChainId.UnichainSepolia]: true,
-  // Base Sepolia: Spry's chain; the Uniswap price service does not cover it.
+  // Spry's chains: the app runs on its testnets only and the Uniswap price service
+  // does not cover them (no testnet price oracle), so use the legacy path and don't
+  // fire failing centralized-price requests.
+  [UniverseChainId.UnichainSepolia]: false,
   [UniverseChainId.BaseSepolia]: false,
 
   // Unsupported — falls back to legacy (TAPI /quote or GraphQL)

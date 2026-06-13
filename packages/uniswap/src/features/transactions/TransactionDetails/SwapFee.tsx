@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import { Currency } from '@uniswap/sdk-core'
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { useRef } from 'react'
@@ -50,10 +51,10 @@ export function SwapFee({
   const isNoUniswapInterfaceFees = useFeatureFlag(FeatureFlags.NoUniswapInterfaceFees)
   const isJupiterSwap = currency.chainId === UniverseChainId.Solana
 
-  // SPRY: Base Sepolia (Spry) trades have no Uniswap interface fee, and the pool's
-  // actual fee is shown by the dedicated Spry "Dynamic fee" row, so suppress this row
-  // to avoid a redundant, confusing "Fee: Free" beside the real dynamic fee.
-  if (currency.chainId === UniverseChainId.BaseSepolia) {
+  // SPRY: Spry trades have no Uniswap interface fee, and the pool's actual fee is
+  // shown by the dedicated Spry "Dynamic fee" row, so suppress this row to avoid a
+  // redundant, confusing "Fee: Free" beside the real dynamic fee.
+  if (isSpryChain(currency.chainId)) {
     return null
   }
 

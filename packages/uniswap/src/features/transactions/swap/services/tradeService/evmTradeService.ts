@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import { FetchError, TradingApi } from '@universe/api'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { GetQuoteRequestResult } from 'uniswap/src/features/transactions/swap/hooks/useTrade/createGetQuoteRequestArgs'
@@ -95,10 +96,10 @@ export function createEVMTradeService(ctx: EVMTradeServiceContext): TradeService
           return { trade: null }
         }
 
-        // SPRY: the Trading API gateway does not serve Base Sepolia (every quote
-        // 401s), so we synthesize the quote locally where we can and never fall
-        // through to the gateway for this chain.
-        if (validatedInput.currencyIn.chainId === UniverseChainId.BaseSepolia) {
+        // SPRY: the Trading API gateway does not serve the Spry chains (every
+        // quote 401s / CORS-fails), so we synthesize the quote locally where we
+        // can and never fall through to the gateway for these chains.
+        if (isSpryChain(validatedInput.currencyIn.chainId)) {
           // Resolve slippage the same way the gateway path would (the user's custom
           // tolerance, else the L2 auto-min) and carry it on the local quote;
           // otherwise ClassicTrade falls back to the 5.5% max and the setting is lost.
@@ -180,9 +181,9 @@ export function createEVMTradeService(ctx: EVMTradeServiceContext): TradeService
         return null
       }
 
-      // SPRY: Base Sepolia has no Trading API, so the indicative endpoint would 401.
-      // Skip it; the synthesized main quote provides the amount.
-      if (validatedInput.currencyIn.chainId === UniverseChainId.BaseSepolia) {
+      // SPRY: the Spry chains have no Trading API, so the indicative endpoint would
+      // 401 / CORS-fail. Skip it; the synthesized main quote provides the amount.
+      if (isSpryChain(validatedInput.currencyIn.chainId)) {
         return null
       }
 

@@ -18,8 +18,6 @@ import {
   OP,
   PATHUSD_TEMPO,
   PORTAL_ETH_CELO,
-  SPRY_TEST_TOKEN_A,
-  SPRY_TEST_TOKEN_B,
   UNI,
   USDC_ARBITRUM,
   USDC_AVALANCHE,
@@ -58,6 +56,7 @@ import {
   WETH_POLYGON,
   WRAPPED_NATIVE_CURRENCY,
 } from 'uniswap/src/constants/tokens'
+import { getSpryTokenLogo, spryTokensForChain } from 'uniswap/src/constants/spryTokens'
 import { uniswapUrls } from 'uniswap/src/constants/urls'
 import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
@@ -110,13 +109,14 @@ export const COMMON_BASES: ChainCurrencyList = {
     USDC_BASE,
   ].map(buildPartialCurrencyInfo),
 
-  // Spry: Base Sepolia is testnet-only and not served by the Uniswap gateway, so
-  // these hardcoded common bases are the fallback that populates the token selector.
+  // Spry: the Spry chains are not served by the Uniswap gateway, so these common
+  // bases are the fallback that populates the token selector (and drives on-chain
+  // balances + logos). The Spry tokens come from the SPRY_TOKENS registry, so
+  // adding one there surfaces it here too.
   [UniverseChainId.BaseSepolia]: [
     nativeOnChain(UniverseChainId.BaseSepolia),
     WRAPPED_NATIVE_CURRENCY[UniverseChainId.BaseSepolia] as Token,
-    SPRY_TEST_TOKEN_A,
-    SPRY_TEST_TOKEN_B,
+    ...spryTokensForChain(UniverseChainId.BaseSepolia),
   ].map(buildPartialCurrencyInfo),
 
   [UniverseChainId.Blast]: [
@@ -201,8 +201,7 @@ export const COMMON_BASES: ChainCurrencyList = {
   [UniverseChainId.UnichainSepolia]: [
     nativeOnChain(UniverseChainId.UnichainSepolia),
     WRAPPED_NATIVE_CURRENCY[UniverseChainId.UnichainSepolia] as Token,
-    // TODO(WEB-5160): re-add usdc sepolia
-    // USDC_UNICHAIN_SEPOLIA,
+    ...spryTokensForChain(UniverseChainId.UnichainSepolia),
   ].map(buildPartialCurrencyInfo),
 
   [UniverseChainId.WorldChain]: [
@@ -252,6 +251,13 @@ function getNativeLogoURI(chainId: UniverseChainId = UniverseChainId.Mainnet): I
 function getTokenLogoURI(chainId: UniverseChainId, address: string): ImageSourcePropType | string | undefined {
   const chainInfo = getChainInfo(chainId)
   const networkName = chainInfo.assetRepoNetworkName
+
+  // SPRY: the asset repo has no logos for the Spry testnet token set, so curate
+  // them (single source of truth: SPRY_TOKENS in spryTokens.ts).
+  const spryLogo = getSpryTokenLogo(chainId, address)
+  if (spryLogo) {
+    return spryLogo
+  }
 
   if (
     chainId === UniverseChainId.Celo &&

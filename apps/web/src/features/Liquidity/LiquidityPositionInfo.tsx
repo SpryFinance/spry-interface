@@ -8,7 +8,7 @@ import { SplitLogo } from 'uniswap/src/components/CurrencyLogo/SplitLogo'
 import { getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import { LiquidityPositionStatusIndicator } from 'uniswap/src/features/positions/LiquidityPositionStatusIndicator'
 import { PositionInfo } from 'uniswap/src/features/positions/types'
-import { useCurrencyInfos } from 'uniswap/src/features/tokens/useCurrencyInfo'
+import { useCurrencyInfo } from 'uniswap/src/features/tokens/useCurrencyInfo'
 import { currencyId } from 'uniswap/src/utils/currencyId'
 import { getPoolDetailsURL } from 'uniswap/src/utils/linking'
 import { MouseoverTooltip } from '~/components/Tooltip'
@@ -180,10 +180,12 @@ export function LiquidityPositionInfo({
   const spryMeta = getSpryPositionMeta(positionInfo)
   const statusLabel = getProtocolStatusLabel(status, t)
 
-  const [currency0Info, currency1Info] = useCurrencyInfos([
-    currencyId(currency0Amount.currency),
-    currencyId(currency1Amount.currency),
-  ])
+  // SPRY: resolve per-currency via the singular hook (getCommonBase + the Spry
+  // local fallback) instead of the gateway-only plural useCurrencyInfos, so the
+  // pair logos render for Spry tokens on every chain (the gateway serves logos
+  // only for some chains, and only when reachable).
+  const currency0Info = useCurrencyInfo(currencyId(currency0Amount.currency))
+  const currency1Info = useCurrencyInfo(currencyId(currency1Amount.currency))
 
   const includeNetworkInLogo = useMemo(() => !includeNetwork || media.lg, [includeNetwork, media.lg])
 

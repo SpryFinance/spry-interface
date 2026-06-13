@@ -121,16 +121,14 @@ export const UNICHAIN_SEPOLIA_CHAIN_INFO = {
   networkLayer: NetworkLayer.L2,
   blockTimeMs: 1000,
   pendingTransactionsRetryOptions: undefined,
+  // SPRY: talk to Unichain Sepolia directly (the Quicknode/UniRPC proxy needs
+  // credentials and/or CORS-fails from the app origin, so wagmi on-chain reads -
+  // e.g. the swap form's token balance - returned nothing). Mirrors Base Sepolia,
+  // and matches the RPC the Spry rails use (@spry/config rpcUrl). Host is in csp.json.
   rpcUrls: {
-    [RPCType.Public]: {
-      http: [getQuicknodeEndpointUrl(UniverseChainId.UnichainSepolia)],
-    },
-    [RPCType.Default]: {
-      http: [getQuicknodeEndpointUrl(UniverseChainId.UnichainSepolia)],
-    },
-    [RPCType.Interface]: {
-      http: [getQuicknodeEndpointUrl(UniverseChainId.UnichainSepolia)],
-    },
+    [RPCType.Public]: { http: ['https://sepolia.unichain.org'] },
+    [RPCType.Default]: { http: ['https://sepolia.unichain.org'] },
+    [RPCType.Interface]: { http: ['https://sepolia.unichain.org'] },
   },
   tokens: testnetTokens,
   statusPage: undefined,

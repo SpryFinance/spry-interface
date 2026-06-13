@@ -1,4 +1,5 @@
 import { NetworkStatus } from '@apollo/client'
+import { isSpryChain } from '@spry/config'
 import type { CurrencyAmount, Token } from '@uniswap/sdk-core'
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { useCallback, useState } from 'react'
@@ -90,11 +91,14 @@ export function AuthenticatedHeader({
 
   const { percentChange, absoluteChangeUSD, balanceUSD } = portfolioData || {}
 
-  // SPRY: the Uniswap data gateway does not serve some chains (e.g. Base Sepolia, backendSupported: false).
-  // There, a portfolio/price fetch error is expected (the gateway never covers the chain), so it is
-  // neither a provider outage nor a transient loading state.
+  // SPRY: the Uniswap data gateway does not serve any Spry chain (the app runs on
+  // Spry's testnets only). A portfolio/price fetch error there is expected (the
+  // gateway never covers the chain), so it is neither a provider outage nor a
+  // transient loading state. NOTE: some Spry chains (e.g. Unichain Sepolia) ARE
+  // upstream-backend-supported in general, so exclude Spry chains explicitly
+  // instead of relying on isBackendSupportedChainId alone.
   const { chains } = useEnabledChains()
-  const gatewayServesAnEnabledChain = chains.some(isBackendSupportedChainId)
+  const gatewayServesAnEnabledChain = chains.some((c) => isBackendSupportedChainId(c) && !isSpryChain(c))
 
   // Treat error-before-first-data as loading so the skeleton stays visible - but only when the gateway
   // actually serves the chain. Otherwise the error never clears and the balance would load forever; on

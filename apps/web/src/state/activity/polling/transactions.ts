@@ -9,6 +9,7 @@ import { RetryOptions, UniverseChainId } from 'uniswap/src/features/chains/types
 import { InterfaceEventName } from 'uniswap/src/features/telemetry/constants'
 import { sendAnalyticsEvent } from 'uniswap/src/features/telemetry/send'
 import { checkedTransaction } from 'uniswap/src/features/transactions/slice'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { isUniswapX } from 'uniswap/src/features/transactions/swap/utils/routing'
 import { toTradingApiSupportedChainId } from 'uniswap/src/features/transactions/swap/utils/tradingApi'
 import { TransactionReceipt, TransactionStatus } from 'uniswap/src/features/transactions/types/transactionDetails'
@@ -82,20 +83,25 @@ export function usePollPendingTransactions(onActivityUpdate: OnActivityUpdate) {
       }
 
       // SPRY: Spry chains have no Trading API swap-status endpoint (it 401s), so
-      // confirm transactions directly from the on-chain receipt instead.
+      // confirm transactions directly from the on-chain receipt instead. Use the
+      // Spry per-chain viem client (the chain's own RPC, CSP-allowed), NOT wagmi's
+      // current-chain client, whose transport may not cover this Spry chain - that
+      // is why the confirmation toast never fired on chains other than the one the
+      // wagmi client happened to serve.
       if (isSpryChain(account.chainId)) {
+        const spryClient = getSpryPublicClient(account.chainId)
         // Testnet blocks are ~1-2s, so poll over a longer window than the 150ms
         // trading-api interval (the effect also restarts each new block). This spans
         // real mine time and avoids burning RPC on sub-block retries.
         const receiptRetryOptions: RetryOptions = { n: 20, minWait: 1_500, medWait: 1_500, maxWait: 1_500 }
         return retry(async () => {
-          if (!tx.hash || !isValidHexString(tx.hash) || !publicClient) {
+          if (!tx.hash || !isValidHexString(tx.hash)) {
             throw new Error('Invalid transaction hash')
           }
           let adaptedReceipt: TransactionReceipt | undefined
           let isSuccess = false
           try {
-            const viemReceipt = await publicClient.getTransactionReceipt({ hash: tx.hash })
+            const viemReceipt = await spryClient.getTransactionReceipt({ hash: tx.hash })
             adaptedReceipt = receiptFromViemReceipt(viemReceipt)
             isSuccess = viemReceipt.status === 'success'
           } catch {

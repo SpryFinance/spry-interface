@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import type { GasFeeResult } from '@universe/api'
 import { isMobileApp, isWebPlatform } from '@universe/environment'
 import type { PropsWithChildren } from 'react'
@@ -88,11 +89,9 @@ export function RoutingHopInfo({
     return null
   }, [t, trade, routes, gasFeeFormatted, routingProvider, isUniswapXTrade])
 
-  // SPRY: classic trades on Base Sepolia route through Spry, not the Uniswap routing API.
+  // SPRY: classic trades on a Spry chain route through Spry, not the Uniswap routing API.
   const providerName =
-    trade.inputAmount.currency.chainId === UniverseChainId.BaseSepolia && !isUniswapXTrade
-      ? 'Spry'
-      : routingProvider?.name
+    isSpryChain(trade.inputAmount.currency.chainId) && !isUniswapXTrade ? 'Spry' : routingProvider?.name
   const modalTitle =
     !isUniswapXTrade && providerName ? t('common.bestRoute.with', { provider: providerName }) : t('swap.tradeRoutes')
 
