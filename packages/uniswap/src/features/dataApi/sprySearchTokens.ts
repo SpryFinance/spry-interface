@@ -1,16 +1,21 @@
-// SPRY: local token search for Base Sepolia. The gateway SearchTokens endpoint
-// 401s there, so the token selectors (swap, create position) could never
-// resolve a pasted address or a symbol search. This resolves searches locally:
+// SPRY: local token search for the Spry chains. The gateway SearchTokens
+// endpoint 401s there, so the token selectors (swap, create position) could
+// never resolve a pasted address or a symbol search. This resolves searches
+// locally, per chain:
 //
 //   address queries: COMMON_BASES match -> Spry subgraph Token entity (any
 //   token already in a Spry pool) -> live on-chain ERC20 metadata (so ANY
 //   ERC20 address can be added, matching mainnet behavior)
 //   text queries: COMMON_BASES + subgraph symbol/name substring match
 //
-// Returned through useSearchTokens, so every selector built on
-// useTokenSectionsForSearchResults gets it on all breakpoints.
+// When the selector filters to one Spry chain, that chain is searched; when it
+// does not filter (all chains), every Spry-deployed chain is searched and the
+// results merged (a CurrencyInfo's currencyId carries its chain, so same-symbol
+// tokens on different chains stay distinct). Returned through useSearchTokens,
+// so every selector built on useTokenSectionsForSearchResults gets it on all
+// breakpoints.
 
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, isSpryChain, SPRY_DEPLOYED_CHAIN_IDS } from '@spry/config'
 import { createSpryGraphClient, type SpryGraphClient } from '@spry/subgraph'
 import { useQuery } from '@tanstack/react-query'
 import type { GqlResult } from '@universe/api'
@@ -22,12 +27,10 @@ import { nativeOnChain } from 'uniswap/src/constants/tokens'
 import { normalizeCurrencyIdForMapLookup, normalizeTokenAddressForCache } from 'uniswap/src/data/cache'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { areAddressesEqual } from 'uniswap/src/utils/addresses'
 import { currencyId as buildCurrencyId, currencyIdToAddress, currencyIdToChain } from 'uniswap/src/utils/currencyId'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
-
-const SPRY_SEARCH_CHAIN_ID = UniverseChainId.BaseSepolia
 
 interface SubgraphTokenRow {
   id: string
@@ -43,6 +46,14 @@ function isSameEvmAddress(a: string, b: string): boolean {
   })
 }
 
+/** The Spry chains a search should cover for a given chain filter (Unichain Sepolia first). */
+function spryTargetChains(chainFilter: UniverseChainId | null): number[] {
+  if (chainFilter === null) {
+    return SPRY_DEPLOYED_CHAIN_IDS
+  }
+  return isSpryChain(chainFilter) ? [chainFilter] : []
+}
+
 /**
  * buildPartialCurrencyInfo (the COMMON_BASES builder) never sets currencyId, and
  * search-result consumers (token warnings, recent searches) read it - so every
@@ -52,17 +63,17 @@ function toSearchCurrencyInfo(info: CurrencyInfo): CurrencyInfo {
   return info.currencyId ? info : { ...info, currencyId: buildCurrencyId(info.currency) }
 }
 
-function subgraphTokenToCurrencyInfo(row: SubgraphTokenRow): CurrencyInfo {
+function subgraphTokenToCurrencyInfo(chainId: number, row: SubgraphTokenRow): CurrencyInfo {
   const decimals = Number.parseInt(row.decimals, 10)
   const currency = isSameEvmAddress(row.id, '0x0000000000000000000000000000000000000000')
-    ? nativeOnChain(SPRY_SEARCH_CHAIN_ID)
-    : new Token(SPRY_SEARCH_CHAIN_ID, row.id, decimals, row.symbol, row.name)
+    ? nativeOnChain(chainId)
+    : new Token(chainId, row.id, decimals, row.symbol, row.name)
   return toSearchCurrencyInfo(buildPartialCurrencyInfo(currency))
 }
 
-function commonBaseMatches(query: string): CurrencyInfo[] {
+function commonBaseMatches(chainId: number, query: string): CurrencyInfo[] {
   const q = query.toLowerCase()
-  return (COMMON_BASES[SPRY_SEARCH_CHAIN_ID] ?? [])
+  return (COMMON_BASES[chainId] ?? [])
     .filter((info) => {
       const { currency } = info
       if (isAddress(query)) {
@@ -75,8 +86,13 @@ function commonBaseMatches(query: string): CurrencyInfo[] {
     .map(toSearchCurrencyInfo)
 }
 
-async function resolveByAddress(client: SpryGraphClient | null, address: string): Promise<CurrencyInfo | null> {
-  const [known] = commonBaseMatches(address)
+async function resolveByAddress(args: {
+  chainId: number
+  client: SpryGraphClient | null
+  address: string
+}): Promise<CurrencyInfo | null> {
+  const { chainId, client, address } = args
+  const [known] = commonBaseMatches(chainId, address)
   if (known) {
     return known
   }
@@ -88,13 +104,13 @@ async function resolveByAddress(client: SpryGraphClient | null, address: string)
       { id: normalizeTokenAddressForCache(address) },
     )
     if (token) {
-      return subgraphTokenToCurrencyInfo(token)
+      return subgraphTokenToCurrencyInfo(chainId, token)
     }
   }
 
   // arbitrary ERC20: read metadata live so pasting any address still works
   const erc20 = { address: getAddress(address), abi: erc20Abi } as const
-  const [symbol, name, decimals] = await spryPublicClient.multicall({
+  const [symbol, name, decimals] = await getSpryPublicClient(chainId).multicall({
     contracts: [
       { ...erc20, functionName: 'symbol' },
       { ...erc20, functionName: 'name' },
@@ -106,7 +122,7 @@ async function resolveByAddress(client: SpryGraphClient | null, address: string)
     return null // not an ERC20 (or not deployed) - nothing to offer
   }
   const currency = new Token(
-    SPRY_SEARCH_CHAIN_ID,
+    chainId,
     address,
     decimals.result,
     symbol.status === 'success' ? symbol.result : undefined,
@@ -115,26 +131,86 @@ async function resolveByAddress(client: SpryGraphClient | null, address: string)
   return toSearchCurrencyInfo(buildPartialCurrencyInfo(currency))
 }
 
-async function searchByAddress(client: SpryGraphClient, address: string): Promise<CurrencyInfo[]> {
-  const info = await resolveByAddress(client, address)
+async function searchByAddress(args: {
+  chainId: number
+  client: SpryGraphClient | null
+  address: string
+}): Promise<CurrencyInfo[]> {
+  const info = await resolveByAddress(args)
   return info ? [info] : []
 }
 
-/**
- * One-token local resolution for Base Sepolia (common bases -> subgraph ->
- * live ERC20 metadata). Used as the fallback inside useCurrencyInfo so a
- * selected unknown token actually renders (the gateway token query the rest of
- * the app re-resolves through serves nothing on testnet).
- */
-export async function fetchSpryCurrencyInfoByAddress(address: string): Promise<CurrencyInfo | null> {
-  const config = getSpryConfig(SPRY_SEARCH_CHAIN_ID)
+async function searchByText(args: {
+  chainId: number
+  client: SpryGraphClient | null
+  query: string
+}): Promise<CurrencyInfo[]> {
+  const { chainId, client, query } = args
+  const fromBases = commonBaseMatches(chainId, query)
+  if (!client) {
+    return fromBases
+  }
+  const { tokens } = await client.request<{ tokens: SubgraphTokenRow[] }>(
+    `query($q: String!) {
+      tokens(first: 10, where: { or: [{ symbol_contains_nocase: $q }, { name_contains_nocase: $q }] }) {
+        id symbol name decimals
+      }
+    }`,
+    { q: query },
+  )
+  const fromSubgraph = tokens.map((row) => subgraphTokenToCurrencyInfo(chainId, row))
+  // common bases first (they carry curated metadata/logos); dedupe by currencyId
+  const seen = new Set<string>()
+  return [...fromBases, ...fromSubgraph].filter((info) => {
+    const key = normalizeCurrencyIdForMapLookup(info.currencyId)
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
+/** Resolve a query across one chain (subgraph client from its config; null when none). */
+async function searchOneChain(chainId: number, query: string): Promise<CurrencyInfo[]> {
+  const config = getSpryConfig(chainId)
   const client = config?.subgraphUrl ? createSpryGraphClient(config.subgraphUrl) : null
-  return resolveByAddress(client, address)
+  return isAddress(query)
+    ? searchByAddress({ chainId, client, address: query })
+    : searchByText({ chainId, client, query })
+}
+
+/** Resolve a query across every target Spry chain, merged and deduped by currencyId. */
+async function searchSpryChains(chains: number[], query: string): Promise<CurrencyInfo[]> {
+  const perChain = await Promise.all(
+    chains.map((chainId) => searchOneChain(chainId, query).catch(() => [] as CurrencyInfo[])),
+  )
+  const seen = new Set<string>()
+  return perChain.flat().filter((info) => {
+    const key = normalizeCurrencyIdForMapLookup(info.currencyId)
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
 }
 
 /**
- * Spry local fallback for {@link useCurrencyInfo}: resolves a Base Sepolia
- * currencyId without the gateway. Returns undefined for other chains, while
+ * One-token local resolution on a Spry chain (common bases -> subgraph -> live
+ * ERC20 metadata). Used as the fallback inside useCurrencyInfo so a selected
+ * unknown token actually renders (the gateway token query the rest of the app
+ * re-resolves through serves nothing on these testnets).
+ */
+export async function fetchSpryCurrencyInfoByAddress(chainId: number, address: string): Promise<CurrencyInfo | null> {
+  const config = getSpryConfig(chainId)
+  const client = config?.subgraphUrl ? createSpryGraphClient(config.subgraphUrl) : null
+  return resolveByAddress({ chainId, client, address })
+}
+
+/**
+ * Spry local fallback for {@link useCurrencyInfo}: resolves a Spry-chain
+ * currencyId without the gateway. Returns undefined for non-Spry chains, while
  * skipped, or when the address is not a live ERC20.
  */
 export function useSpryLocalCurrencyInfo(
@@ -148,11 +224,11 @@ export function useSpryLocalCurrencyInfo(
   } catch (_error) {
     address = undefined
   }
-  const applies = chainId === SPRY_SEARCH_CHAIN_ID && !!address && isAddress(address)
+  const applies = chainId !== null && chainId !== undefined && isSpryChain(chainId) && !!address && isAddress(address)
 
   const { data } = useQuery({
-    queryKey: ['spryLocalCurrencyInfo', address ? normalizeTokenAddressForCache(address) : ''],
-    queryFn: () => fetchSpryCurrencyInfoByAddress(address ?? ''),
+    queryKey: ['spryLocalCurrencyInfo', chainId ?? 0, address ? normalizeTokenAddressForCache(address) : ''],
+    queryFn: () => fetchSpryCurrencyInfoByAddress(chainId ?? 0, address ?? ''),
     enabled: applies && !options?.skip,
     staleTime: Infinity, // ERC20 metadata is immutable
   })
@@ -164,29 +240,6 @@ export function useSpryLocalCurrencyInfo(
     // keep the caller's exact currencyId so map lookups keyed on it stay stable
     return { ...data, currencyId: currencyIdInput ?? data.currencyId }
   }, [applies, data, currencyIdInput])
-}
-
-async function searchByText(client: SpryGraphClient, query: string): Promise<CurrencyInfo[]> {
-  const { tokens } = await client.request<{ tokens: SubgraphTokenRow[] }>(
-    `query($q: String!) {
-      tokens(first: 10, where: { or: [{ symbol_contains_nocase: $q }, { name_contains_nocase: $q }] }) {
-        id symbol name decimals
-      }
-    }`,
-    { q: query },
-  )
-  const fromSubgraph = tokens.map(subgraphTokenToCurrencyInfo)
-  const fromBases = commonBaseMatches(query)
-  // common bases first (they carry curated metadata/logos); dedupe by currencyId
-  const seen = new Set<string>()
-  return [...fromBases, ...fromSubgraph].filter((info) => {
-    const key = normalizeCurrencyIdForMapLookup(info.currencyId)
-    if (seen.has(key)) {
-      return false
-    }
-    seen.add(key)
-    return true
-  })
 }
 
 /**
@@ -202,21 +255,15 @@ export function useSprySearchTokens({
   chainFilter: UniverseChainId | null
   skip: boolean
 }): GqlResult<CurrencyInfo[]> | null {
-  // chainFilter null means "all enabled chains" - on this app that includes Base
-  // Sepolia, and the gateway serves none of them, so handle it locally too.
-  const applies = chainFilter === SPRY_SEARCH_CHAIN_ID || chainFilter === null
+  // A specific Spry chain searches that chain; "all chains" (null) searches every
+  // Spry-deployed chain. The gateway serves none of them, so handle it locally.
+  const targetChains = spryTargetChains(chainFilter)
+  const applies = targetChains.length > 0
   const query = searchQuery?.trim() ?? ''
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['sprySearchTokens', query],
-    queryFn: async (): Promise<CurrencyInfo[]> => {
-      const config = getSpryConfig(SPRY_SEARCH_CHAIN_ID)
-      if (!config?.subgraphUrl) {
-        return commonBaseMatches(query)
-      }
-      const client = createSpryGraphClient(config.subgraphUrl)
-      return isAddress(query) ? searchByAddress(client, query) : searchByText(client, query)
-    },
+    queryKey: ['sprySearchTokens', targetChains.join(','), query],
+    queryFn: async (): Promise<CurrencyInfo[]> => searchSpryChains(targetChains, query),
     enabled: applies && !skip && query.length > 0,
     staleTime: 60_000,
   })

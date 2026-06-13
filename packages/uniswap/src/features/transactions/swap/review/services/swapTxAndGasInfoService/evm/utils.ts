@@ -1,7 +1,7 @@
+import { isSpryChain } from '@spry/config'
 import { type GasStrategy, TradingApi } from '@universe/api'
 import { DEFAULT_CUSTOM_DEADLINE } from 'uniswap/src/constants/transactions'
 import { getTradeSettingsDeadline } from 'uniswap/src/data/apiClients/tradingApi/utils/getTradeSettingsDeadline'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { TransactionSettings } from 'uniswap/src/features/transactions/components/settings/types'
 import type { ApprovalTxInfo } from 'uniswap/src/features/transactions/swap/review/hooks/useTokenApprovalInfo'
 import type { EVMSwapInstructionsService } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/evm/evmSwapInstructionsService'
@@ -51,12 +51,12 @@ export function createGetEVMSwapTransactionRequestInfo(ctx: {
     approvalTxInfo,
     derivedSwapInfo,
   }) => {
-    // SPRY: the Trading API /swap endpoint does not serve Base Sepolia, so build the
-    // SpryRouter calldata locally for the Spry pool's classic trades.
+    // SPRY: the Trading API /swap endpoint does not serve Spry's testnets, so build
+    // the SpryRouter calldata locally for the Spry pool's classic trades.
     if (
       trade.routing === TradingApi.Routing.CLASSIC &&
       ctx.account &&
-      derivedSwapInfo.chainId === UniverseChainId.BaseSepolia
+      isSpryChain(derivedSwapInfo.chainId)
     ) {
       // SPRY: honor the user's deadline setting (default DEFAULT_CUSTOM_DEADLINE),
       // since the local SpryRouter build bypasses the Trading API /swap call that
@@ -72,11 +72,11 @@ export function createGetEVMSwapTransactionRequestInfo(ctx: {
       }
     }
 
-    // SPRY: wrap/unwrap (ETH <-> WETH) on Base Sepolia is a local WETH deposit/withdraw
+    // SPRY: wrap/unwrap (ETH <-> WETH) on a Spry chain is a local WETH deposit/withdraw
     // (the gateway /swap 401s here too).
     if (
       (trade.routing === TradingApi.Routing.WRAP || trade.routing === TradingApi.Routing.UNWRAP) &&
-      derivedSwapInfo.chainId === UniverseChainId.BaseSepolia
+      isSpryChain(derivedSwapInfo.chainId)
     ) {
       const wrapInfo = await buildSpryWrapTransactionInfo({ trade })
       if (wrapInfo) {

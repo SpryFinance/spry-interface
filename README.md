@@ -9,9 +9,12 @@ against upstream is meant to stay small and auditable.
 ## Current state
 
 The upstream monorepo fork (pinned at `web/5.148.6`, commit `417e7724`) is
-landed and **fully functional** as a single-protocol, single-chain interface on
-**Base Sepolia (84532)**. Both core product surfaces work end to end against
-the live chain:
+landed and **fully functional** as a single-protocol, Uniswap-v4-only interface
+on Spry's deployed chains: **Unichain Sepolia (1301)** and **Base Sepolia
+(84532)** (Unichain Sepolia is the default). The chains, addresses, and RPCs
+live in [`@spry/config`](packages/spry-config/README.md); a chain becomes
+available the moment its Spry contracts are deployed there. Both core product
+surfaces work end to end against the live chains:
 
 **Swap** - quote (V4 `Quoter`, reflecting the `SpryHook` dynamic fee across
 every candidate route and tier), approve (ERC-20 to `SpryRouter`), swap
@@ -191,10 +194,10 @@ Optional (the app degrades gracefully without them):
 | `REACT_APP_STATSIG_API_KEY` | Feature-flag service key. The checked-in value is a placeholder, so flags fall back to their code defaults (current behavior); set a real key to use Statsig. |
 | `PRIVY_APP_ID`, `PRIVY_CLIENT_ID` | Privy embedded wallet. Unset by default (Spry uses the standard wallet modal); set both, with your own Privy project, only to enable embedded wallets. |
 | `REACT_APP_ANALYTICS_ENABLED` | Amplitude analytics on/off. Unset (off) by default so events don't flow to Uniswap's pipeline; enable once you have your own. |
-| `REACT_APP_INFURA_KEY`, `REACT_APP_QUICKNODE_ENDPOINT_NAME`, `REACT_APP_QUICKNODE_ENDPOINT_TOKEN` | RPC for non-Spry chains only. **Base Sepolia does not use them** - it talks to `https://sepolia.base.org` directly (hardcoded in the chain info; the UniRPC proxy is disabled for 84532). |
-| `REACT_APP_TRADING_API_KEY` | `x-api-key` for the Trading API / Blockaid. Inert on Base Sepolia (local rails replace the Trading API); kept as an inherited placeholder. |
+| `REACT_APP_INFURA_KEY`, `REACT_APP_QUICKNODE_ENDPOINT_NAME`, `REACT_APP_QUICKNODE_ENDPOINT_TOKEN` | RPC for non-Spry chains only. **The Spry chains do not use them** - each reads its own RPC (`rpcUrl`) from [`@spry/config`](packages/spry-config/README.md) (`https://sepolia.unichain.org`, `https://sepolia.base.org`); the UniRPC proxy is disabled for them. |
+| `REACT_APP_TRADING_API_KEY` | `x-api-key` for the Trading API / Blockaid. Inert on the Spry chains (local rails replace the Trading API); kept as an inherited placeholder. |
 | `REACT_APP_VERSION_TAG` | Version label shown in diagnostics. |
-| `AWS_API_ENDPOINT`, `UNISWAP_GATEWAY_DNS` | Override hooks for the inherited Uniswap gateway endpoints (Apollo GraphQL + gateway v2). Not set in `.env` - the URLs are defaulted in [`apps/web/src/config.ts`](apps/web/src/config.ts) since they do not serve Base Sepolia anyway (the local rails replace them). |
+| `AWS_API_ENDPOINT`, `UNISWAP_GATEWAY_DNS` | Override hooks for the inherited Uniswap gateway endpoints (Apollo GraphQL + gateway v2). Not set in `.env` - the URLs are defaulted in [`apps/web/src/config.ts`](apps/web/src/config.ts) since they do not serve the Spry chains anyway (the local rails replace them). |
 | `VITE_ENABLE_ENTRY_GATEWAY_PROXY` | Keep `false` in production (worker-side gateway proxying, staging-only). |
 
 Worker runtime variables (set per environment in

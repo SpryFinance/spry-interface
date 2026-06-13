@@ -1,6 +1,6 @@
+import { isSpryChain } from '@spry/config'
 import { TradingApi } from '@universe/api'
 import { WRAPPED_NATIVE_CURRENCY } from 'uniswap/src/constants/tokens'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { TransactionRequestInfo } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
 import { estimateSpryGasFeeValue } from 'uniswap/src/features/transactions/swap/services/tradeService/sprySwapTransaction'
 import type { UnwrapTrade, WrapTrade } from 'uniswap/src/features/transactions/swap/types/trade'
@@ -22,18 +22,18 @@ const WETH_ABI = [
 const SPRY_WRAP_GAS_LIMIT = BigInt(60_000)
 
 /**
- * Builds the wrap/unwrap transaction info for a Base Sepolia WrapTrade/UnwrapTrade,
+ * Builds the wrap/unwrap transaction info for a Spry-chain WrapTrade/UnwrapTrade,
  * in the shape the swap-tx service expects (replacing the Trading API /swap call,
  * which does not serve this chain). Wrap (native ETH -> WETH) is WETH.deposit() with
  * the ETH as value; unwrap (WETH -> native ETH) is WETH.withdraw(amount). Both are
- * 1:1, so the amount is just the trade's input amount. Returns null off Base Sepolia.
+ * 1:1, so the amount is just the trade's input amount. Returns null off the Spry chains.
  */
 export async function buildSpryWrapTransactionInfo(args: {
   trade: WrapTrade | UnwrapTrade
 }): Promise<TransactionRequestInfo | null> {
   const { trade } = args
   const chainId = trade.inputAmount.currency.chainId
-  if (chainId !== UniverseChainId.BaseSepolia) {
+  if (!isSpryChain(chainId)) {
     return null
   }
 
@@ -57,7 +57,7 @@ export async function buildSpryWrapTransactionInfo(args: {
     chainId,
   }
 
-  const gasFeeValue = await estimateSpryGasFeeValue(SPRY_WRAP_GAS_LIMIT)
+  const gasFeeValue = await estimateSpryGasFeeValue(chainId, SPRY_WRAP_GAS_LIMIT)
 
   return {
     txRequests: [txRequest],

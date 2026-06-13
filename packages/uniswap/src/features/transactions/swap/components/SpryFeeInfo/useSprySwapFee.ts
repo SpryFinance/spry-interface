@@ -1,9 +1,8 @@
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, isSpryChain } from '@spry/config'
 import { computeSignedDelta, marginalFee, tierParams, type PoolTier } from '@spry/fee'
 import { createSpryHookClient, type Hex, type ReadContractFn } from '@spry/sdk'
 import { useQuery } from '@tanstack/react-query'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { ONE_SECOND_MS } from 'utilities/src/time/time'
 
 /** One route hop with the state needed to price its dynamic fee. */
@@ -37,7 +36,7 @@ export interface SprySwapFee {
  */
 export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[] }): SprySwapFee | null {
   const { chainId, hops } = params
-  const enabled = chainId === UniverseChainId.BaseSepolia && hops.length > 0
+  const enabled = isSpryChain(chainId) && hops.length > 0
   // Key on every input the fee math consumes, so a same-pool/same-amount direction
   // flip (zeroForOne) or a liquidity change re-fetches instead of serving a stale fee.
   const hopsKey = hops
@@ -57,12 +56,13 @@ export function useSprySwapFee(params: { chainId: number; hops: SprySwapFeeHop[]
       if (!config) {
         return null
       }
-      const read: ReadContractFn = (request) => spryPublicClient.readContract(request as never) as Promise<unknown>
+      const client = getSpryPublicClient(chainId)
+      const read: ReadContractFn = (request) => client.readContract(request as never) as Promise<unknown>
       const hook = createSpryHookClient(read, config.addresses.spryHook)
       const [blockWindow, currentBlock] = await Promise.all([
         hook.getBlockWindow(),
         // Read fresh so window expiry is detected as blocks advance, not from a cache.
-        spryPublicClient.getBlockNumber({ cacheTime: 0 }),
+        client.getBlockNumber({ cacheTime: 0 }),
       ])
 
       const perHop = await Promise.all(

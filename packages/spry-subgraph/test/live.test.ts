@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ChainId } from '@spry/config';
+import { requireSpryConfig, SPRY_DEPLOYED_CHAIN_IDS } from '@spry/config';
 import { TIER_PARAMS, marginalFee, zoneOf, dispatchCase } from '@spry/fee';
 import {
   createSpryGraphClientForChain,
@@ -9,13 +9,12 @@ import {
   fetchPoolWindows,
 } from '../src/index';
 
-// Live checks against the deployed Base Sepolia Spry subgraph (Goldsky). Skipped
-// unless SPRY_LIVE_SUBGRAPH is set.
-//   SPRY_LIVE_SUBGRAPH=1 npx vitest run packages/spry-subgraph/test/live.test.ts
-const enabled = process.env['SPRY_LIVE_SUBGRAPH'];
-
-describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
-  const client = createSpryGraphClientForChain(ChainId.BASE_SEPOLIA);
+// Live checks against every deployed Spry subgraph (Goldsky) - two now: Unichain
+// Sepolia and Base Sepolia. Runs by default against the endpoints in
+// @spry/config; no env var needed.
+describe.each(SPRY_DEPLOYED_CHAIN_IDS)('live Spry subgraph (chain %s)', (chainId) => {
+  const config = requireSpryConfig(chainId);
+  const client = createSpryGraphClientForChain(chainId);
 
   it('indexes without errors', async () => {
     const meta = await client.request<{ _meta: { hasIndexingErrors: boolean; block: { number: number } } }>(
@@ -45,12 +44,12 @@ describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
     const first = pools[0];
     if (first) {
       // eslint-disable-next-line no-console
-      console.log(`pool ${first.id}: tier=${first.tier} feeTier=${first.feeTier}`);
+      console.log(`[${config.key}] pool ${first.id}: tier=${first.tier} feeTier=${first.feeTier}`);
       expect(Array.isArray(await fetchPoolSwaps(client, { pool: first.id, first: 5 }))).toBe(true);
       expect(Array.isArray(await fetchPoolWindows(client, { pool: first.id, first: 5 }))).toBe(true);
     } else {
       // eslint-disable-next-line no-console
-      console.log('no Spry pools indexed yet on Base Sepolia');
+      console.log(`[${config.key}] no Spry pools indexed yet`);
     }
   });
 
@@ -59,13 +58,13 @@ describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
     const pool = pools[0];
     if (!pool) {
       // eslint-disable-next-line no-console
-      console.log('no pools yet; skipping swap reproduction');
+      console.log(`[${config.key}] no pools yet; skipping swap reproduction`);
       return;
     }
     const swaps = await fetchPoolSwaps(client, { pool: pool.id, first: 10 });
     if (swaps.length === 0) {
       // eslint-disable-next-line no-console
-      console.log('no swaps indexed yet; skipping swap reproduction');
+      console.log(`[${config.key}] no swaps indexed yet; skipping swap reproduction`);
       return;
     }
     const params = TIER_PARAMS[pool.tier];
@@ -81,7 +80,7 @@ describe.skipIf(!enabled)('live Spry subgraph (Base Sepolia)', () => {
       reproduced++;
     }
     // eslint-disable-next-line no-console
-    console.log(`reproduced ${reproduced} live swap fee(s) exactly (tier ${pool.tier})`);
+    console.log(`[${config.key}] reproduced ${reproduced} live swap fee(s) exactly (tier ${pool.tier})`);
     expect(reproduced).toBeGreaterThan(0);
   });
 });

@@ -8,7 +8,7 @@ import {
   DynamicConfigs,
   useDynamicConfigValue,
 } from '@universe/gating'
-import { getSpryConfig } from '@spry/config'
+import { DEFAULT_CHAIN_ID, getSpryConfig } from '@spry/config'
 import type { Dispatch, SetStateAction } from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -203,7 +203,7 @@ export function SelectTokensStep({
   // fires) - the tier + hook together identify the Spry pool the form looks up and targets.
   const handleSpryTierSelect = useCallback(
     (feeData: FeeData) => {
-      const spryHookAddress = getSpryConfig(token0?.chainId ?? UniverseChainId.BaseSepolia)?.addresses.spryHook
+      const spryHookAddress = getSpryConfig(token0?.chainId ?? DEFAULT_CHAIN_ID)?.addresses.spryHook
       setPositionState((prevState) => ({
         ...prevState,
         fee: feeData,

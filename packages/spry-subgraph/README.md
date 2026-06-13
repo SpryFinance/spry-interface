@@ -46,16 +46,18 @@ throws with the error messages when there is none.
 
 ## Status
 
-The deployed Base Sepolia subgraph (Goldsky) is **healthy and serving live
-data** (`hasIndexingErrors: false`): Spry pools are seeded on-chain and the
-app's positions list, fee sparklines, and tier stats are all fed from it. The
-live test introspects the `Pool` type, checks `_meta`, and runs the queries
-end-to-end.
+Spry ships a subgraph per deployed chain (Goldsky). The live test iterates over
+every `SPRY_DEPLOYED_CHAIN_IDS` endpoint (Unichain Sepolia, Base Sepolia),
+introspecting the `Pool` type, checking `_meta`, and running the queries; the
+app's positions list, fee sparklines, and tier stats are all fed from these.
+Per-chain swap-reproduction is skipped (with a console note) on a chain that has
+no pools indexed yet.
 
 ## Test
 
 ```bash
 cd packages/spry-subgraph && bunx vitest run
-# live schema check against Goldsky:
-SPRY_LIVE_SUBGRAPH=1 bunx vitest run packages/spry-subgraph/test/live.test.ts
 ```
+
+The live schema check (`test/live.test.ts`) runs by default - no env var - and
+covers both live subgraphs.

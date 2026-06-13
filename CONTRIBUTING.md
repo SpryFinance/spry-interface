@@ -2,7 +2,7 @@
 
 Thanks for your interest in Spry! This repository is the Spry web app: a fork
 of the Uniswap v4 web interface (`Uniswap/interface`, pinned at `web/5.148.6`)
-maintained by SpryFinance. It currently runs on **Base Sepolia** and is
+maintained by SpryFinance. It runs on **Unichain Sepolia** and **Base Sepolia** and is
 **pre-audit / pre-mainnet**.
 
 ## Getting set up
@@ -57,7 +57,7 @@ Open a GitHub issue on this repository with:
 - What you did, what you expected, and what happened (screenshots help)
 - The page/flow (swap, positions list, create position, add/remove/collect)
 - Browser + viewport (desktop / tablet / mobile), and the wallet you used
-- The chain (Base Sepolia today) and, for failed transactions, the tx hash or
+- The chain (Unichain Sepolia or Base Sepolia) and, for failed transactions, the tx hash or
   the exact error text from the review modal
 
 For protocol-level issues (the hook, the fee curve, the router), file against

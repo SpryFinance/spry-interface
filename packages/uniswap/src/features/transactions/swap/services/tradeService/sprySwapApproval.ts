@@ -1,4 +1,4 @@
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, isSpryChain } from '@spry/config'
 import { type Address } from '@spry/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { Currency, CurrencyAmount } from '@uniswap/sdk-core'
@@ -6,7 +6,7 @@ import { TradingApi } from '@universe/api'
 import { useMemo } from 'react'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { ApprovalTxInfo } from 'uniswap/src/features/transactions/swap/review/hooks/useTokenApprovalInfo'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { estimateSpryGasFeeValue } from 'uniswap/src/features/transactions/swap/services/tradeService/sprySwapTransaction'
 import { ApprovalAction } from 'uniswap/src/features/transactions/swap/types/trade'
 import { WrapType } from 'uniswap/src/features/transactions/types/wrap'
@@ -51,7 +51,7 @@ export function useSprySwapApprovalInfo(params: {
 }): ApprovalTxInfo | null {
   const { chainId, address, currencyInAmount, currencyInMaxAmount, routing, wrapType } = params
 
-  const config = getSpryConfig(UniverseChainId.BaseSepolia)
+  const config = getSpryConfig(chainId)
   const spender = config?.addresses.spryRouter
   const currencyIn = currencyInAmount?.currency
   const token = currencyIn && !currencyIn.isNative ? currencyIn.wrapped.address : undefined
@@ -59,10 +59,10 @@ export function useSprySwapApprovalInfo(params: {
   const requiredCurrencyAmount = currencyInMaxAmount ?? currencyInAmount
   const requiredAmount = requiredCurrencyAmount ? BigInt(requiredCurrencyAmount.quotient.toString()) : BigInt(0)
 
-  // A Spry classic swap on Base Sepolia by a connected account. A native ETH input
+  // A Spry classic swap on a Spry chain by a connected account. A native ETH input
   // needs no approval; an ERC20 input needs the allowance check below (token set).
   const isSpryClassicSwap =
-    chainId === UniverseChainId.BaseSepolia &&
+    isSpryChain(chainId) &&
     routing === TradingApi.Routing.CLASSIC &&
     wrapType === WrapType.NotApplicable &&
     Boolean(address) &&
@@ -74,13 +74,13 @@ export function useSprySwapApprovalInfo(params: {
     queryKey: ['sprySwapAllowance', chainId, token, address, spender],
     queryFn: async () => {
       const [allowance, approvalGasFeeValue] = await Promise.all([
-        spryPublicClient.readContract({
+        getSpryPublicClient(chainId).readContract({
           address: token as Address,
           abi: erc20Abi,
           functionName: 'allowance',
           args: [address as Address, spender as Address],
         }),
-        estimateSpryGasFeeValue(SPRY_APPROVAL_GAS_LIMIT),
+        estimateSpryGasFeeValue(chainId, SPRY_APPROVAL_GAS_LIMIT),
       ])
       return { allowance, approvalGasFeeValue }
     },
@@ -90,7 +90,7 @@ export function useSprySwapApprovalInfo(params: {
 
   return useMemo(() => {
     // Native ETH input needs no ERC20 approval; short-circuit so we don't fall
-    // through to the Base Sepolia-401 gateway approval (which shows "may fail").
+    // through to the Spry-chain 401 gateway approval (which shows "may fail").
     if (isSpryClassicSwap && nativeInput) {
       return NO_APPROVAL
     }

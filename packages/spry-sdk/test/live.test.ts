@@ -1,26 +1,36 @@
 import { describe, it, expect } from 'vitest';
-import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
-import { ChainId, requireSpryConfig } from '@spry/config';
+import { createPublicClient, http, type Chain } from 'viem';
+import { baseSepolia, unichainSepolia } from 'viem/chains';
+import { ChainId, requireSpryConfig, SPRY_DEPLOYED_CHAIN_IDS } from '@spry/config';
 import { PoolTier } from '@spry/fee';
 import { createSpryHookClient, spryHookAbi, type ReadContractFn } from '../src/index';
 
-// Live deployment sanity check against the real Base Sepolia SpryHook.
-// Skipped unless SPRY_LIVE_RPC is set to a Base Sepolia RPC URL, so the default
-// test run stays deterministic and offline.
-//   SPRY_LIVE_RPC=https://sepolia.base.org npx vitest run packages/spry-sdk/test/live.test.ts
-const RPC = process.env['SPRY_LIVE_RPC'];
+// Live deployment sanity check against the real SpryHook on every Spry-deployed
+// chain (Unichain Sepolia, Base Sepolia). Runs by default, reading each chain's
+// RPC from @spry/config; override a chain's RPC with its env var if the public
+// endpoint is rate-limited:
+//   SPRY_UNICHAIN_SEPOLIA_RPC=https://sepolia.unichain.org
+//   SPRY_BASE_SEPOLIA_RPC=https://sepolia.base.org
+const VIEM_CHAIN_BY_ID: Record<number, Chain> = {
+  [ChainId.UNICHAIN_SEPOLIA]: unichainSepolia,
+  [ChainId.BASE_SEPOLIA]: baseSepolia,
+};
+const RPC_ENV_BY_ID: Record<number, string> = {
+  [ChainId.UNICHAIN_SEPOLIA]: 'SPRY_UNICHAIN_SEPOLIA_RPC',
+  [ChainId.BASE_SEPOLIA]: 'SPRY_BASE_SEPOLIA_RPC',
+};
 
-describe.skipIf(!RPC)('live Base Sepolia deployment', () => {
-  const config = requireSpryConfig(ChainId.BASE_SEPOLIA);
-  const client = createPublicClient({ chain: baseSepolia, transport: http(RPC) });
+describe.each(SPRY_DEPLOYED_CHAIN_IDS)('live Spry deployment (chain %s)', (chainId) => {
+  const config = requireSpryConfig(chainId);
+  const rpc = process.env[RPC_ENV_BY_ID[chainId] ?? ''] ?? config.rpcUrl;
+  const client = createPublicClient({ chain: VIEM_CHAIN_BY_ID[chainId], transport: http(rpc) });
   const read: ReadContractFn = (req) => client.readContract(req as never) as Promise<unknown>;
   const hook = createSpryHookClient(read, config.addresses.spryHook);
 
   it('reads BLOCK_WINDOW (> 0)', async () => {
     const bw = await hook.getBlockWindow();
     // eslint-disable-next-line no-console
-    console.log('base-sepolia BLOCK_WINDOW =', bw.toString());
+    console.log(`${config.key} BLOCK_WINDOW =`, bw.toString());
     expect(bw).toBeGreaterThan(0n);
   });
 

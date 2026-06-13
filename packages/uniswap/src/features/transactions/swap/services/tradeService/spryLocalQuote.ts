@@ -1,4 +1,4 @@
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, getSpryRpcUrl, isSpryChain } from '@spry/config'
 import {
   createSpryQuoterClient,
   createSpryStateViewClient,
@@ -25,13 +25,13 @@ import {
 import type { ValidatedTradeInput } from 'uniswap/src/features/transactions/swap/services/tradeService/transformations/buildQuoteRequest'
 import { getWrapType } from 'uniswap/src/features/transactions/swap/utils/wrap'
 import { WrapType } from 'uniswap/src/features/transactions/types/wrap'
-import { createPublicClient, http } from 'viem'
-import { baseSepolia } from 'viem/chains'
+import { createPublicClient, http, type Chain, type PublicClient } from 'viem'
+import { baseSepolia, sepolia, unichainSepolia } from 'viem/chains'
 
 /**
- * The Uniswap entry-gateway / Trading API does not serve Base Sepolia: every quote
- * request returns 401. For the Spry deployment we therefore synthesize quote
- * responses locally and feed them through the normal `transformQuoteToTrade`
+ * The Uniswap entry-gateway / Trading API does not serve Spry's testnets: every
+ * quote request returns 401. For the Spry deployment we therefore synthesize
+ * quote responses locally and feed them through the normal `transformQuoteToTrade`
  * pipeline, so the resulting trade objects are identical to real API responses.
  *
  * Two cases are handled:
@@ -40,7 +40,8 @@ import { baseSepolia } from 'viem/chains'
  *    subgraph, every candidate route is priced on-chain via the V4 Quoter
  *    (authoritative, reflects the SpryHook dynamic fee), and the best is kept.
  *
- * Returns null for anything else, so the caller falls through to "no trade".
+ * Works on every Spry-deployed chain (Unichain Sepolia, Base Sepolia). Returns
+ * null for anything else, so the caller falls through to "no trade".
  */
 export async function buildSpryLocalQuote(
   validatedInput: ValidatedTradeInput,
@@ -59,8 +60,8 @@ export async function buildSpryLocalQuote(
  * non-wrap pair.
  */
 export function buildSpryWrapQuote(validatedInput: ValidatedTradeInput): DiscriminatedQuoteResponse | null {
-  // Scope strictly to Base Sepolia; every other chain keeps the real Trading API path.
-  if (validatedInput.currencyIn.chainId !== UniverseChainId.BaseSepolia) {
+  // Scope to Spry-deployed chains; every other chain keeps the real Trading API path.
+  if (!isSpryChain(validatedInput.currencyIn.chainId)) {
     return null
   }
 
@@ -96,16 +97,43 @@ export function buildSpryWrapQuote(validatedInput: ValidatedTradeInput): Discrim
   return response
 }
 
-// Base Sepolia is the only chain with deployed Spry pools. Direct RPC (the Uniswap
-// gateway proxy 401s here); CSP already allows *.base.org.
-const BASE_SEPOLIA_RPC_URL = 'https://sepolia.base.org'
-// The Trading API chain-id enum member for Base Sepolia (84532).
-const BASE_SEPOLIA_API_CHAIN_ID = TradingApi.ChainId._84532
+// Direct RPC per Spry chain (the Uniswap gateway proxy 401s on these testnets);
+// CSP allows each chain's RPC host. The viem chain object carries multicall3 +
+// defaults; the URL comes from @spry/config.
+const VIEM_CHAIN_BY_ID: Record<number, Chain> = {
+  [UniverseChainId.UnichainSepolia]: unichainSepolia,
+  [UniverseChainId.BaseSepolia]: baseSepolia,
+  [UniverseChainId.Sepolia]: sepolia,
+}
 
-// One shared read-only client. createPublicClient does no I/O (connections open
-// lazily on the first call), so building it at module load is cheap. Exported so
-// the swap-tx and approval paths reuse the same client.
-export const spryPublicClient = createPublicClient({ chain: baseSepolia, transport: http(BASE_SEPOLIA_RPC_URL) })
+// One read-only client per chain, built lazily and memoized. createPublicClient
+// does no I/O (connections open on the first call), so this is cheap.
+const clientByChain = new Map<number, PublicClient>()
+
+/**
+ * The shared read-only viem client for a Spry chain. Used by every Spry rail
+ * (quote, swap-tx, approval, LP, positions, fee widgets) so they all read the
+ * right chain's RPC. Throws for a chain Spry is not configured for.
+ */
+export function getSpryPublicClient(chainId: number): PublicClient {
+  const existing = clientByChain.get(chainId)
+  if (existing) {
+    return existing
+  }
+  const chain = VIEM_CHAIN_BY_ID[chainId]
+  const rpcUrl = getSpryRpcUrl(chainId)
+  if (!chain || !rpcUrl) {
+    throw new Error(`Spry: no RPC client configured for chain ${chainId}`)
+  }
+  const client = createPublicClient({ chain, transport: http(rpcUrl) })
+  clientByChain.set(chainId, client)
+  return client
+}
+
+/** The Trading API chain-id enum member for a chain (the enum values are the EIP-155 ids). */
+function toApiChainId(chainId: number): TradingApi.ChainId {
+  return chainId as TradingApi.ChainId
+}
 
 /** One hop priced by the Quoter: the hop plus its input/output amounts. */
 interface QuotedHop {
@@ -115,10 +143,10 @@ interface QuotedHop {
 }
 
 /** A V4 route token in the shape parseV4PoolApi expects (native ETH uses the zero address). */
-function routeToken(currency: SpryPoolCurrency): TradingApi.TokenInRoute {
+function routeToken(currency: SpryPoolCurrency, apiChainId: TradingApi.ChainId): TradingApi.TokenInRoute {
   return {
     address: currency.address,
-    chainId: BASE_SEPOLIA_API_CHAIN_ID,
+    chainId: apiChainId,
     decimals: String(currency.decimals),
     symbol: currency.symbol,
   }
@@ -174,30 +202,33 @@ function routeOutput(quoted: QuotedHop[]): bigint {
 }
 
 /**
- * Prices a Spry pool swap on Base Sepolia. Discovers the pools, finds every candidate
- * route (direct or multi-hop, across tiers), prices each on-chain via the V4 Quoter,
- * and keeps the best. Produces a CLASSIC quote with a single V4 route of N pools,
- * which transformQuoteToTrade turns into a ClassicTrade whose amounts come straight
- * from the Quoter. Returns null for any pair with no priceable Spry route.
+ * Prices a Spry pool swap on a Spry-deployed chain. Discovers the pools, finds every
+ * candidate route (direct or multi-hop, across tiers), prices each on-chain via the V4
+ * Quoter, and keeps the best. Produces a CLASSIC quote with a single V4 route of N
+ * pools, which transformQuoteToTrade turns into a ClassicTrade whose amounts come
+ * straight from the Quoter. Returns null for any pair with no priceable Spry route.
  */
 export async function buildSprySwapQuote(
   validatedInput: ValidatedTradeInput,
   slippageTolerance?: number,
 ): Promise<DiscriminatedQuoteResponse | null> {
   const { currencyIn, currencyOut } = validatedInput
+  const chainId = currencyIn.chainId
 
-  if (currencyIn.chainId !== UniverseChainId.BaseSepolia) {
+  if (!isSpryChain(chainId)) {
     return null
   }
 
-  const config = getSpryConfig(UniverseChainId.BaseSepolia)
+  const config = getSpryConfig(chainId)
   if (!config) {
     return null
   }
-  const graph = await discoverSpryPoolGraph(UniverseChainId.BaseSepolia)
+  const graph = await discoverSpryPoolGraph(chainId)
   if (!graph) {
     return null
   }
+  const apiChainId = toApiChainId(chainId)
+  const client = getSpryPublicClient(chainId)
 
   const fromCurrency = toPoolCurrency(currencyIn)
   const toCurrency = toPoolCurrency(currencyOut)
@@ -207,8 +238,8 @@ export async function buildSprySwapQuote(
   }
 
   const simulate: SimulateQuoteFn = async (request) =>
-    (await spryPublicClient.simulateContract(request as never)).result as readonly [bigint, bigint]
-  const read: StateViewReadFn = (request) => spryPublicClient.readContract(request as never) as Promise<unknown>
+    (await client.simulateContract(request as never)).result as readonly [bigint, bigint]
+  const read: StateViewReadFn = (request) => client.readContract(request as never) as Promise<unknown>
   const quoter = createSpryQuoterClient(simulate, config.addresses.quoter)
   const stateView = createSpryStateViewClient(read, config.addresses.stateView)
 
@@ -261,8 +292,8 @@ export async function buildSprySwapQuote(
     return {
       type: 'v4-pool',
       address: hop.poolId,
-      tokenIn: routeToken(tokenIn),
-      tokenOut: routeToken(tokenOut),
+      tokenIn: routeToken(tokenIn, apiChainId),
+      tokenOut: routeToken(tokenOut, apiChainId),
       sqrtRatioX96: state.slot0.sqrtPriceX96.toString(),
       liquidity: state.liquidity.toString(),
       tickCurrent: state.slot0.tick.toString(),
@@ -284,7 +315,7 @@ export async function buildSprySwapQuote(
     quote: {
       input: { amount: totalAmountIn.toString(), token: fromCurrency },
       output: { amount: totalAmountOut.toString(), token: toCurrency },
-      chainId: BASE_SEPOLIA_API_CHAIN_ID,
+      chainId: apiChainId,
       tradeType: validatedInput.requestTradeType,
       route: [v4Pools],
       // Carry the resolved tolerance so ClassicTrade derives minOut/maxIn from the

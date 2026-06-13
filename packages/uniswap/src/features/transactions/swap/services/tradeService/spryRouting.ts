@@ -12,7 +12,7 @@ import { areAddressesEqual } from 'uniswap/src/utils/addresses'
 
 /**
  * The Spry pool graph and routing over it. The Uniswap routing API does not serve
- * Base Sepolia, so we discover the deployed pools (from the Spry subgraph) and find
+ * the Spry chains, so we discover the deployed pools (from the Spry subgraph) and find
  * routes ourselves; the quote prices every candidate route and keeps the best, and
  * the swap-tx encoder replays the chosen route back from the trade.
  *
@@ -72,8 +72,10 @@ export interface SpryPoolGraph {
 }
 
 /**
- * The known pools as a static fallback, used only when the subgraph is unreachable so
- * swaps keep working. Base Sepolia: ETH<->sptA and sptA<->sptB (BLUE_CHIP + the hook).
+ * A static pool fallback for ONE chain (Base Sepolia: ETH<->sptA and
+ * sptA<->sptB on the BLUE_CHIP tier + the hook), used only if that chain's
+ * subgraph is unreachable so swaps keep working. Other chains have no seed and
+ * rely on their subgraph (returns null); add a seed here per chain if desired.
  */
 function seedSpryPoolGraph(chainId: number): SpryPoolGraph | null {
   if (chainId !== UniverseChainId.BaseSepolia) {

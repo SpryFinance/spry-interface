@@ -1,8 +1,9 @@
+import { SPRY_DEPLOYED_CHAIN_IDS } from '@spry/config'
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber'
 import { Token } from '@uniswap/sdk-core'
 import { GraphQLApi } from '@universe/api'
 import { PollingInterval } from 'uniswap/src/constants/misc'
-import { ALL_CHAIN_IDS, getChainInfo, ORDERED_CHAINS } from 'uniswap/src/features/chains/chainInfo'
+import { ALL_CHAIN_IDS, getChainInfo } from 'uniswap/src/features/chains/chainInfo'
 import { EnabledChainsInfo, GqlChainId, NetworkLayer, UniverseChainId } from 'uniswap/src/features/chains/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 
@@ -231,12 +232,12 @@ export function filterChainIdsByPlatform<T extends number>(chainIds: T[], platfo
   })
 }
 
-// Spry interface: the app is hardcoded to Spry's deployed chain(s). Base Sepolia
-// is the only enabled network; the testnet-mode toggle and chain feature flags are
-// intentionally bypassed so it is always available. (Conceptually mirrors
-// @spry/config's SUPPORTED_CHAIN_IDS / isSpryDeployed; kept as a local constant to
-// avoid a cross-package dependency from packages/uniswap.)
-const SPRY_ENABLED_CHAIN_IDS: UniverseChainId[] = [UniverseChainId.BaseSepolia]
+// Spry interface: the app is hardcoded to Spry's deployed chains (Unichain
+// Sepolia first, then Base Sepolia). The testnet-mode toggle and chain feature
+// flags are intentionally bypassed so they are always available. Sourced from
+// @spry/config so a new deployment (or Sepolia going live) flows through
+// automatically, in that package's display order.
+const SPRY_ENABLED_CHAIN_IDS: UniverseChainId[] = SPRY_DEPLOYED_CHAIN_IDS as UniverseChainId[]
 
 export function getEnabledChains({
   platform,
@@ -247,14 +248,12 @@ export function getEnabledChains({
   featureFlaggedChainIds: UniverseChainId[]
   includeTestnets?: boolean
 }): EnabledChainsInfo {
-  // Only Spry's deployed chain(s). `includeTestnets` / `isTestnetModeEnabled` and
+  // Only Spry's deployed chains, in SPRY_ENABLED_CHAIN_IDS order (Unichain
+  // Sepolia first). `includeTestnets` / `isTestnetModeEnabled` and
   // `featureFlaggedChainIds` are ignored on purpose (see SPRY_ENABLED_CHAIN_IDS).
-  const enabledChainInfos = ORDERED_CHAINS.filter((chainInfo) => {
-    if (platform !== undefined && platform !== chainInfo.platform) {
-      return false
-    }
-    return SPRY_ENABLED_CHAIN_IDS.includes(chainInfo.id)
-  })
+  const enabledChainInfos = SPRY_ENABLED_CHAIN_IDS.map((id) => getChainInfo(id)).filter(
+    (chainInfo) => platform === undefined || platform === chainInfo.platform,
+  )
 
   const chains = enabledChainInfos.map((chainInfo) => chainInfo.id)
   const gqlChains = enabledChainInfos.map((chainInfo) => chainInfo.backendChain.chain)
@@ -273,8 +272,8 @@ function getDefaultChainId({ platform }: { platform?: Platform; isTestnetModeEna
     return UniverseChainId.Solana
   }
 
-  // Spry interface: default to Spry's chain (Base Sepolia) for EVM.
-  return UniverseChainId.BaseSepolia
+  // Spry interface: default to Spry's first deployed chain (Unichain Sepolia) for EVM.
+  return (SPRY_ENABLED_CHAIN_IDS[0] ?? UniverseChainId.UnichainSepolia) as UniverseChainId
 }
 
 /** Returns all stablecoins for a given chainId. */

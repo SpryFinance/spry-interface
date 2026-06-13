@@ -1,10 +1,9 @@
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, isSpryChain } from '@spry/config'
 import { feeForDelta, tierFromTickSpacing, tierInfo, tierParams, zoneOf, type PoolTier, type SpryZone } from '@spry/fee'
 import { createSpryHookClient, NATIVE_CURRENCY, type Address, type Hex, type ReadContractFn } from '@spry/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { type Currency } from '@uniswap/sdk-core'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import {
   discoverSpryPoolGraph,
   findSpryCurrency,
@@ -37,7 +36,7 @@ export interface SpryPoolFeeState {
 
 /**
  * The live dynamic-fee state of the pool(s) the selected pair would route through
- * (Base Sepolia only). Unlike the per-swap fee row in the review, this needs no
+ * (Spry chains only). Unlike the per-swap fee row in the review, this needs no
  * connected wallet or amount: it reads each pool's block-windowed cumulative
  * on-chain and maps it through the @spry/fee curve to a resting fee + zone, so the
  * swap form can show the pool's current "fee weather". Polls ~per block. Returns
@@ -49,7 +48,7 @@ export function useSpryPoolFeeStates(params: {
   currencyOut: Maybe<Currency>
 }): SpryPoolFeeState[] | null {
   const { chainId, currencyIn, currencyOut } = params
-  const enabled = chainId === UniverseChainId.BaseSepolia && Boolean(currencyIn) && Boolean(currencyOut)
+  const enabled = isSpryChain(chainId) && Boolean(currencyIn) && Boolean(currencyOut)
   const routeKey = currencyIn && currencyOut ? `${toPoolCurrency(currencyIn)}->${toPoolCurrency(currencyOut)}` : ''
 
   const { data } = useQuery({
@@ -94,11 +93,12 @@ export function useSpryPoolFeeStates(params: {
         })
       }
 
-      const read: ReadContractFn = (request) => spryPublicClient.readContract(request as never) as Promise<unknown>
+      const client = getSpryPublicClient(chainId)
+      const read: ReadContractFn = (request) => client.readContract(request as never) as Promise<unknown>
       const hook = createSpryHookClient(read, config.addresses.spryHook)
       const [blockWindow, currentBlock] = await Promise.all([
         hook.getBlockWindow(),
-        spryPublicClient.getBlockNumber({ cacheTime: 0 }),
+        client.getBlockNumber({ cacheTime: 0 }),
       ])
 
       const symbolOf = (address: Address): string =>

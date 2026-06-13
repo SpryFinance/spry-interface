@@ -1,10 +1,10 @@
-// SPRY: the wallet-positions data source for Spry chains. The Uniswap gateway
-// (ListPositions) does not serve Base Sepolia, so positions are assembled from
-// the Spry subgraph + live chain reads instead:
+// SPRY: the wallet-positions data source for the Spry chains. The Uniswap
+// gateway (ListPositions) does not serve them, so positions are assembled from
+// the Spry subgraph + live chain reads instead, per chain:
 //
 //   1. DISCOVERY (subgraph): which positions belong to this wallet.
 //      - NFT positions: `positions(owner)` tracks every ERC-721 minted by the
-//        CANONICAL PositionManager (shared by all Base Sepolia protocols, so a
+//        CANONICAL PositionManager (shared by all protocols on the chain, so a
 //        tokenId is not necessarily Spry).
 //      - Raw positions: liquidity seeded by the spry-contracts scripts goes
 //        through the PoolModifyLiquidityTest router with salt = owner address
@@ -21,12 +21,13 @@
 //      derive from these via the v4 SDK, so they are correct even after
 //      increases/decreases the subgraph cannot attribute per-tokenId.
 //
-// The whole pipeline was verified end-to-end against the deployed Base Sepolia
-// contracts and the live Goldsky subgraph (position liquidity sums match
-// StateView exactly for both salt schemes). USD valuations are intentionally
-// absent (no price oracle on testnet): totalValueUsd/apr stay undefined.
+// fetchSpryPositions runs the pipeline for ONE chain; the hook runs it per
+// enabled Spry chain and merges. Verified end-to-end against the deployed
+// contracts + live Goldsky subgraphs (liquidity sums match StateView exactly
+// for both salt schemes). USD valuations are intentionally absent (no price
+// oracle on testnet): totalValueUsd/apr stay undefined.
 
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, isSpryChain, SPRY_DEPLOYED_CHAIN_IDS } from '@spry/config'
 import { DYNAMIC_FEE_FLAG, type PoolTier } from '@spry/fee'
 import {
   createSpryGraphClient,
@@ -48,7 +49,7 @@ import { normalizeTokenAddressForCache } from 'uniswap/src/data/cache'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
 import type { V4PositionInfo } from 'uniswap/src/features/positions/types'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { areAddressesEqual } from 'uniswap/src/utils/addresses'
 import { logger } from 'utilities/src/logger/logger'
 import {
@@ -56,11 +57,6 @@ import {
   STATE_VIEW_POSITIONS_ABI,
   toInt24,
 } from '~/features/Liquidity/spry/spryPositionsAbi'
-
-// The only Spry chain with a deployed subgraph + the shared viem client today.
-// Multi-chain support needs a public client per chain; extend here when the
-// other testnets deploy.
-const SPRY_POSITIONS_CHAIN_ID = UniverseChainId.BaseSepolia
 
 const MASK_256 = (1n << 256n) - 1n
 const Q128 = 1n << 128n
@@ -138,14 +134,18 @@ interface Candidate {
   timestamp: number
 }
 
-/** The pipeline behind {@link useSpryWalletPositions}; exported for tests and console verification. */
-export async function fetchSpryPositions(owner: Address): Promise<SpryV4PositionInfo[]> {
-  const chainId = SPRY_POSITIONS_CHAIN_ID
+/**
+ * The pipeline behind {@link useSpryWalletPositions} for ONE Spry chain;
+ * exported for tests and console verification. The hook runs it per enabled
+ * chain and merges (each position carries its own chainId).
+ */
+export async function fetchSpryPositions(owner: Address, chainId: number): Promise<SpryV4PositionInfo[]> {
   const config = getSpryConfig(chainId)
   if (!config?.subgraphUrl) {
     return []
   }
   const graph = createSpryGraphClient(config.subgraphUrl)
+  const client = getSpryPublicClient(chainId)
   const positionManager = config.addresses.positionManager
   const stateView = config.addresses.stateView
 
@@ -160,7 +160,7 @@ export async function fetchSpryPositions(owner: Address): Promise<SpryV4Position
   //    zero key whose poolId matches no Spry pool, so they fall out naturally.
   const nftCandidates: Candidate[] = []
   if (nftRows.length > 0) {
-    const infoResults = await spryPublicClient.multicall({
+    const infoResults = await client.multicall({
       contracts: nftRows.map((row) => ({
         address: positionManager,
         abi: POSITION_MANAGER_ABI,
@@ -276,7 +276,7 @@ export async function fetchSpryPositions(owner: Address): Promise<SpryV4Position
       args: [c.poolId as Hex, c.tickLower, c.tickUpper] as const,
     },
   ])
-  const stateResults = await spryPublicClient.multicall({
+  const stateResults = await client.multicall({
     contracts: [...poolCalls, ...positionCalls],
     allowFailure: true,
   })
@@ -390,8 +390,9 @@ export interface UseSpryWalletPositionsResult {
 
 /**
  * Wallet positions for Spry chains, from the Spry subgraph + live chain reads.
- * Returns every position (open and closed); apply status/version filters at
- * the call site so filter toggles do not refetch.
+ * A specific chain filter queries that chain; "all chains" (null) queries every
+ * Spry-deployed chain and merges. Returns every position (open and closed);
+ * apply status/version filters at the call site so filter toggles do not refetch.
  */
 export function useSpryWalletPositions({
   address,
@@ -400,14 +401,24 @@ export function useSpryWalletPositions({
   address: string | undefined
   chainFilter: UniverseChainId | null
 }): UseSpryWalletPositionsResult {
-  // Only Base Sepolia has Spry rails today; any other explicit chain filter has no Spry positions.
-  const chainSupported = chainFilter === null || chainFilter === SPRY_POSITIONS_CHAIN_ID
-  const enabled = !!address && chainSupported && !!getSpryConfig(SPRY_POSITIONS_CHAIN_ID)?.subgraphUrl
+  // Target the filtered Spry chain, or every Spry-deployed chain when unfiltered.
+  const targetChains = (chainFilter === null ? SPRY_DEPLOYED_CHAIN_IDS : isSpryChain(chainFilter) ? [chainFilter] : [])
+    .filter((chainId) => !!getSpryConfig(chainId)?.subgraphUrl)
+  const enabled = !!address && targetChains.length > 0
 
   const query = useQuery({
-    queryKey: ['spryWalletPositions', SPRY_POSITIONS_CHAIN_ID, address ? normalizeTokenAddressForCache(address) : undefined],
+    queryKey: [
+      'spryWalletPositions',
+      targetChains.join(','),
+      address ? normalizeTokenAddressForCache(address) : undefined,
+    ],
     // enabled gates on address; getAddress also validates (throws loudly on a bad value).
-    queryFn: () => fetchSpryPositions(getAddress(address ?? '')),
+    queryFn: async () => {
+      const owner = getAddress(address ?? '')
+      // each position carries its own chainId, so per-chain results merge cleanly
+      const perChain = await Promise.all(targetChains.map((chainId) => fetchSpryPositions(owner, chainId)))
+      return perChain.flat()
+    },
     enabled,
     staleTime: 30_000,
     // PositionInfo holds SDK class instances; structural sharing would walk them pointlessly.

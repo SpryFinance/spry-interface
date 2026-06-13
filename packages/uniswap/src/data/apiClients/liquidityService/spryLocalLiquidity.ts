@@ -1,11 +1,13 @@
 /* oxlint-disable max-lines -- one cohesive module: every LP write flow's local builder lives here */
-// SPRY: local calldata builders for the LP write flows on Base Sepolia. The
+// SPRY: local calldata builders for the LP write flows on the Spry chains. The
 // Uniswap gateway Liquidity Service 401s there, so collect-fees / increase /
-// decrease transactions (and the ERC20 approval check) are synthesized locally
-// and returned through the same liquidityQueries seams, mirroring the swap
-// local-rails pattern (spryLocalQuote / sprySwapApproval).
+// decrease / create transactions (and the ERC20 approval check) are synthesized
+// locally and returned through the same liquidityQueries seams, mirroring the
+// swap local-rails pattern (spryLocalQuote / sprySwapApproval). Every entry
+// point reads its chain from `params.chainId` (the request carries it) and
+// gates on `isSpryChain`, so all flows work on every Spry-deployed chain.
 //
-// SCOPE: two position kinds exist on Base Sepolia and both are handled here.
+// SCOPE: two position kinds exist on each Spry chain and both are handled here.
 //
 // RAW positions (liquidity seeded through the canonical PoolModifyLiquidityTest
 // router with salt = bytes32(owner EOA), no NFT; the positions list synthesizes
@@ -46,7 +48,7 @@
 // the salt IS the owner address, and the positions list only shows a wallet
 // its own positions, so this holds by construction.
 
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, isSpryChain } from '@spry/config'
 import { DYNAMIC_FEE_FLAG } from '@spry/fee'
 import { poolId as computeSpryPoolId, sortCurrencies } from '@spry/sdk'
 import { createSpryGraphClient, fetchPoolsByIds, type PositionPoolRow } from '@spry/subgraph'
@@ -97,9 +99,8 @@ import {
 import { ZERO_ADDRESS } from 'uniswap/src/constants/misc'
 import { nativeOnChain } from 'uniswap/src/constants/tokens'
 import { normalizeTokenAddressForCache } from 'uniswap/src/data/cache'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { Platform } from 'uniswap/src/features/platforms/types/Platform'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { areAddressesEqual } from 'uniswap/src/utils/addresses'
 
 function isSameEvmAddress(a: string, b: string): boolean {
@@ -110,7 +111,6 @@ function isSameEvmAddress(a: string, b: string): boolean {
 }
 
 const SPRY_RAW_TOKEN_ID_PREFIX = 'spry-raw-'
-const SPRY_LP_CHAIN_ID = UniverseChainId.BaseSepolia
 // Generous fixed limit; the wallet re-estimates at signing (and for increase the
 // real estimate only succeeds once the approvals are mined).
 const SPRY_LP_GAS_LIMIT = '600000'
@@ -303,20 +303,21 @@ interface NftPositionState {
 }
 
 /** Live pool key + range + liquidity + price for a PositionManager NFT position. */
-async function fetchNftPositionState(tokenId: bigint): Promise<NftPositionState> {
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+async function fetchNftPositionState(chainId: number, tokenId: bigint): Promise<NftPositionState> {
+  const config = getSpryConfig(chainId)
   if (!config) {
-    throw new Error('Spry LP: no Spry config for Base Sepolia')
+    throw new Error(`Spry LP: no Spry config for chain ${chainId}`)
   }
+  const client = getSpryPublicClient(chainId)
   const posm = config.addresses.positionManager
   const [keyAndInfo, liquidity] = await Promise.all([
-    spryPublicClient.readContract({
+    client.readContract({
       address: posm,
       abi: POSITION_MANAGER_LP_ABI,
       functionName: 'getPoolAndPositionInfo',
       args: [tokenId],
     }),
-    spryPublicClient.readContract({
+    client.readContract({
       address: posm,
       abi: POSITION_MANAGER_LP_ABI,
       functionName: 'getPositionLiquidity',
@@ -342,7 +343,7 @@ async function fetchNftPositionState(tokenId: bigint): Promise<NftPositionState>
     tickSpacing: key.tickSpacing,
     hooks: key.hooks,
   })
-  const slot0 = await spryPublicClient.readContract({
+  const slot0 = await client.readContract({
     address: config.addresses.stateView,
     abi: STATE_VIEW_ABI,
     functionName: 'getSlot0',
@@ -360,9 +361,9 @@ async function fetchNftPositionState(tokenId: bigint): Promise<NftPositionState>
 }
 
 /** SDK Currency pair for a pool key, reading ERC20 decimals live (symbols are display-only here). */
-async function currenciesForPoolKey(key: PoolKeyStruct): Promise<[Currency, Currency]> {
+async function currenciesForPoolKey(chainId: number, key: PoolKeyStruct): Promise<[Currency, Currency]> {
   const erc20Legs = [key.currency0, key.currency1].filter((address) => !isSameEvmAddress(address, ZERO_ADDRESS))
-  const decimalsResults = await spryPublicClient.multicall({
+  const decimalsResults = await getSpryPublicClient(chainId).multicall({
     contracts: erc20Legs.map((address) => ({
       address: getAddress(address),
       abi: erc20Abi,
@@ -373,8 +374,8 @@ async function currenciesForPoolKey(key: PoolKeyStruct): Promise<[Currency, Curr
   const decimalsByAddress = new Map(erc20Legs.map((address, i) => [normalizeTokenAddressForCache(address), decimalsResults[i]]))
   const toCurrency = (address: string): Currency =>
     isSameEvmAddress(address, ZERO_ADDRESS)
-      ? nativeOnChain(SPRY_LP_CHAIN_ID)
-      : new Token(SPRY_LP_CHAIN_ID, address, decimalsByAddress.get(normalizeTokenAddressForCache(address)) ?? 18)
+      ? nativeOnChain(chainId)
+      : new Token(chainId, address, decimalsByAddress.get(normalizeTokenAddressForCache(address)) ?? 18)
   return [toCurrency(key.currency0), toCurrency(key.currency1)]
 }
 
@@ -407,10 +408,10 @@ function deadlineOrDefault(deadline: number | undefined): string {
   return String(deadline && deadline > 0 ? deadline : Math.floor(Date.now() / 1000) + 1200)
 }
 
-async function fetchSpryPool(poolId: Hex): Promise<PositionPoolRow> {
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+async function fetchSpryPool(chainId: number, poolId: Hex): Promise<PositionPoolRow> {
+  const config = getSpryConfig(chainId)
   if (!config?.subgraphUrl) {
-    throw new Error('Spry LP: no subgraph configured for Base Sepolia')
+    throw new Error(`Spry LP: no subgraph configured for chain ${chainId}`)
   }
   const [pool] = await fetchPoolsByIds(createSpryGraphClient(config.subgraphUrl), [poolId])
   if (!pool) {
@@ -451,20 +452,22 @@ function encodeModifyLiquidity(args: {
   })
 }
 
-function buildTxRequest(args: { to: string; from: string; data: Hex; value: bigint; gasLimit?: string }): TransactionRequest {
+function buildTxRequest(args: {
+  chainId: number
+  to: string
+  from: string
+  data: Hex
+  value: bigint
+  gasLimit?: string
+}): TransactionRequest {
   return new TransactionRequest({
     to: args.to,
     from: args.from,
     data: args.data,
     value: toHex(args.value),
-    chainId: SPRY_LP_CHAIN_ID,
+    chainId: args.chainId,
     gasLimit: args.gasLimit ?? SPRY_LP_GAS_LIMIT,
   })
-}
-
-/** True when this request is for the Spry chain (proto ChainId values are EIP-155 numbers). */
-function isSpryLpChain(chainId: number): boolean {
-  return Number(chainId) === SPRY_LP_CHAIN_ID
 }
 
 /**
@@ -475,13 +478,14 @@ function isSpryLpChain(chainId: number): boolean {
  *   TAKE_PAIR to the owner).
  */
 export async function maybeSpryLocalClaimFees(params: ClaimFeesRequest): Promise<ClaimFeesResponse | undefined> {
-  if (!isSpryLpChain(params.chainId) || !params.walletAddress) {
+  const chainId = Number(params.chainId)
+  if (!isSpryChain(chainId) || !params.walletAddress) {
     return undefined
   }
 
   const ref = parseSpryRawTokenId(params.tokenId)
   if (ref) {
-    const pool = await fetchSpryPool(ref.poolId)
+    const pool = await fetchSpryPool(chainId, ref.poolId)
     const data = encodeModifyLiquidity({
       key: poolKeyFromRow(pool),
       tickLower: ref.tickLower,
@@ -491,7 +495,7 @@ export async function maybeSpryLocalClaimFees(params: ClaimFeesRequest): Promise
     })
     return new ClaimFeesResponse({
       requestId: 'spry-local-claim',
-      claim: buildTxRequest({ to: ref.router, from: params.walletAddress, data, value: BigInt(0) }),
+      claim: buildTxRequest({ chainId, to: ref.router, from: params.walletAddress, data, value: BigInt(0) }),
     })
   }
 
@@ -499,12 +503,12 @@ export async function maybeSpryLocalClaimFees(params: ClaimFeesRequest): Promise
   if (nftTokenId === undefined) {
     return undefined
   }
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const config = getSpryConfig(chainId)
   if (!config) {
     return undefined
   }
-  const state = await fetchNftPositionState(nftTokenId)
-  const [currency0, currency1] = await currenciesForPoolKey(state.key)
+  const state = await fetchNftPositionState(chainId, nftTokenId)
+  const [currency0, currency1] = await currenciesForPoolKey(chainId, state.key)
   const position = new V4Position({
     pool: v4PoolFromState({ currency0, currency1, key: state.key, sqrtPriceX96: state.sqrtPriceX96, tick: state.tick }),
     liquidity: state.liquidity.toString(),
@@ -520,6 +524,7 @@ export async function maybeSpryLocalClaimFees(params: ClaimFeesRequest): Promise
   return new ClaimFeesResponse({
     requestId: 'spry-local-claim',
     claim: buildTxRequest({
+      chainId,
       to: config.addresses.positionManager,
       from: params.walletAddress,
       data: calldata as Hex,
@@ -537,21 +542,22 @@ export async function maybeSpryLocalClaimFees(params: ClaimFeesRequest): Promise
 export async function maybeSpryLocalDecreasePosition(
   params: DecreasePositionRequest,
 ): Promise<DecreasePositionResponse | undefined> {
-  if (!isSpryLpChain(params.chainId) || !params.walletAddress) {
+  const chainId = Number(params.chainId)
+  if (!isSpryChain(chainId) || !params.walletAddress) {
     return undefined
   }
 
   const nftTokenId = parseNftTokenId(params.nftTokenId)
   if (nftTokenId !== undefined) {
-    const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+    const config = getSpryConfig(chainId)
     if (!config) {
       return undefined
     }
-    const state = await fetchNftPositionState(nftTokenId)
+    const state = await fetchNftPositionState(chainId, nftTokenId)
     if (state.liquidity === BigInt(0)) {
       throw new Error('Spry LP: nothing to remove (zero live liquidity for this position)')
     }
-    const [currency0, currency1] = await currenciesForPoolKey(state.key)
+    const [currency0, currency1] = await currenciesForPoolKey(chainId, state.key)
     const position = new V4Position({
       pool: v4PoolFromState({
         currency0,
@@ -575,6 +581,7 @@ export async function maybeSpryLocalDecreasePosition(
     return new DecreasePositionResponse({
       requestId: 'spry-local-decrease',
       decrease: buildTxRequest({
+        chainId,
         to: config.addresses.positionManager,
         from: params.walletAddress,
         data: calldata as Hex,
@@ -587,14 +594,14 @@ export async function maybeSpryLocalDecreasePosition(
   if (!ref) {
     return undefined
   }
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const config = getSpryConfig(chainId)
   if (!config) {
     return undefined
   }
   const salt = saltForOwner(params.walletAddress)
   const [pool, positionInfo] = await Promise.all([
-    fetchSpryPool(ref.poolId),
-    spryPublicClient.readContract({
+    fetchSpryPool(chainId, ref.poolId),
+    getSpryPublicClient(chainId).readContract({
       address: config.addresses.stateView,
       abi: STATE_VIEW_ABI,
       functionName: 'getPositionInfo',
@@ -617,7 +624,7 @@ export async function maybeSpryLocalDecreasePosition(
   })
   return new DecreasePositionResponse({
     requestId: 'spry-local-decrease',
-    decrease: buildTxRequest({ to: ref.router, from: params.walletAddress, data, value: BigInt(0) }),
+    decrease: buildTxRequest({ chainId, to: ref.router, from: params.walletAddress, data, value: BigInt(0) }),
   })
 }
 
@@ -638,10 +645,11 @@ export async function maybeSpryLocalIncreasePosition(
   params: IncreasePositionRequest,
 ): Promise<IncreasePositionResponse | undefined> {
   const independent = params.independentToken
-  if (!isSpryLpChain(params.chainId) || !params.walletAddress || !independent) {
+  const chainId = Number(params.chainId)
+  if (!isSpryChain(chainId) || !params.walletAddress || !independent) {
     return undefined
   }
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const config = getSpryConfig(chainId)
   const router = config?.addresses.poolModifyLiquidityTest
   if (!config || !router) {
     return undefined
@@ -663,8 +671,8 @@ export async function maybeSpryLocalIncreasePosition(
   let currency1: Currency
   if (ref) {
     const [pool, slot0] = await Promise.all([
-      fetchSpryPool(ref.poolId),
-      spryPublicClient.readContract({
+      fetchSpryPool(chainId, ref.poolId),
+      getSpryPublicClient(chainId).readContract({
         address: config.addresses.stateView,
         abi: STATE_VIEW_ABI,
         functionName: 'getSlot0',
@@ -676,16 +684,16 @@ export async function maybeSpryLocalIncreasePosition(
     tickUpper = ref.tickUpper
     sqrtPriceX96 = slot0[0]
     tick = slot0[1]
-    currency0 = currencyForPoolToken(pool.token0, SPRY_LP_CHAIN_ID)
-    currency1 = currencyForPoolToken(pool.token1, SPRY_LP_CHAIN_ID)
+    currency0 = currencyForPoolToken(pool.token0, chainId)
+    currency1 = currencyForPoolToken(pool.token1, chainId)
   } else if (nftTokenId !== undefined) {
-    const state = await fetchNftPositionState(nftTokenId)
+    const state = await fetchNftPositionState(chainId, nftTokenId)
     key = state.key
     tickLower = state.tickLower
     tickUpper = state.tickUpper
     sqrtPriceX96 = state.sqrtPriceX96
     tick = state.tick
-    ;[currency0, currency1] = await currenciesForPoolKey(state.key)
+    ;[currency0, currency1] = await currenciesForPoolKey(chainId, state.key)
   } else {
     return undefined
   }
@@ -730,7 +738,7 @@ export async function maybeSpryLocalIncreasePosition(
     requestId: 'spry-local-increase',
     token0: new LPToken({ tokenAddress: key.currency0, amount: amount0.toString() }),
     token1: new LPToken({ tokenAddress: key.currency1, amount: amount1.toString() }),
-    increase: buildTxRequest({ to: ref?.router ?? router, from: params.walletAddress, data, value }),
+    increase: buildTxRequest({ chainId, to: ref?.router ?? router, from: params.walletAddress, data, value }),
   })
 }
 
@@ -752,15 +760,17 @@ export async function maybeSpryLocalIncreasePosition(
  * Native legs never need approval (they ride as msg.value).
  */
 export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promise<LPApprovalResponse | undefined> {
-  if (!isSpryLpChain(params.chainId) || !params.walletAddress) {
+  const chainId = Number(params.chainId)
+  if (!isSpryChain(chainId) || !params.walletAddress) {
     return undefined
   }
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const config = getSpryConfig(chainId)
   const router = config?.addresses.poolModifyLiquidityTest
   if (!config || !router) {
     return undefined
   }
   const owner = params.walletAddress as Address
+  const client = getSpryPublicClient(chainId)
 
   const erc20Legs = params.lpTokens.filter(
     (lpToken) =>
@@ -775,19 +785,19 @@ export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promi
   }
 
   if (params.action === LPAction.CREATE) {
-    const permit2 = getAddress(permit2Address(SPRY_LP_CHAIN_ID))
+    const permit2 = getAddress(permit2Address(chainId))
     const posm = config.addresses.positionManager
     const reads = await Promise.all(
       erc20Legs.map(async (lpToken) => {
         const token = getAddress(lpToken.tokenAddress)
         return Promise.all([
-          spryPublicClient.readContract({
+          client.readContract({
             address: token,
             abi: erc20Abi,
             functionName: 'allowance',
             args: [owner, permit2],
           }),
-          spryPublicClient.readContract({
+          client.readContract({
             address: permit2,
             abi: PERMIT2_LP_ABI,
             functionName: 'allowance',
@@ -803,7 +813,7 @@ export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promi
       if (erc20Allowance < amount) {
         const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [permit2, maxUint256] })
         pushApproval(
-          buildTxRequest({ to: lpToken.tokenAddress, from: params.walletAddress, data: approveData, value: BigInt(0) }),
+          buildTxRequest({ chainId, to: lpToken.tokenAddress, from: params.walletAddress, data: approveData, value: BigInt(0) }),
         )
       }
       const [permitAmount, permitExpiration] = permit2Allowance
@@ -814,7 +824,7 @@ export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promi
           args: [getAddress(lpToken.tokenAddress), posm, maxUint160, Number(MAX_UINT48)],
         })
         pushApproval(
-          buildTxRequest({ to: permit2, from: params.walletAddress, data: permitData, value: BigInt(0) }),
+          buildTxRequest({ chainId, to: permit2, from: params.walletAddress, data: permitData, value: BigInt(0) }),
         )
       }
     })
@@ -823,7 +833,7 @@ export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promi
 
   const allowances = await Promise.all(
     erc20Legs.map((lpToken) =>
-      spryPublicClient.readContract({
+      client.readContract({
         address: lpToken.tokenAddress as Address,
         abi: erc20Abi,
         functionName: 'allowance',
@@ -840,7 +850,7 @@ export async function maybeSpryLocalLPApproval(params: LPApprovalRequest): Promi
     const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [router, maxUint256] })
     // normalizeApprovalResponse matches these to token0/token1 by `transaction.to`
     pushApproval(
-      buildTxRequest({ to: lpToken.tokenAddress, from: params.walletAddress, data: approveData, value: BigInt(0) }),
+      buildTxRequest({ chainId, to: lpToken.tokenAddress, from: params.walletAddress, data: approveData, value: BigInt(0) }),
     )
   })
 
@@ -865,10 +875,11 @@ function fullRangeTicks(tickSpacing: number): { tickLower: number; tickUpper: nu
  */
 export async function maybeSpryLocalPoolInfo(params: PoolInfoRequest): Promise<PoolInfoResponse | undefined> {
   const poolParams = params.poolParameters
-  if (Number(params.chainId) !== SPRY_LP_CHAIN_ID || !poolParams) {
+  const chainId = Number(params.chainId)
+  if (!isSpryChain(chainId) || !poolParams) {
     return undefined
   }
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const config = getSpryConfig(chainId)
   if (!config) {
     return undefined
   }
@@ -896,14 +907,15 @@ export async function maybeSpryLocalPoolInfo(params: PoolInfoRequest): Promise<P
     return new PoolInfoResponse({ requestId: 'spry-local-poolinfo', pools: [] })
   }
 
+  const client = getSpryPublicClient(chainId)
   const [slot0, poolLiquidity] = await Promise.all([
-    spryPublicClient.readContract({
+    client.readContract({
       address: config.addresses.stateView,
       abi: STATE_VIEW_ABI,
       functionName: 'getSlot0',
       args: [id],
     }),
-    spryPublicClient.readContract({
+    client.readContract({
       address: config.addresses.stateView,
       abi: STATE_VIEW_ABI,
       functionName: 'getLiquidity',
@@ -925,7 +937,7 @@ export async function maybeSpryLocalPoolInfo(params: PoolInfoRequest): Promise<P
         fee: DYNAMIC_FEE_FLAG, // the pool-key fee (consumers build the SDK pool from it)
         tickSpacing,
         hookAddress: config.addresses.spryHook,
-        chainId: SPRY_LP_CHAIN_ID,
+        chainId,
         sqrtRatioX96: slot0[0].toString(),
         currentTick: slot0[1],
         poolLiquidity: poolLiquidity.toString(),
@@ -942,11 +954,13 @@ export async function maybeSpryLocalPoolInfo(params: PoolInfoRequest): Promise<P
  * Permit2 (see the CREATE branch of maybeSpryLocalLPApproval); a native leg
  * rides as msg.value with a sweep for the excess.
  */
-async function buildSpryNewPoolCreate(
-  params: CreatePositionRequest,
-  newPool: CreatePoolParameters,
-): Promise<CreatePositionResponse> {
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+async function buildSpryNewPoolCreate(args: {
+  chainId: number
+  params: CreatePositionRequest
+  newPool: CreatePoolParameters
+}): Promise<CreatePositionResponse> {
+  const { chainId, params, newPool } = args
+  const config = getSpryConfig(chainId)
   const independent = params.independentToken
   if (!config || !independent) {
     throw new Error('Spry LP: malformed create request')
@@ -968,7 +982,7 @@ async function buildSpryNewPoolCreate(
     tickSpacing: newPool.tickSpacing,
     hooks: config.addresses.spryHook,
   }
-  const [currency0, currency1] = await currenciesForPoolKey(key)
+  const [currency0, currency1] = await currenciesForPoolKey(chainId, key)
 
   // Guard: if someone initialized this pool since the form loaded, the
   // initializePool leg would revert the whole multicall - fail with a clear
@@ -980,7 +994,7 @@ async function buildSpryNewPoolCreate(
     tickSpacing: key.tickSpacing,
     hooks: key.hooks,
   })
-  const existingSlot0 = await spryPublicClient.readContract({
+  const existingSlot0 = await getSpryPublicClient(chainId).readContract({
     address: config.addresses.stateView,
     abi: STATE_VIEW_ABI,
     functionName: 'getSlot0',
@@ -1020,7 +1034,7 @@ async function buildSpryNewPoolCreate(
     deadline: deadlineOrDefault(params.deadline),
     createPool: true,
     sqrtPriceX96,
-    useNative: currency0.isNative ? nativeOnChain(SPRY_LP_CHAIN_ID) : undefined,
+    useNative: currency0.isNative ? nativeOnChain(chainId) : undefined,
   })
 
   return new CreatePositionResponse({
@@ -1030,6 +1044,7 @@ async function buildSpryNewPoolCreate(
     tickLower,
     tickUpper,
     create: buildTxRequest({
+      chainId,
       to: config.addresses.positionManager,
       from: params.walletAddress,
       data: calldata as Hex,
@@ -1054,32 +1069,33 @@ export async function maybeSpryLocalCreatePosition(
   params: CreatePositionRequest,
 ): Promise<CreatePositionResponse | undefined> {
   const independent = params.independentToken
-  if (!isSpryLpChain(params.chainId) || !params.walletAddress || !independent) {
+  const chainId = Number(params.chainId)
+  if (!isSpryChain(chainId) || !params.walletAddress || !independent) {
     return undefined
   }
-  const config = getSpryConfig(SPRY_LP_CHAIN_ID)
+  const config = getSpryConfig(chainId)
   const router = config?.addresses.poolModifyLiquidityTest
   if (!config || !router) {
     return undefined
   }
   if (params.pool.case === 'newPool') {
-    return buildSpryNewPoolCreate(params, params.pool.value)
+    return buildSpryNewPoolCreate({ chainId, params, newPool: params.pool.value })
   }
   if (params.pool.case !== 'existingPool' || !params.pool.value.poolReference.startsWith('0x')) {
     return undefined
   }
   const poolIdRef = params.pool.value.poolReference as Hex
 
-  const pool = await fetchSpryPool(poolIdRef)
-  const slot0 = await spryPublicClient.readContract({
+  const pool = await fetchSpryPool(chainId, poolIdRef)
+  const slot0 = await getSpryPublicClient(chainId).readContract({
     address: config.addresses.stateView,
     abi: STATE_VIEW_ABI,
     functionName: 'getSlot0',
     args: [poolIdRef],
   })
 
-  const currency0 = currencyForPoolToken(pool.token0, SPRY_LP_CHAIN_ID)
-  const currency1 = currencyForPoolToken(pool.token1, SPRY_LP_CHAIN_ID)
+  const currency0 = currencyForPoolToken(pool.token0, chainId)
+  const currency1 = currencyForPoolToken(pool.token1, chainId)
   const key = poolKeyFromRow(pool)
   const { tickLower, tickUpper } = fullRangeTicks(key.tickSpacing)
   const v4Pool = new V4Pool(
@@ -1122,6 +1138,6 @@ export async function maybeSpryLocalCreatePosition(
     token1: new LPToken({ tokenAddress: pool.token1.id, amount: amount1.toString() }),
     tickLower,
     tickUpper,
-    create: buildTxRequest({ to: router, from: params.walletAddress, data, value }),
+    create: buildTxRequest({ chainId, to: router, from: params.walletAddress, data, value }),
   })
 }

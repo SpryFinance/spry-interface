@@ -7,14 +7,17 @@ changes, and before considering a task complete.
 ## Project overview
 
 This is the **Spry interface**: a fork of the Uniswap universe monorepo
-(pinned at `web/5.148.6`, commit `417e7724`) trimmed to a single app and a
-single chain. Only **`apps/web/`** exists (the mobile and extension apps are
-not part of this fork). The app is a Uniswap-v4-only DEX interface for Spry
-(dynamic-fee hook pools) running on **Base Sepolia (84532)**.
+(pinned at `web/5.148.6`, commit `417e7724`) trimmed to a single app and to
+Spry's deployed chains. Only **`apps/web/`** exists (the mobile and extension
+apps are not part of this fork). The app is a Uniswap-v4-only DEX interface for Spry
+(dynamic-fee hook pools) running on Spry's deployed chains: **Unichain Sepolia
+(1301)** and **Base Sepolia (84532)** (Unichain Sepolia is the default). The
+chain set, addresses, and RPCs live in `@spry/config`; gate per chain with
+`isSpryChain(chainId)` / `SPRY_DEPLOYED_CHAIN_IDS`, never a hardcoded id.
 
 Read [README.md](README.md) first: it describes the local-rails architecture
-(the Uniswap gateway does not serve Base Sepolia, so quotes, LP transactions,
-positions, and token metadata are produced client-side from the chain and the
+(the Uniswap gateway does not serve these testnets, so quotes, LP transactions,
+positions, and token metadata are produced client-side from each chain and its
 Spry subgraph), the reviewability contract, and the key invariants.
 
 ## Commands
@@ -112,7 +115,7 @@ Gotchas the hard way:
   change.
 - Browser verification of UI changes matters here (much of the surface is
   breakpoint-dependent): check desktop and the `sm` mobile width.
-- Anything transaction-shaped should be verified against Base Sepolia by
+- Anything transaction-shaped should be verified against a live Spry chain by
   `eth_call` simulation where possible (the LP and swap rails were landed that
   way).
 

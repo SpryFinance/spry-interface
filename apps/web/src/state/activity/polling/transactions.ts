@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import { TradingApi } from '@universe/api'
 import { isValidHexString } from '@universe/encoding'
 import ms from 'ms'
@@ -80,10 +81,10 @@ export function usePollPendingTransactions(onActivityUpdate: OnActivityUpdate) {
         maxWait: pollingInterval,
       }
 
-      // SPRY: Base Sepolia has no Trading API swap-status endpoint (it 401s), so
+      // SPRY: Spry chains have no Trading API swap-status endpoint (it 401s), so
       // confirm transactions directly from the on-chain receipt instead.
-      if (account.chainId === UniverseChainId.BaseSepolia) {
-        // Base Sepolia blocks are ~2s, so poll over a longer window than the 150ms
+      if (isSpryChain(account.chainId)) {
+        // Testnet blocks are ~1-2s, so poll over a longer window than the 150ms
         // trading-api interval (the effect also restarts each new block). This spans
         // real mine time and avoids burning RPC on sub-block retries.
         const receiptRetryOptions: RetryOptions = { n: 20, minWait: 1_500, medWait: 1_500, maxWait: 1_500 }

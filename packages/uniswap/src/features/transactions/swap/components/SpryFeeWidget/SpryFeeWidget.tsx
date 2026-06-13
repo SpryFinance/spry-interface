@@ -1,9 +1,9 @@
+import { isSpryChain } from '@spry/config'
 import { formatFeePercent, SpryZone, tierInfo } from '@spry/fee'
 import { TradingApi } from '@universe/api'
 import { Fragment } from 'react'
 import { Flex, Text, Tooltip, useSporeColors } from 'ui/src'
 import { InfoCircle } from 'ui/src/components/icons/InfoCircle'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { TierIcon } from 'uniswap/src/features/transactions/swap/components/SpryFeeWidget/TierIcon'
 import {
   useSpryPoolFeeStates,
@@ -43,7 +43,7 @@ function routePoolIds(trade: Trade | null | undefined): Set<string> {
 
 /**
  * Surfaces the live Spry dynamic-fee state of the pool(s) the selected pair would
- * route through, in the swap form (Base Sepolia only). Each pool gets a card: its
+ * route through, in the swap form (Spry chains only). Each pool gets a card: its
  * tier (icon + label), current resting fee + curve zone, a gauge of how far the fee
  * sits between base and cap, and how long until the block window resets. A pair with
  * several fee tiers shows one card per tier; once an amount is entered, the tier the
@@ -62,7 +62,7 @@ export function SpryFeeWidget(): JSX.Element | null {
     currencyOut: currencies[CurrencyField.OUTPUT]?.currency,
   })
 
-  if (chainId !== UniverseChainId.BaseSepolia || !states || states.length === 0) {
+  if (!isSpryChain(chainId) || !states || states.length === 0) {
     return null
   }
 

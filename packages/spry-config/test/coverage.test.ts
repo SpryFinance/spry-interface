@@ -43,17 +43,18 @@ describe('deployment gating', () => {
 });
 
 describe('config invariants', () => {
-  it('has a supported default chain', () => {
-    expect(DEFAULT_CHAIN_ID).toBe(ChainId.BASE_SEPOLIA);
+  it('defaults to the first live chain (Unichain Sepolia)', () => {
+    expect(DEFAULT_CHAIN_ID).toBe(ChainId.UNICHAIN_SEPOLIA);
     expect(isSupportedChain(DEFAULT_CHAIN_ID)).toBe(true);
   });
 
-  it('every chain has a slug, numeric block-window hint, and Permit2', () => {
+  it('every chain has a slug, numeric block-window hint, Permit2, and an RPC url', () => {
     for (const chainId of SUPPORTED_CHAIN_IDS) {
       const config = requireSpryConfig(chainId);
       expect(config.key).toMatch(/^[a-z-]+$/);
       expect(typeof config.blockWindowHint).toBe('number');
       expect(config.addresses.permit2).toMatch(/^0x[0-9a-fA-F]{40}$/);
+      expect(config.rpcUrl).toMatch(/^https:\/\//);
     }
   });
 });

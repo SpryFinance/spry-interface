@@ -6,33 +6,36 @@ domain.
 
 ## Status
 
-Supported chains: **Sepolia** (11155111), **Base Sepolia** (84532),
-**Unichain Sepolia** (1301).
+Supported chains, in display order: **Unichain Sepolia** (1301), **Base
+Sepolia** (84532), **Sepolia** (11155111).
 
-**Base Sepolia is fully wired and verified on-chain** (SpryHook, SpryRouter,
-canonical V4Quoter + StateView + PoolManager + PositionManager + Permit2,
-`startBlock` = the hook deploy block, `blockWindowHint` = 30 from the live
-`BLOCK_WINDOW()`, and `subgraphUrl` = the Goldsky endpoint, indexing healthy).
-It also carries the optional `poolModifyLiquidityTest` address (the canonical
-v4 test router): the seeded "raw" liquidity positions live under it, and the
-app's local LP rails target it for those positions.
+**Unichain Sepolia and Base Sepolia are LIVE and verified on-chain** (SpryHook,
+SpryRouter, canonical V4Quoter + StateView + PoolManager + PositionManager +
+Permit2, `startBlock` = the hook deploy block, `blockWindowHint` from the live
+`BLOCK_WINDOW()` - 60 on Unichain, 30 on Base, the `subgraphUrl` Goldsky
+endpoint, and an `rpcUrl`). Each also carries the optional
+`poolModifyLiquidityTest` address (the canonical v4 test router): seeded "raw"
+liquidity positions live under it, and the app's local LP rails target it for
+those positions.
 
-**Sepolia and Unichain Sepolia are pre-deployment**: `spryHook`, `spryRouter`,
-`quoter`, and `stateView` are placeholders (`0xffff...ffff`), and `subgraphUrl`
-is null. Their `poolManager` / `positionManager` / `permit2` are real.
+**Sepolia is pre-deployment**: `spryHook`, `spryRouter`, `quoter`, and
+`stateView` are placeholders (`0xffff...ffff`) and `subgraphUrl` is null;
+`poolManager` / `positionManager` / `permit2` / `rpcUrl` are real.
 
-`isSpryDeployed(config)` returns `true` once the hook + router are real (Base
-Sepolia today); use it to gate Spry-specific UI per chain.
+`isSpryDeployed(config)` returns `true` once the hook + router are real;
+`isSpryChain(chainId)` and `SPRY_DEPLOYED_CHAIN_IDS` (Unichain Sepolia first)
+are the convenience forms the rails / UI gate on per chain. `DEFAULT_CHAIN_ID`
+is the first deployed chain (Unichain Sepolia).
 
 `blockWindowHint` is informational; the authoritative window is the on-chain
 `SpryHook.BLOCK_WINDOW()` (read once and cache).
 
 ## TODO
 
-- Base Sepolia is fully configured and serving the live app (pools seeded,
-  subgraph indexing them).
-- Sepolia / Unichain Sepolia: fill `spryHook`, `spryRouter`, `quoter`,
-  `stateView`, `startBlock`, and `subgraphUrl` when deployed there.
+- Unichain Sepolia and Base Sepolia are fully configured. Pools populate the
+  subgraph as they are created/seeded on each chain.
+- Sepolia: fill `spryHook`, `spryRouter`, `quoter`, `stateView`, `startBlock`,
+  and `subgraphUrl` when deployed there.
 
 ## API
 

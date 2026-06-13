@@ -1,9 +1,9 @@
+import { isSpryChain } from '@spry/config'
 import { useQuery } from '@tanstack/react-query'
 import { COMMON_BASES } from 'uniswap/src/constants/routing'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { type CurrencyInfo, type PortfolioBalance } from 'uniswap/src/features/dataApi/types'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import { type CurrencyId } from 'uniswap/src/types/currency'
 import { currencyId as toCurrencyId } from 'uniswap/src/utils/currencyId'
 import { ONE_SECOND_MS } from 'utilities/src/time/time'
@@ -26,21 +26,61 @@ function buildBalance(info: CurrencyInfo, raw: bigint): PortfolioBalance {
   }
 }
 
+/** Read the address's non-zero common-base balances on one Spry chain. */
+async function fetchSpryChainBalances(
+  chainId: number,
+  owner: Address,
+): Promise<Record<CurrencyId, PortfolioBalance>> {
+  const bases = COMMON_BASES[chainId] ?? []
+  const native = bases.find((base) => base.currency.isNative)
+  const erc20s = bases.filter((base) => !base.currency.isNative)
+  const client = getSpryPublicClient(chainId)
+
+  const [nativeBalance, erc20Balances] = await Promise.all([
+    native ? client.getBalance({ address: owner }) : Promise.resolve(BigInt(0)),
+    client.multicall({
+      contracts: erc20s.map((base) => ({
+        address: base.currency.wrapped.address as Address,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [owner],
+      })),
+    }),
+  ])
+
+  const result: Record<CurrencyId, PortfolioBalance> = {}
+  if (native && nativeBalance > BigInt(0)) {
+    const balance = buildBalance(native, nativeBalance)
+    result[balance.id] = balance
+  }
+  erc20s.forEach((base, index) => {
+    const entry = erc20Balances[index]
+    const raw = entry?.status === 'success' ? (entry.result as bigint) : BigInt(0)
+    if (raw > BigInt(0)) {
+      const balance = buildBalance(base, raw)
+      result[balance.id] = balance
+    }
+  })
+  return result
+}
+
 /**
- * The Uniswap portfolio gateway does not serve Base Sepolia (backendSupported:
+ * The Uniswap portfolio gateway does not serve Spry's testnets (backendSupported:
  * false), so the token selector's "Your tokens" list is empty there. This reads
- * the connected address's balances for the Spry token set directly on-chain and
- * returns them in the same shape the portfolio uses, so they can be merged in.
- * Only non-zero balances are returned (zero-balance tokens still appear in the
- * common-bases row). Empty/undefined until the read resolves or when no address.
+ * the connected address's balances for the Spry token set directly on-chain, for
+ * every enabled Spry chain, and returns them in the same shape the portfolio uses
+ * so they can be merged in. Only non-zero balances are returned (zero-balance
+ * tokens still appear in the common-bases row). Empty/undefined until the read
+ * resolves or when no address.
  */
 export function useSpryOnchainBalances(evmAddress?: string): Record<CurrencyId, PortfolioBalance> | undefined {
-  // Only read Base Sepolia balances when that chain is enabled, so other chains do
-  // not pay for a Base Sepolia RPC round-trip or surface its tokens in an all-chains view.
+  // Read balances for every enabled Spry chain, so other chains do not pay for a
+  // round-trip and only Spry chains surface their tokens in the all-chains view.
   const { chains } = useEnabledChains()
+  const spryChains = chains.filter((chainId) => isSpryChain(chainId))
   const { data } = useQuery({
-    queryKey: ['spryOnchainBalances', evmAddress],
-    enabled: Boolean(evmAddress) && chains.includes(UniverseChainId.BaseSepolia),
+    queryKey: ['spryOnchainBalances', evmAddress, spryChains.join(',')],
+    enabled: Boolean(evmAddress) && spryChains.length > 0,
     refetchInterval: ONE_SECOND_MS * 15,
     staleTime: ONE_SECOND_MS * 10,
     queryFn: async (): Promise<Record<CurrencyId, PortfolioBalance>> => {
@@ -48,36 +88,13 @@ export function useSpryOnchainBalances(evmAddress?: string): Record<CurrencyId, 
         return {}
       }
       const owner = evmAddress as Address
-      const bases = COMMON_BASES[UniverseChainId.BaseSepolia] ?? []
-      const native = bases.find((base) => base.currency.isNative)
-      const erc20s = bases.filter((base) => !base.currency.isNative)
-
-      const [nativeBalance, erc20Balances] = await Promise.all([
-        native ? spryPublicClient.getBalance({ address: owner }) : Promise.resolve(BigInt(0)),
-        spryPublicClient.multicall({
-          contracts: erc20s.map((base) => ({
-            address: base.currency.wrapped.address as Address,
-            abi: erc20Abi,
-            functionName: 'balanceOf',
-            args: [owner],
-          })),
-        }),
-      ])
-
-      const result: Record<CurrencyId, PortfolioBalance> = {}
-      if (native && nativeBalance > BigInt(0)) {
-        const balance = buildBalance(native, nativeBalance)
-        result[balance.id] = balance
+      // currencyId includes the chain, so per-chain results merge without collision.
+      const perChain = await Promise.all(spryChains.map((chainId) => fetchSpryChainBalances(chainId, owner)))
+      const merged: Record<CurrencyId, PortfolioBalance> = {}
+      for (const chainBalances of perChain) {
+        Object.assign(merged, chainBalances)
       }
-      erc20s.forEach((base, index) => {
-        const entry = erc20Balances[index]
-        const raw = entry?.status === 'success' ? (entry.result as bigint) : BigInt(0)
-        if (raw > BigInt(0)) {
-          const balance = buildBalance(base, raw)
-          result[balance.id] = balance
-        }
-      })
-      return result
+      return merged
     },
   })
 

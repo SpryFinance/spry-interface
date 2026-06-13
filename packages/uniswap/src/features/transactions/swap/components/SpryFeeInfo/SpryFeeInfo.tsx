@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import { formatFeePercent, isValidTickSpacing, tierFromTickSpacing, tierInfo } from '@spry/fee'
 import { type Hex } from '@spry/sdk'
 import { TradingApi } from '@universe/api'
@@ -41,7 +42,7 @@ function spryRouteHops(trade: Trade): SprySwapFeeHop[] {
 }
 
 /**
- * Surfaces the Spry dynamic fee in the swap details (Base Sepolia only). Unlike a
+ * Surfaces the Spry dynamic fee in the swap details (Spry chains only). Unlike a
  * pool's resting fee, the SpryHook fee rises with the price movement a swap causes,
  * so this shows the fee THIS swap pays (computed the way the hook does, read live
  * on-chain), the tier range, and how long until the fee relaxes toward base. Falls
@@ -53,7 +54,7 @@ export function SpryFeeInfo({ trade, chainId }: { trade: Trade; chainId: Univers
   const swapFee = useSprySwapFee({ chainId, hops })
 
   const firstHop = hops[0]
-  if (chainId !== UniverseChainId.BaseSepolia || !firstHop) {
+  if (!isSpryChain(chainId) || !firstHop) {
     return null
   }
 

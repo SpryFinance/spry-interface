@@ -1,4 +1,4 @@
-import { getSpryConfig } from '@spry/config'
+import { getSpryConfig, isSpryChain } from '@spry/config'
 import {
   buildSwapExactInput,
   buildSwapExactInputSingle,
@@ -12,9 +12,8 @@ import {
 } from '@spry/sdk'
 import { TradeType } from '@uniswap/sdk-core'
 import { TradingApi } from '@universe/api'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { TransactionRequestInfo } from 'uniswap/src/features/transactions/swap/review/services/swapTxAndGasInfoService/utils'
-import { spryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
+import { getSpryPublicClient } from 'uniswap/src/features/transactions/swap/services/tradeService/spryLocalQuote'
 import {
   spryHopsFromRoute,
   type SpryHop,
@@ -25,7 +24,7 @@ import type { ClassicTrade } from 'uniswap/src/features/transactions/swap/types/
 const GAS_PRICE_FALLBACK = BigInt(1_000_000_000)
 // Realistic fixed limit for a SpryRouter swap through the hook, sized to cover a
 // 2-hop route. A live estimateGas reverts before the token approval, so the review
-// uses this estimate and the wallet computes the exact gas at signing (Base Sepolia
+// uses this estimate and the wallet computes the exact gas at signing (testnet
 // fees are ~$0).
 const SPRY_SWAP_GAS_LIMIT = BigInt(500_000)
 
@@ -36,10 +35,10 @@ const EMPTY_HOOK_DATA: Hex = '0x'
  * review screen requires a defined gas-fee value to enable submission; the wallet
  * re-estimates the real gas at signing time.
  */
-export async function estimateSpryGasFeeValue(gasLimit: bigint): Promise<string> {
+export async function estimateSpryGasFeeValue(chainId: number, gasLimit: bigint): Promise<string> {
   let gasPrice: bigint
   try {
-    gasPrice = await spryPublicClient.getGasPrice()
+    gasPrice = await getSpryPublicClient(chainId).getGasPrice()
   } catch {
     gasPrice = GAS_PRICE_FALLBACK
   }
@@ -56,7 +55,7 @@ export interface SprySwapTxRequest {
 
 /**
  * Builds the SpryRouter calldata for a priced Spry route. The Trading API gateway's
- * /swap endpoint does not serve Base Sepolia, so we encode the call locally via the
+ * /swap endpoint does not serve the Spry chains, so we encode the call locally via the
  * @spry/sdk router builders (which enforce the section 6.1 guards and are round-trip
  * tested). A 1-hop route uses the single-pool entry points (which attach native ETH
  * automatically); a multi-hop route uses the path entry points. The route is the
@@ -86,7 +85,7 @@ export function buildSprySwapTxRequest(args: {
   /** Unix-seconds deadline. */
   deadline: bigint
 }): SprySwapTxRequest | null {
-  if (args.chainId !== UniverseChainId.BaseSepolia) {
+  if (!isSpryChain(args.chainId)) {
     return null
   }
 
@@ -186,7 +185,7 @@ export function buildSprySwapTxRequest(args: {
 }
 
 /**
- * Builds the swap-transaction info for a priced Spry ClassicTrade on Base Sepolia,
+ * Builds the swap-transaction info for a priced Spry ClassicTrade on a Spry chain,
  * in the shape the swap-tx service expects (replacing the Trading API /swap call,
  * which does not serve this chain). Replays the exact route the quote chose, read
  * back from the trade's V4 route, then encodes the SpryRouter calldata.
@@ -194,7 +193,7 @@ export function buildSprySwapTxRequest(args: {
  * Gas is a rough estimate (fixed limit * live price): a live estimateGas would
  * revert before the token approval step, so the review uses this to enable
  * submission and the wallet re-estimates the real gas at signing. Returns null if
- * this is not a Base Sepolia Spry swap.
+ * this is not a Spry-chain swap.
  */
 export async function buildSprySwapTransactionInfo(args: {
   trade: ClassicTrade
@@ -205,7 +204,7 @@ export async function buildSprySwapTransactionInfo(args: {
 }): Promise<TransactionRequestInfo | null> {
   const { trade, account, deadline } = args
   const chainId = trade.inputAmount.currency.chainId
-  if (chainId !== UniverseChainId.BaseSepolia) {
+  if (!isSpryChain(chainId)) {
     return null
   }
 
@@ -240,7 +239,7 @@ export async function buildSprySwapTransactionInfo(args: {
     chainId,
   }
 
-  const gasFeeValue = await estimateSpryGasFeeValue(SPRY_SWAP_GAS_LIMIT)
+  const gasFeeValue = await estimateSpryGasFeeValue(chainId, SPRY_SWAP_GAS_LIMIT)
 
   return {
     txRequests: [txRequest],

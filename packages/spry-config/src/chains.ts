@@ -1,52 +1,64 @@
 // Per-chain Spry configuration.
 //
-// The three networks here are exactly the ones the Spry subgraph indexes
-// (see spry-subgraph/networks.json). Base Sepolia is DEPLOYED + verified
-// on-chain; Sepolia and Unichain Sepolia are still pre-deployment.
+// The networks here are the ones the Spry subgraph indexes (see
+// spry-subgraph/networks.json). Spry is LIVE on Unichain Sepolia and Base
+// Sepolia (contracts deployed + verified, subgraph serving); Sepolia is still
+// pre-deployment.
 //
 //   - poolManager / positionManager: REAL canonical V4 addresses.
 //   - permit2: the universal canonical Permit2 address.
-//   - quoter / stateView: REAL canonical v4-periphery on Base Sepolia;
-//     PLACEHOLDER on the other chains (fill from the canonical deployment,
+//   - quoter / stateView: REAL canonical v4-periphery on the live chains;
+//     PLACEHOLDER on Sepolia (fill from the canonical deployment,
 //     https://docs.uniswap.org/contracts/v4/deployments).
-//   - spryHook / spryRouter: DEPLOYED on Base Sepolia (verified on-chain);
-//     still PLACEHOLDER on Sepolia and Unichain Sepolia until deployed there.
-//   - subgraphUrl: set on Base Sepolia (Goldsky); null on the other chains.
-//   - startBlock: the SpryHook deploy block on Base Sepolia; provisional
-//     (canonical V4 block) on the other chains until deployed.
+//   - spryHook / spryRouter: DEPLOYED + verified on the live chains; still
+//     PLACEHOLDER on Sepolia until deployed there.
+//   - poolModifyLiquidityTest: the canonical V4 test router the seeding
+//     scripts LP through (raw, non-NFT positions); tracked on the live chains.
+//   - subgraphUrl: the Goldsky endpoint on the live chains; null on Sepolia.
+//   - rpcUrl: the public JSON-RPC the rails read directly (gateway proxy does
+//     not serve these testnets).
+//   - startBlock: the SpryHook deploy block on the live chains; provisional
+//     (canonical V4 block) on Sepolia until deployed.
 //
-// Uniswap's Universal Router and the PoolSwapTest / PoolModifyLiquidityTest
-// helpers are intentionally NOT tracked: Spry swaps go through SpryRouter only.
+// Uniswap's Universal Router and the PoolSwapTest helper are intentionally NOT
+// tracked: Spry swaps go through SpryRouter only.
 //
 // See the "TODO before mainnet/testnet use" section in this package's README.
 
 import { PERMIT2_ADDRESS, PLACEHOLDER_ADDRESS } from './constants';
+import { isSpryDeployed } from './predicate';
 import type { SpryChainConfig } from './types';
 
 /** EIP-155 chain ids for the supported networks. */
 export const ChainId = {
-  SEPOLIA: 11155111,
-  BASE_SEPOLIA: 84532,
   UNICHAIN_SEPOLIA: 1301,
+  BASE_SEPOLIA: 84532,
+  SEPOLIA: 11155111,
 } as const;
 
-export const SEPOLIA: SpryChainConfig = {
-  chainId: ChainId.SEPOLIA,
-  key: 'sepolia',
-  name: 'Sepolia',
+export const UNICHAIN_SEPOLIA: SpryChainConfig = {
+  chainId: ChainId.UNICHAIN_SEPOLIA,
+  key: 'unichain-sepolia',
+  name: 'Unichain Sepolia',
   testnet: true,
   addresses: {
-    poolManager: '0xE03A1074c86CFeDd5C142C4F04F1a1536e203543',
-    positionManager: '0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4',
-    quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Sepolia
-    stateView: PLACEHOLDER_ADDRESS, // TODO: canonical StateView on Sepolia
+    poolManager: '0x00b036b58a818b1bc34d502d3fe730db729e62ac',
+    positionManager: '0xf969aee60879c54baaed9f3ed26147db216fd664',
+    quoter: '0x56dcd40a3f2d466f48e7f48bdbe5cc9b92ae4472', // canonical V4Quoter (verified on-chain)
+    stateView: '0xc199f1072a74d4e905aba1a84d9a45e2546b6222', // canonical StateView (verified on-chain)
     permit2: PERMIT2_ADDRESS,
-    spryHook: PLACEHOLDER_ADDRESS, // TODO: deployed SpryHook
-    spryRouter: PLACEHOLDER_ADDRESS, // TODO: deployed SpryRouter
+    spryHook: '0x68ba5F1A761253c7c169F3Fde5b715c027814080', // deployed + verified on-chain
+    spryRouter: '0xd887e2d555f98CB76AE3d0755Af7DdDC503EF017', // deployed + verified on-chain
+    // canonical PoolModifyLiquidityTest: the seeding scripts' LP router; the LP
+    // write flows target it for raw (non-NFT) positions.
+    poolModifyLiquidityTest: '0x5fa728c0a5cfd51bee4b060773f50554c0c8a7ab',
   },
-  startBlock: 7258946,
-  blockWindowHint: 1, // ~12s blocks
-  subgraphUrl: null, // TODO: deployed Spry subgraph endpoint
+  startBlock: 54497329, // SpryHook deploy block on Unichain Sepolia
+  blockWindowHint: 60, // confirmed from the deployed BLOCK_WINDOW() (authoritative value is on-chain)
+  // Spry subgraph on Goldsky (indexing healthy; serving data).
+  subgraphUrl:
+    'https://api.goldsky.com/api/public/project_cmls3noc9jy1l01uy0cr74jok/subgraphs/spry-subgraph-unichain-sepolia/1.0.0/gn',
+  rpcUrl: 'https://sepolia.unichain.org',
 };
 
 export const BASE_SEPOLIA: SpryChainConfig = {
@@ -70,37 +82,48 @@ export const BASE_SEPOLIA: SpryChainConfig = {
   blockWindowHint: 30, // confirmed from the deployed BLOCK_WINDOW() (authoritative value is on-chain)
   // Spry subgraph on Goldsky (indexing healthy; serving data).
   subgraphUrl:
-    'https://api.goldsky.com/api/public/project_cmls3noc9jy1l01uy0cr74jok/subgraphs/spry-subgraph/1.0.0/gn',
+    'https://api.goldsky.com/api/public/project_cmls3noc9jy1l01uy0cr74jok/subgraphs/spry-subgraph-base-sepolia/1.0.0/gn',
+  rpcUrl: 'https://sepolia.base.org',
 };
 
-export const UNICHAIN_SEPOLIA: SpryChainConfig = {
-  chainId: ChainId.UNICHAIN_SEPOLIA,
-  key: 'unichain-sepolia',
-  name: 'Unichain Sepolia',
+export const SEPOLIA: SpryChainConfig = {
+  chainId: ChainId.SEPOLIA,
+  key: 'sepolia',
+  name: 'Sepolia',
   testnet: true,
   addresses: {
-    poolManager: '0x00b036b58a818b1bc34d502d3fe730db729e62ac',
-    positionManager: '0xf969aee60879c54baaed9f3ed26147db216fd664',
-    quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Unichain Sepolia
-    stateView: PLACEHOLDER_ADDRESS, // TODO: canonical StateView on Unichain Sepolia
+    poolManager: '0xE03A1074c86CFeDd5C142C4F04F1a1536e203543',
+    positionManager: '0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4',
+    quoter: PLACEHOLDER_ADDRESS, // TODO: canonical V4Quoter on Sepolia
+    stateView: PLACEHOLDER_ADDRESS, // TODO: canonical StateView on Sepolia
     permit2: PERMIT2_ADDRESS,
     spryHook: PLACEHOLDER_ADDRESS, // TODO: deployed SpryHook
     spryRouter: PLACEHOLDER_ADDRESS, // TODO: deployed SpryRouter
   },
-  startBlock: 7092034,
-  blockWindowHint: 12, // ~1s blocks (informational; read BLOCK_WINDOW() on-chain)
+  startBlock: 7258946,
+  blockWindowHint: 1, // ~12s blocks
   subgraphUrl: null, // TODO: deployed Spry subgraph endpoint
+  rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
 };
 
-/** All configured chains, keyed by chain id. */
+/** All configured chains, keyed by chain id. Insertion order = display order (live chains first). */
 export const SPRY_CHAINS: Record<number, SpryChainConfig> = {
-  [SEPOLIA.chainId]: SEPOLIA,
-  [BASE_SEPOLIA.chainId]: BASE_SEPOLIA,
   [UNICHAIN_SEPOLIA.chainId]: UNICHAIN_SEPOLIA,
+  [BASE_SEPOLIA.chainId]: BASE_SEPOLIA,
+  [SEPOLIA.chainId]: SEPOLIA,
 };
 
-/** Chain ids Spry is configured for. */
+/** Chain ids Spry is configured for, in display order (Unichain Sepolia first). */
 export const SUPPORTED_CHAIN_IDS: number[] = Object.values(SPRY_CHAINS).map((c) => c.chainId);
 
-/** Default chain for the app to select when none is connected. */
-export const DEFAULT_CHAIN_ID: number = ChainId.BASE_SEPOLIA;
+/**
+ * Chain ids Spry is actually DEPLOYED on (hook + router real), in display order
+ * (Unichain Sepolia first). This is the set the app enables and the rails serve.
+ */
+export const SPRY_DEPLOYED_CHAIN_IDS: number[] = SUPPORTED_CHAIN_IDS.filter((id) => {
+  const config = SPRY_CHAINS[id];
+  return config !== undefined && isSpryDeployed(config);
+});
+
+/** Default chain for the app to select when none is connected (first live chain). */
+export const DEFAULT_CHAIN_ID: number = SPRY_DEPLOYED_CHAIN_IDS[0] ?? ChainId.UNICHAIN_SEPOLIA;

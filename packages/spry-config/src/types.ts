@@ -50,4 +50,10 @@ export interface SpryChainConfig {
   blockWindowHint: number | null;
   /** Spry subgraph endpoint. `null` until chosen at deploy (The Graph / Goldsky). */
   subgraphUrl: string | null;
+  /**
+   * Public JSON-RPC endpoint for this chain. The Spry rails read the chain
+   * directly here (the Uniswap gateway proxy does not serve these testnets);
+   * the host must be in the app's CSP `connect-src` allowlist.
+   */
+  rpcUrl: string;
 }

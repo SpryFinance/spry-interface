@@ -21,33 +21,40 @@ describe('chain configs', () => {
     );
   });
 
-  it('exposes the real canonical V4 + Spry addresses on Base Sepolia', () => {
+  it('exposes the real canonical V4 + Spry addresses on the live chains', () => {
     const base = requireSpryConfig(ChainId.BASE_SEPOLIA);
     expect(base.addresses.poolManager).toBe('0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408');
     expect(base.addresses.permit2).toBe(PERMIT2_ADDRESS);
     expect(base.addresses.quoter).toBe('0x4A6513c898fe1B2d0E78d3b0e0A4a151589B1cBa');
     expect(base.addresses.stateView).toBe('0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4');
     expect(base.startBlock).toBe(42508548);
+
+    const unichain = requireSpryConfig(ChainId.UNICHAIN_SEPOLIA);
+    expect(unichain.addresses.poolManager).toBe('0x00b036b58a818b1bc34d502d3fe730db729e62ac');
+    expect(unichain.addresses.permit2).toBe(PERMIT2_ADDRESS);
+    expect(unichain.addresses.quoter).toBe('0x56dcd40a3f2d466f48e7f48bdbe5cc9b92ae4472');
+    expect(unichain.addresses.stateView).toBe('0xc199f1072a74d4e905aba1a84d9a45e2546b6222');
+    expect(unichain.startBlock).toBe(54497329);
   });
 
   it('reflects deployment status per chain', () => {
-    const base = requireSpryConfig(ChainId.BASE_SEPOLIA);
-    expect(base.addresses.spryHook).toBe('0x43C99D40E2E7FBa44435bFC6Da57a74d38fD0080');
-    expect(base.addresses.spryRouter).toBe('0xd4Af9FFDf2067d4CA422526D308E08CDBE690642');
-    expect(isSpryDeployed(base)).toBe(true);
-
-    for (const chainId of [ChainId.SEPOLIA, ChainId.UNICHAIN_SEPOLIA]) {
+    // Both live testnets are deployed with a subgraph; Sepolia is still placeholder.
+    for (const chainId of [ChainId.UNICHAIN_SEPOLIA, ChainId.BASE_SEPOLIA]) {
       const config = requireSpryConfig(chainId);
-      expect(config.addresses.spryHook).toBe(PLACEHOLDER_ADDRESS);
-      expect(config.addresses.quoter).toBe(PLACEHOLDER_ADDRESS);
-      expect(config.addresses.stateView).toBe(PLACEHOLDER_ADDRESS);
-      expect(isSpryDeployed(config)).toBe(false);
+      expect(config.addresses.spryHook).not.toBe(PLACEHOLDER_ADDRESS);
+      expect(config.addresses.spryRouter).not.toBe(PLACEHOLDER_ADDRESS);
+      expect(config.addresses.quoter).not.toBe(PLACEHOLDER_ADDRESS);
+      expect(config.addresses.stateView).not.toBe(PLACEHOLDER_ADDRESS);
+      expect(isSpryDeployed(config)).toBe(true);
+      expect(config.subgraphUrl).toContain('goldsky.com');
     }
-    // Base Sepolia has a subgraph endpoint; the other chains do not yet.
-    expect(base.subgraphUrl).toContain('goldsky.com');
-    for (const chainId of [ChainId.SEPOLIA, ChainId.UNICHAIN_SEPOLIA]) {
-      expect(requireSpryConfig(chainId).subgraphUrl).toBeNull();
-    }
+
+    const sepolia = requireSpryConfig(ChainId.SEPOLIA);
+    expect(sepolia.addresses.spryHook).toBe(PLACEHOLDER_ADDRESS);
+    expect(sepolia.addresses.quoter).toBe(PLACEHOLDER_ADDRESS);
+    expect(sepolia.addresses.stateView).toBe(PLACEHOLDER_ADDRESS);
+    expect(isSpryDeployed(sepolia)).toBe(false);
+    expect(sepolia.subgraphUrl).toBeNull();
   });
 
   it('looks up configs and rejects unsupported chains', () => {

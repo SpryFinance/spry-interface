@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import { Currency } from '@uniswap/sdk-core'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,7 +7,6 @@ import { zIndexes } from 'ui/src/theme'
 import { CurrencyLogo } from 'uniswap/src/components/CurrencyLogo/CurrencyLogo'
 import { SplitLogo } from 'uniswap/src/components/CurrencyLogo/SplitLogo'
 import { BIPS_BASE } from 'uniswap/src/constants/misc'
-import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
 import { useCurrencyInfo } from 'uniswap/src/features/tokens/useCurrencyInfo'
 import { currencyId, currencyIdToChain } from 'uniswap/src/utils/currencyId'
@@ -120,7 +120,7 @@ export function RoutingDiagram({
   const currencyOutCurrencyInfo = useCurrencyInfo(currencyId(currencyOut))
   // SPRY: hide the Uniswap protocol/percent badge ("V4 100%") for Spry routes; a
   // single dynamic-fee pool per hop carries no useful protocol/split information.
-  const showProtocolBadge = currencyIn.chainId !== UniverseChainId.BaseSepolia
+  const showProtocolBadge = !isSpryChain(currencyIn.chainId)
 
   return (
     <Flex>
