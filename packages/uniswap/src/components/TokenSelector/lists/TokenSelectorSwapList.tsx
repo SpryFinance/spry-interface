@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import { GqlResult } from '@universe/api'
 import { isMobileApp } from '@universe/environment'
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
@@ -28,10 +29,10 @@ const PORTFOLIO_OUTAGE_SECTION_HEADER_ROW_HEIGHT = 104
 
 /**
  * A portfolio outage is real only when the data API actually serves the chain.
- * SPRY: on a gateway-unsupported chain (Base Sepolia) the API never returns
- * token prices, so its error is expected - not an outage - and the "Cannot load
- * latest token prices" banner must not show. Extracted so the gateway guard does
- * not push useTokenSectionsForSwap past its complexity ceiling.
+ * SPRY: on a gateway-unsupported chain the API never returns token prices, so its
+ * error is expected - not an outage - and the "Cannot load latest token prices"
+ * banner must not show. Extracted so the gateway guard does not push
+ * useTokenSectionsForSwap past its complexity ceiling.
  */
 function getIsPortfolioOutage(args: {
   isGatewayUnsupportedChain: boolean
@@ -94,12 +95,15 @@ function useTokenSectionsForSwap({
 
   const recentlySearchedTokenOptions = useRecentlySearchedTokens(chainFilter)
 
-  // Base Sepolia (and any chain with backendSupported: false) is not served by the
-  // Uniswap gateway, so its portfolio / trending / bridging endpoints 400/401. Those
-  // are expected, not fatal - suppress them so the locally-sourced suggested tokens
-  // (COMMON_BASES, e.g. sptA/sptB) still render instead of "Something went wrong".
+  // A Spry chain is not reachable by the Uniswap gateway, so its portfolio /
+  // trending / bridging endpoints 400/401. Those are expected, not fatal - suppress
+  // them so the locally-sourced suggested tokens (COMMON_BASES) still render instead
+  // of "Something went wrong". NOTE: some Spry chains (e.g. Unichain Sepolia) report
+  // backendSupported: true, so isBackendSupportedChainId alone is not enough - also
+  // treat every Spry chain as gateway-unsupported (this is what kept the "Cannot load
+  // latest token prices" banner showing on Unichain Sepolia).
   const effectiveChainId = chainFilter ?? oppositeSelectedToken?.chainId ?? defaultChainId
-  const isGatewayUnsupportedChain = !isBackendSupportedChainId(effectiveChainId)
+  const isGatewayUnsupportedChain = !isBackendSupportedChainId(effectiveChainId) || isSpryChain(effectiveChainId)
 
   const error = isGatewayUnsupportedChain
     ? undefined

@@ -1,3 +1,4 @@
+import { isSpryChain } from '@spry/config'
 import { skipToken, useQuery } from '@tanstack/react-query'
 import { Currency, CurrencyAmount, NativeCurrency as NativeCurrencyClass } from '@uniswap/sdk-core'
 import { SharedQueryClient } from '@universe/api'
@@ -70,7 +71,12 @@ async function getOnChainBalancesFetchEVM(params: BalanceLookupParams): Promise<
     key: SyncTransactionSubmissionChainIdsConfigKey.ChainIds,
     defaultValue: defaultSyncChainIds,
   })
-  const isSyncChain = syncTransactionSubmissionChainIds.includes(chainId)
+  // SPRY: a Spry chain's public RPC (e.g. sepolia.unichain.org) returns 0 for
+  // eth_getBalance with the 'pending' block tag - only 'latest' works (ERC20
+  // eth_call works with either tag). The sub-block "pending" sync path therefore
+  // read the swap form's native balance back as 0 while token balances showed
+  // fine. Keep Spry chains on the standard 'latest' read below.
+  const isSyncChain = !isSpryChain(chainId) && syncTransactionSubmissionChainIds.includes(chainId)
 
   if (isSyncChain) {
     return getOnChainBalancesFetchWithPending(params)

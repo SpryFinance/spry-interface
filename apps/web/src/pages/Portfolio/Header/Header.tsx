@@ -1,8 +1,11 @@
+import { isSpryChain } from '@spry/config'
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { Flex, useMedia } from 'ui/src'
+import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
+import { isBackendSupportedChainId } from 'uniswap/src/features/chains/utils'
 import { usePortfolioData } from 'uniswap/src/features/dataApi/balances/balancesRest'
 import { DataApiOutageBanner } from 'uniswap/src/features/dataApi/outage/DataApiOutageBanner'
 import type { DataApiOutageState } from 'uniswap/src/features/dataApi/types'
@@ -104,7 +107,14 @@ export function PortfolioHeader({ isCompact }: PortfolioHeaderProps) {
     portfolioDataUpdatedAt,
   })
 
-  const isOutage = !!outageError
+  // SPRY: the Uniswap data gateway serves none of this app's Spry chains, so its
+  // portfolio/activity fetch error is expected - not an outage. Suppress the
+  // "Cannot load latest token prices" banner unless the gateway actually serves an
+  // enabled, non-Spry chain (mirrors AuthenticatedHeader's gateway guard). Note
+  // Unichain Sepolia reports backendSupported: true, so isSpryChain is required.
+  const { chains } = useEnabledChains()
+  const gatewayServesAnEnabledChain = chains.some((c) => isBackendSupportedChainId(c) && !isSpryChain(c))
+  const isOutage = !!outageError && gatewayServesAnEnabledChain
   const { openOutageModal } = useDataApiOutageModal({
     dataUpdatedAt: outageDataUpdatedAt,
   })
