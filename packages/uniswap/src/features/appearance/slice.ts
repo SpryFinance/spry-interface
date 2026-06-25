@@ -11,7 +11,9 @@ export interface AppearanceSettingsState {
 }
 
 export const initialAppearanceSettingsState: AppearanceSettingsState = {
-  selectedAppearanceSettings: AppearanceSettingType.System,
+  // SPRY: Spry is a dark-only brand (charcoal + violet), so default new users to
+  // Dark instead of System. The appearance toggle still works for anyone who wants it.
+  selectedAppearanceSettings: AppearanceSettingType.Dark,
 }
 
 const slice = createSlice({

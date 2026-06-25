@@ -11,6 +11,7 @@ import { SectionName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
 import type { PoolData } from '~/appGraphql/data/pools/usePoolData'
 import { BreadcrumbNavContainer, BreadcrumbNavLink } from '~/components/BreadcrumbNav'
+import { SpryAura } from '~/components/Spry/SpryAura'
 import { Container, PageLayout } from '~/features/Liquidity/Create/Container'
 import { EditSelectTokensStep } from '~/features/Liquidity/Create/EditStep'
 import { useEntryPointBreadcrumb } from '~/features/Liquidity/Create/hooks/useEntryPointBreadcrumb'
@@ -197,7 +198,9 @@ export function FormWrapper({
   }, [creatingPoolOrPair, protocolVersion, setStep, step, t, setPriceRangeState, isMigration])
 
   return (
-    <PageLayout mt="$spacing24">
+    <>
+      <SpryAura />
+      <PageLayout mt="$spacing24" position="relative" zIndex={1}>
       <BreadcrumbNavContainer aria-label="breadcrumb-nav">
         <BreadcrumbNavLink to={leadingBreadcrumb.to}>
           {leadingBreadcrumb.label} <Chevron size="$icon.16" color="$neutral2" rotate="180deg" />
@@ -232,6 +235,7 @@ export function FormWrapper({
           {children}
         </Flex>
       </Flex>
-    </PageLayout>
+      </PageLayout>
+    </>
   )
 }

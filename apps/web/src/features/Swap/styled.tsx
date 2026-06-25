@@ -100,11 +100,12 @@ export const SwapSection = styled(Flex, {
   borderColor: '$surface2',
 
   hoverStyle: {
-    borderColor: '$surface2Hovered',
+    // SPRY: violet-tinted hover/focus so the active panel glows in the brand color.
+    borderColor: '$surface3',
   },
 
   focusWithinStyle: {
-    borderColor: '$surface3',
+    borderColor: '$accent1',
   },
 })
 

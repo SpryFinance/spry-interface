@@ -195,7 +195,9 @@ const commonTheme = {
 export const darkTheme = {
   ...commonTheme,
 
-  background: colors.black,
+  // SPRY: warm charcoal root (landing brand) instead of pure black, so the page
+  // canvas reads as one piece with the violet aura and charcoal cards.
+  background: '#121117',
 
   neutral1: colors.neutral1_dark,
   neutral1Hovered: colors.neutral1Hovered_dark,

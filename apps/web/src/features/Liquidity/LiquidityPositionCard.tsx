@@ -152,7 +152,19 @@ export const LiquidityPositionCard = memo(function LiquidityPositionCard({
         borderRadius="$rounded20"
         borderColor="$surface3"
         width="100%"
-        hoverStyle={!disabled ? { borderColor: '$surface3Hovered', backgroundColor: '$surface1Hovered' } : {}}
+        // SPRY: lift the card into the brand violet on hover with a soft accent glow.
+        hoverStyle={
+          !disabled
+            ? {
+                borderColor: '$accent1',
+                backgroundColor: '$surface1Hovered',
+                shadowColor: '$accent1',
+                shadowRadius: 22,
+                shadowOpacity: 0.35,
+                shadowOffset: { width: 0, height: 6 },
+              }
+            : {}
+        }
       >
         <Flex
           row

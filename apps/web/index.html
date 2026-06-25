@@ -21,7 +21,12 @@
 
     <link rel="preload" href="/fonts/Basel-Grotesk-Book.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/Basel-Grotesk-Medium.woff2" as="font" type="font/woff2" crossorigin />
-    
+
+    <!-- SPRY: Space Grotesk is the spry.fi landing's display font; used for brand headings. CSP allows fonts.gstatic.com. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+
     <!-- Cloudflare Turnstile script - loaded early for CSP compliance -->
     <link rel="preconnect" href="https://challenges.cloudflare.com" crossorigin />
     <script id="cf-turnstile-script" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
@@ -107,7 +112,8 @@
 
       @media (prefers-color-scheme: dark) {
         html {
-          background: linear-gradient(rgb(19, 19, 19) 0%, rgb(19, 19, 19) 100%);
+          /* SPRY: warm charcoal root, matches darkTheme.background */
+          background: linear-gradient(rgb(18, 17, 23) 0%, rgb(18, 17, 23) 100%);
         }
       }
 

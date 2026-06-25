@@ -79,6 +79,17 @@ export const colors = {
   uniswapXPurple: '#7D55FB',
 
   fiatOnRampBanner: '#FB36D0',
+
+  // Spry brand palette (ported from the spry.fi landing): dark charcoal ink,
+  // violet energy, mint growth. Reused by the aura background, gradient
+  // headings, and the "how a swap works" explainer.
+  spryInk: '#1C1C1C',
+  spryCoal: '#222222',
+  spryViolet: '#8936FF',
+  spryGrape: '#A900FF',
+  spryPlum: '#6B21D8',
+  spryLilac: '#C77DFF',
+  spryMint: '#86EFAC',
 }
 
 export const DEP_accentColors = {
@@ -206,15 +217,15 @@ const sporeLight = {
   surface4: 'rgba(255, 255, 255, 0.64)',
   surface5: 'rgba(0,0,0,0.04)',
   surface5Hovered: 'rgba(0,0,0,0.06)',
-  accent1: '#FF37C7',
-  accent1Hovered: '#E500A5',
-  accent2: 'rgba(255, 55, 199, 0.08)',
-  accent2Hovered: 'rgba(255, 55, 199, 0.12)',
-  accent2Solid: '#FFF3FC',
+  accent1: '#8936FF',
+  accent1Hovered: '#7A26F0',
+  accent2: 'rgba(137, 54, 255, 0.10)',
+  accent2Hovered: 'rgba(137, 54, 255, 0.16)',
+  accent2Solid: '#F4ECFF',
   accent3: '#222222',
   accent3Hovered: colors.black,
 
-  DEP_accentSoft: '#FC72FF33', //33 = 20%
+  DEP_accentSoft: '#8936FF33', //33 = 20%
   DEP_blue400: '#4C82FB',
 
   statusSuccess: '#0C8911',
@@ -245,26 +256,28 @@ const sporeDark = {
   neutral3: 'rgba(255, 255, 255, 0.38)',
   neutral3Hovered: 'rgba(255, 255, 255, 0.58)',
 
-  surface1: '#131313',
-  surface1Hovered: '#1A1A1A',
-  surface2: '#1F1F1F',
-  surface2Hovered: '#242424',
-  surface3: 'rgba(255,255,255,0.12)',
-  surface3Solid: '#393939',
-  surface3Hovered: 'rgba(255,255,255,0.16)',
+  // Spry: warm charcoal surfaces (landing brand: #1C1C1C ink, #222 coal) with a
+  // faint violet cast so the app reads as one piece with spry.fi.
+  surface1: '#161616',
+  surface1Hovered: '#1C1C1C',
+  surface2: '#1E1B24',
+  surface2Hovered: '#241F2E',
+  surface3: 'rgba(137,54,255,0.14)',
+  surface3Solid: '#393441',
+  surface3Hovered: 'rgba(137,54,255,0.20)',
   surface4: 'rgba(255,255,255,0.20)',
   surface5: 'rgba(0,0,0,0.04)',
   surface5Hovered: 'rgba(0,0,0,0.06)',
-  accent1: '#FF37C7',
-  accent1Hovered: '#E500A5',
+  accent1: '#8936FF',
+  accent1Hovered: '#9B5BFF',
 
-  accent2: 'rgba(255, 55, 199, 0.08)',
-  accent2Hovered: 'rgba(255, 55, 199, 0.12)',
-  accent2Solid: '#261621',
+  accent2: 'rgba(137, 54, 255, 0.12)',
+  accent2Hovered: 'rgba(137, 54, 255, 0.18)',
+  accent2Solid: '#1C1233',
   accent3: colors.white,
   accent3Hovered: '#F5F5F5',
 
-  DEP_accentSoft: '#FC72FF33', //33 = 20%
+  DEP_accentSoft: '#8936FF33', //33 = 20%
   DEP_blue400: '#4C82FB',
 
   statusSuccess: '#21C95E',
@@ -333,11 +346,11 @@ export const colorsLight = {
   DEP_backgroundBranded: '#FCF7FF',
   DEP_backgroundOverlay: opacifyRaw(60, colors.white),
 
-  DEP_accentBranded: DEP_accentColors.magentaVibrant,
-  DEP_shadowBranded: DEP_accentColors.magentaVibrant,
+  DEP_accentBranded: colors.spryViolet,
+  DEP_shadowBranded: colors.spryViolet,
 
-  DEP_brandedAccentSoft: DEP_accentColors.magenta100,
-  DEP_magentaDark: opacifyRaw(12, DEP_accentColors.magentaVibrant),
+  DEP_brandedAccentSoft: '#EDE3FF',
+  DEP_magentaDark: opacifyRaw(12, colors.spryViolet),
 
   DEP_fiatBanner: colors.fiatOnRampBanner,
 
@@ -424,15 +437,15 @@ export const colorsDark = {
   statusWarning2: sporeDark.statusWarning2,
   statusWarning2Hovered: sporeDark.statusWarning2Hovered,
 
-  DEP_backgroundBranded: '#100D1C',
+  DEP_backgroundBranded: '#150E28',
   DEP_backgroundOverlay: opacifyRaw(10, colors.white),
 
-  DEP_accentBranded: DEP_accentColors.magentaVibrant,
+  DEP_accentBranded: colors.spryViolet,
   // TODO(MOB-160): accommodate one-off color in cleaner way
-  DEP_shadowBranded: '#B60ACF',
+  DEP_shadowBranded: colors.spryViolet,
 
-  DEP_brandedAccentSoft: '#46244F', // git blame Chelsy
-  DEP_magentaDark: opacifyRaw(12, DEP_accentColors.magentaVibrant),
+  DEP_brandedAccentSoft: '#2A1A4F', // Spry violet-tinted soft
+  DEP_magentaDark: opacifyRaw(12, colors.spryViolet),
 
   DEP_fiatBanner: colors.fiatOnRampBanner,
 

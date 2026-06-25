@@ -7,6 +7,7 @@ import Trace from 'uniswap/src/features/telemetry/Trace'
 import { DisconnectedWalletView } from '~/features/Liquidity/components/emptyStates/DisconnectedWalletView'
 import { EmptyPositionsView } from '~/features/Liquidity/components/emptyStates/EmptyPositionsView'
 import { ErrorPositionsView } from '~/features/Liquidity/components/emptyStates/ErrorPositionsView'
+import { SpryAura } from '~/components/Spry/SpryAura'
 import { useWalletPositionsWeb } from '~/features/Liquidity/hooks/useWalletPositionsWeb'
 import { LiquidityPositionCardLoader } from '~/features/Liquidity/LiquidityPositionCard'
 import { PositionsHeader } from '~/features/Liquidity/PositionsHeader'
@@ -58,12 +59,15 @@ export function Pool() {
 
   return (
     <Trace logImpression page={InterfacePageName.Positions}>
+      <SpryAura />
       <Flex
         row
         justifyContent="space-between"
         // SPRY: top-align so the fee-curve chart in the right column lines up with the fee-tier card.
         alignItems="flex-start"
         $xl={{ flexDirection: 'column', gap: '$gap16' }}
+        position="relative"
+        zIndex={1}
         width="100%"
         gap={20}
         py="$spacing24"
