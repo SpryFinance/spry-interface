@@ -13,6 +13,7 @@ import {
 import { TransactionModalInnerContainer } from 'uniswap/src/features/transactions/components/TransactionModal/TransactionModal'
 import { useTransactionModalContext } from 'uniswap/src/features/transactions/components/TransactionModal/TransactionModalContext'
 import { SpryFeeWidget } from 'uniswap/src/features/transactions/swap/components/SpryFeeWidget/SpryFeeWidget'
+import { SprySwapHelpButton } from 'uniswap/src/features/transactions/swap/components/SprySwapHelp/SprySwapHelpButton'
 import { Slippage } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/settingsConfigurations/slippage/Slippage/Slippage'
 import { TradeRoutingPreference } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/settingsConfigurations/TradeRoutingPreference/TradeRoutingPreference'
 import { SwapFormSettings } from 'uniswap/src/features/transactions/swap/components/SwapFormSettings/SwapFormSettings'
@@ -81,6 +82,8 @@ export function SwapFormScreen({
     <TransactionModalInnerContainer fullscreen bottomSheetViewStyles={bottomSheetViewStyles}>
       {!isWebApp && <SwapFormHeader /> /* Interface renders its own header with multiple tabs */}
       {!hideSettings && <SwapFormSettings settings={filteredSettings} isZeroSlippage={isZeroSlippage} />}
+      {/* SPRY: a "?" help button beside the settings gear that opens the swap explainer (web only). */}
+      {isWebApp && !hideSettings && <SprySwapHelpButton />}
 
       {!hideContent && (
         <SwapFormScreenStoreContextProvider tokenColor={tokenColor}>

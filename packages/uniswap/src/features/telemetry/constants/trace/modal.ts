@@ -203,6 +203,7 @@ export const ModalName = {
   StorageConfirm: 'storage-confirm-modal',
   StorageHelp: 'storage-help-modal',
   StorageWarning: 'storage-warning-modal',
+  SprySwapHelp: 'spry-swap-help-modal',
   Swap: 'swap-modal',
   SwapError: 'swap-error-modal',
   SwapProtection: 'swap-protection-modal',

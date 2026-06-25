@@ -34,7 +34,6 @@ import { noop } from 'utilities/src/react/noop'
 import { PrefetchBalancesWrapper } from '~/appGraphql/data/apollo/AdaptiveTokenBalancesProvider'
 import { useAccountDrawer } from '~/components/AccountDrawer/MiniPortfolio/hooks'
 import { SpryAura } from '~/components/Spry/SpryAura'
-import { SprySwapExplainer } from '~/components/Spry/SprySwapExplainer'
 import { useSwapHandlers } from '~/features/Swap/hooks/useSwapHandlers/useSwapHandlers'
 import { useInitialCurrencyState } from '~/features/Swap/state/swap/hooks'
 import { SwapAndLimitContextProvider } from '~/features/Swap/state/swap/SwapContext'
@@ -311,7 +310,6 @@ function UniversalSwapFlow({
             />
           </SwapDependenciesStoreContextProvider>
           <SwapBottomCard />
-          <SprySwapExplainer />
         </Flex>
       )}
     </Flex>

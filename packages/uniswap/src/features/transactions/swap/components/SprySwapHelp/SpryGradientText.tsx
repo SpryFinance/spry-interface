@@ -5,8 +5,9 @@ const BRAND_GRADIENT = `linear-gradient(90deg, ${colors.spryMint} 0%, ${colors.s
 
 /**
  * SPRY: a heading whose fill is the brand mint -> violet -> grape gradient,
- * matching the gradient headings on the spry.fi landing. Web-only background-clip
- * trick; falls back to the violet accent if clipping is unsupported.
+ * matching the gradient headings on the spry.fi landing, in the landing's Space
+ * Grotesk display font. Web-only background-clip trick; falls back to the violet
+ * accent if clipping is unsupported.
  */
 export function SpryGradientText({ children, ...props }: TextProps): JSX.Element {
   return (

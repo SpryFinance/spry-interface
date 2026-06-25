@@ -61,7 +61,11 @@ export const SpryAura = memo(function SpryAura({ contained = false }: { containe
   const reduceMotion = useReducedMotion()
   return (
     <Flex
-      position={contained ? 'absolute' : 'fixed'}
+      position="absolute"
+      // `fixed` (full-viewport bleed) is web-only and not in Tamagui's cross-platform
+      // position type, so set it via the web style escape hatch. `contained` keeps it
+      // absolute (clipped to the nearest positioned ancestor).
+      $platform-web={contained ? undefined : { position: 'fixed' }}
       top={0}
       left={0}
       right={0}
